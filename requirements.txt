@@ -1,0 +1,6 @@
+PyYAML>=6.0
+numpy>=1.26
+nvidia-ml-py>=12.0
+aiohttp>=3.9
+pandas>=2.1
+pytest>=8.0

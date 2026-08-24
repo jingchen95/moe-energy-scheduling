@@ -1,0 +1,38 @@
+# Experiment outputs and logs
+results/*
+!results/.gitkeep
+!results/raw/
+results/raw/*
+!results/raw/.gitkeep
+!results/processed/
+results/processed/*
+!results/processed/.gitkeep
+!results/figures/
+results/figures/*
+!results/figures/.gitkeep
+logs/
+slurm-*.out
+slurm-*.err
+
+# Downloaded data, models, and caches
+data/datasets/
+data/models/
+models/
+.cache/
+*.safetensors
+*.bin
+
+# Python and local environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local configuration and editor files
+.env
+.DS_Store
+.idea/
+.vscode/

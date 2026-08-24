@@ -1,0 +1,19 @@
+experiment:
+  repetitions: 3
+  warmup_s: 60
+  measurement_s: 300
+  cooldown_s: 30
+  monitor_interval_s: 0.1
+  slo:
+    ttft_p99_s: null
+    tpot_p99_s: null
+  load_fractions:
+    low: 0.30
+    medium: 0.65
+    high: 0.825
+  policies:
+    - B1
+    - B2
+    - B3
+    - B4
+    - Joint
