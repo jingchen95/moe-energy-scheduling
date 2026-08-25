@@ -26,6 +26,8 @@ def _run_benchmark(
         "--model", args.model,
         "--tokenizer", args.tokenizer,
         "--output-root", str(args.output_root),
+        "--run-label", f"milestone-c-{trace.stem}",
+        "--placement-name", "default_linear",
         "--local-files-only",
         "--server-pid-file", str(args.server_pid_file),
         "--server-log", str(args.server_log),

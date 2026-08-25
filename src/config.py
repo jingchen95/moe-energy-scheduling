@@ -49,8 +49,14 @@ def build_vllm_command(config: dict[str, Any], extra_args: list[str]) -> list[st
         command.append("--enable-expert-parallel")
     if parallel.get("enable_eplb"):
         command.append("--enable-eplb")
+        if parallel.get("eplb_config"):
+            command.extend(["--eplb-config", json.dumps(parallel["eplb_config"], sort_keys=True)])
+    if parallel.get("expert_placement_file"):
+        command.extend(["--expert-placement-file", str(parallel["expert_placement_file"])])
     if server.get("disable_log_requests"):
         command.append("--disable-log-requests")
+    if server.get("enable_prefix_caching") is False:
+        command.append("--no-enable-prefix-caching")
     command.extend(extra_args)
     return command
 

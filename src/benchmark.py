@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import time
 import uuid
+import hashlib
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,6 +33,14 @@ def _git_commit() -> str:
         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
     )
     return result.stdout.strip() or "unknown"
+
+
+def _vllm_version() -> str:
+    try:
+        import vllm
+        return str(vllm.__version__)
+    except ImportError:
+        return "unavailable"
 
 
 def create_run_directory(root: Path, category: str) -> tuple[str, Path]:
@@ -70,6 +79,7 @@ async def _consume_stream(
             }
             first_token_monotonic_s: float | None = None
             chunks: list[str] = []
+            streamed_text_event_count = 0
             server_prompt_tokens: int | None = None
             server_output_tokens: int | None = None
             async with session.post(
@@ -109,6 +119,7 @@ async def _consume_stream(
                         delta = choice.get("delta") or {}
                         text = (delta.get("reasoning_content") or "") + (delta.get("content") or "")
                         if text:
+                            streamed_text_event_count += 1
                             if first_token_monotonic_s is None:
                                 first_token_monotonic_s = time.monotonic()
                             chunks.append(text)
@@ -131,6 +142,13 @@ async def _consume_stream(
             )
             row["output_token_source"] = token_source
             row["server_prompt_tokens"] = server_prompt_tokens
+            row["streamed_text_event_count"] = streamed_text_event_count
+            output_bytes = "".join(chunks).encode("utf-8")
+            row["output_text_sha256"] = hashlib.sha256(output_bytes).hexdigest()
+            if request.metadata.get("store_output_token_ids"):
+                row["output_token_ids"] = tokenizer.encode(
+                    "".join(chunks), add_special_tokens=False,
+                )
             return row
     except Exception as exc:
         complete = time.monotonic()
@@ -211,6 +229,30 @@ async def check_health(base_url: str) -> None:
                 raise RuntimeError(f"vLLM health check returned HTTP {response.status}")
 
 
+async def collective_rpc(
+    base_url: str, method: str, *, args: list[str] | None = None,
+) -> list[Any]:
+    timeout = aiohttp.ClientTimeout(total=300)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.post(
+            f"{base_url.rstrip('/')}/collective_rpc",
+            json={"method": method, "args": args or [], "timeout": 300},
+        ) as response:
+            detail = await response.text()
+            if response.status != 200:
+                raise RuntimeError(f"collective RPC {method} failed: HTTP {response.status}: {detail}")
+            value = json.loads(detail) if detail else {"results": []}
+            return list(value.get("results") or [])
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
 async def warm_up(
     requests: list[TraceRequest], *, base_url: str, model: str,
     tokenizer: Any, count: int, request_timeout_s: float,
@@ -239,6 +281,10 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
     run_id, run_dir = create_run_directory(args.output_root, category)
     (run_dir / "stdout-stderr.log").touch(exist_ok=False)
     shutil.copyfile(args.trace, run_dir / "trace.jsonl")
+    if args.placement_file:
+        shutil.copyfile(args.placement_file, run_dir / "expert_placement.json")
+    if args.vllm_patch_manifest:
+        shutil.copyfile(args.vllm_patch_manifest, run_dir / "vllm_patch_manifest.json")
     commit = _git_commit()
     (run_dir / "git_commit.txt").write_text(commit + "\n", encoding="utf-8")
     config = {
@@ -247,8 +293,11 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
         "trace": str(args.trace.resolve()),
         "base_url": args.base_url,
         "model": args.model,
+        "vllm_version": _vllm_version(),
         "tokenizer": args.tokenizer,
         "request_rate": args.request_rate,
+        "run_label": args.run_label,
+        "placement_name": args.placement_name,
         "warmup_requests": args.warmup_requests,
         "settle_before_s": args.settle_before_s,
         "settle_after_s": args.settle_after_s,
@@ -257,6 +306,11 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
         "request_timeout_s": args.request_timeout_s,
         "decoding": {"temperature": 0.0, "seed": 0,
                      "max_output_tokens": sorted({row.max_output_tokens for row in requests})},
+        "expert_profile": args.expert_profile,
+        "placement_file": str(args.placement_file.resolve()) if args.placement_file else None,
+        "placement_sha256": _sha256(args.placement_file) if args.placement_file else None,
+        "trace_sha256": _sha256(args.trace),
+        "target_clocks_mhz": args.target_clocks,
     }
     (run_dir / "resolved_config.yaml").write_text(
         yaml.safe_dump(config, sort_keys=True), encoding="utf-8",
@@ -266,6 +320,10 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
         "model": args.model,
         "server_pid_file": str(args.server_pid_file) if args.server_pid_file else None,
         "server_log": str(args.server_log) if args.server_log else None,
+        "vllm_patch_manifest": str(args.vllm_patch_manifest) if args.vllm_patch_manifest else None,
+        "vllm_patch_manifest_sha256": (
+            _sha256(args.vllm_patch_manifest) if args.vllm_patch_manifest else None
+        ),
     }, indent=2) + "\n", encoding="utf-8")
 
     from transformers import AutoTokenizer
@@ -277,6 +335,8 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
     )
     if args.settle_before_s:
         await asyncio.sleep(args.settle_before_s)
+    if args.expert_profile:
+        await collective_rpc(args.base_url, "reset_expert_profile")
 
     with NVMLReader(range(4)) as reader:
         monitor = FixedPeriodMonitor(reader, run_dir / "gpu_samples.csv", args.monitor_interval_s)
@@ -299,6 +359,13 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
     (run_dir / "energy.json").write_text(
         json.dumps(energy, indent=2, sort_keys=True) + "\n", encoding="utf-8",
     )
+    if args.expert_profile:
+        profile_results = await collective_rpc(
+            args.base_url, "dump_expert_profile", args=[str(run_dir.resolve())],
+        )
+        (run_dir / "expert_profile_rpc.json").write_text(
+            json.dumps(profile_results, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+        )
     with (run_dir / "requests.jsonl").open("x", encoding="utf-8") as stream:
         for row in rows:
             stream.write(json.dumps(row, sort_keys=True) + "\n")
@@ -309,6 +376,9 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
         request_results=rows, measurement_duration_s=duration_s,
         energy_summary=energy,
     )
+    metrics["run_label"] = args.run_label
+    metrics["placement_name"] = args.placement_name
+    metrics["target_clocks_mhz"] = args.target_clocks
     (run_dir / "metrics.json").write_text(
         json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8",
     )
@@ -335,6 +405,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--server-pid-file", type=Path)
     parser.add_argument("--server-log", type=Path)
     parser.add_argument("--local-files-only", action="store_true")
+    parser.add_argument("--expert-profile", action="store_true")
+    parser.add_argument("--placement-file", type=Path)
+    parser.add_argument("--vllm-patch-manifest", type=Path)
+    parser.add_argument("--target-clocks", type=int, nargs=4)
+    parser.add_argument("--run-label", required=True)
+    parser.add_argument("--placement-name", required=True)
     return parser.parse_args()
 
 

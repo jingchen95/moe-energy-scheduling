@@ -1,0 +1,247 @@
+diff --git a/vllm/config/parallel.py b/vllm/config/parallel.py
+index 16487d7..db4072a 100644
+--- a/vllm/config/parallel.py
++++ b/vllm/config/parallel.py
+@@ -151,6 +151,9 @@ class ParallelConfig:
+       with 4 experts and 2 ranks, rank 0 will have experts [0, 2] and rank 1
+       will have experts [1, 3]. This strategy can help improve load balancing
+       for grouped expert models with no redundant experts."""
++    expert_placement_file: str | None = None
++    """Optional JSON file containing a validated per-layer logical-expert to
++    EP-rank mapping. This is used only to initialize a static EPLB mapping."""
+     all2all_backend: All2AllBackend = "allgather_reducescatter"
+     """All2All backend for MoE expert parallel communication. Available options:
+ 
+diff --git a/vllm/distributed/eplb/eplb_state.py b/vllm/distributed/eplb/eplb_state.py
+index cc4b333..e5a70db 100644
+--- a/vllm/distributed/eplb/eplb_state.py
++++ b/vllm/distributed/eplb/eplb_state.py
+@@ -26,7 +26,9 @@ MoE layer. If we have 32 EP ranks, then each GPU will hold 288 / 32 = 9 local
+ physical experts.
+ """
+ 
++import json
+ import threading
++from pathlib import Path
+ from collections.abc import Sequence
+ from dataclasses import dataclass
+ 
+@@ -55,6 +57,51 @@ from .rebalance_execute import (
+ logger = init_logger(__name__)
+ 
+ 
++def load_static_expert_placement(
++    path: str,
++    num_layers: int,
++    num_logical_experts: int,
++    num_ranks: int,
++    device: torch.device,
++) -> torch.Tensor:
++    """Load a strict logical-expert-to-rank map as physical-slot ordering."""
++    document = json.loads(Path(path).read_text(encoding="utf-8"))
++    if document.get("schema_version") != 1:
++        raise ValueError("expert placement file has unsupported schema_version")
++    if int(document.get("num_layers", -1)) != num_layers:
++        raise ValueError("expert placement num_layers does not match model")
++    if int(document.get("num_experts", -1)) != num_logical_experts:
++        raise ValueError("expert placement num_experts does not match model")
++    if int(document.get("num_ranks", -1)) != num_ranks:
++        raise ValueError("expert placement num_ranks does not match EP size")
++    if num_logical_experts % num_ranks != 0:
++        raise ValueError("logical experts must divide evenly across EP ranks")
++    experts_per_rank = num_logical_experts // num_ranks
++    if int(document.get("experts_per_rank", -1)) != experts_per_rank:
++        raise ValueError("expert placement experts_per_rank is invalid")
++    mapping = document.get("logical_to_rank")
++    if not isinstance(mapping, list) or len(mapping) != num_layers:
++        raise ValueError("expert placement logical_to_rank has invalid layer count")
++    physical_to_logical: list[list[int]] = []
++    for layer, row in enumerate(mapping):
++        if not isinstance(row, list) or len(row) != num_logical_experts:
++            raise ValueError(f"expert placement layer {layer} has invalid expert count")
++        if any(type(rank) is not int or rank < 0 or rank >= num_ranks for rank in row):
++            raise ValueError(f"expert placement layer {layer} contains an invalid EP rank")
++        ordered: list[int] = []
++        for rank in range(num_ranks):
++            experts = [expert for expert, assigned_rank in enumerate(row)
++                       if assigned_rank == rank]
++            if len(experts) != experts_per_rank:
++                raise ValueError(
++                    f"expert placement layer {layer}, rank {rank}: expected "
++                    f"{experts_per_rank} experts, found {len(experts)}"
++                )
++            ordered.extend(experts)
++        physical_to_logical.append(ordered)
++    return torch.tensor(physical_to_logical, dtype=torch.long, device=device)
++
++
+ @dataclass
+ class EplbModelState:
+     """EPLB metrics."""
+@@ -396,6 +443,31 @@ class EplbState:
+             .contiguous()
+         )
+ 
++        static_placement_file = self.parallel_config.expert_placement_file
++        static_old_physical_to_logical_map = None
++        if static_placement_file is not None:
++            if global_expert_load is not None:
++                raise ValueError(
++                    "expert_placement_file and global_expert_load cannot be used together"
++                )
++            ep_group = get_ep_group().device_group
++            static_old_physical_to_logical_map = physical_to_logical_map.clone()
++            physical_to_logical_map = load_static_expert_placement(
++                static_placement_file,
++                model.num_moe_layers,
++                model.num_logical_experts,
++                ep_group.size(),
++                self.device,
++            )
++            logical_to_physical_map.fill_(-1)
++            logical_replica_count.fill_(1)
++            physical_ids = torch.arange(
++                model.num_physical_experts, device=self.device, dtype=torch.long
++            ).expand(model.num_moe_layers, -1)
++            logical_to_physical_map[:, :, 0].scatter_(
++                1, physical_to_logical_map.long(), physical_ids
++            )
++
+         expert_load_pass = torch.zeros(
+             (model.num_moe_layers, model.num_physical_experts),
+             dtype=torch.int32,
+@@ -488,6 +560,15 @@ class EplbState:
+                 rank_mapping,
+             )
+             self.expert_rearrangement_step = 0
++        elif static_old_physical_to_logical_map is not None:
++            rearrange_expert_weights_inplace(
++                static_old_physical_to_logical_map,
++                physical_to_logical_map,
++                model.expert_weights,
++                get_ep_group().device_group,
++                False,
++            )
++            self.expert_rearrangement_step = 0
+ 
+         expert_buffer = [torch.empty_like(w) for w in model.expert_weights[0]]
+ 
+@@ -548,6 +629,9 @@ class EplbState:
+         """
+         ep_group = get_ep_group().device_group
+         if is_profile:
++            if self.parallel_config.expert_placement_file is not None:
++                # Static placements never migrate, so no transfer workspace is needed.
++                return
+             self.rearrange(is_profile=True)
+             return
+ 
+diff --git a/vllm/engine/arg_utils.py b/vllm/engine/arg_utils.py
+index 16e3dcc..09dc365 100644
+--- a/vllm/engine/arg_utils.py
++++ b/vllm/engine/arg_utils.py
+@@ -418,6 +418,7 @@ class EngineArgs:
+     expert_placement_strategy: ExpertPlacementStrategy = (
+         ParallelConfig.expert_placement_strategy
+     )
++    expert_placement_file: str | None = ParallelConfig.expert_placement_file
+     _api_process_count: int = ParallelConfig._api_process_count
+     _api_process_rank: int = ParallelConfig._api_process_rank
+     max_parallel_loading_workers: int | None = (
+@@ -880,6 +881,10 @@ class EngineArgs:
+             "--expert-placement-strategy",
+             **parallel_kwargs["expert_placement_strategy"],
+         )
++        parallel_group.add_argument(
++            "--expert-placement-file",
++            **parallel_kwargs["expert_placement_file"],
++        )
+ 
+         parallel_group.add_argument(
+             "--max-parallel-loading-workers",
+@@ -1614,6 +1619,7 @@ class EngineArgs:
+             enable_eplb=self.enable_eplb,
+             eplb_config=self.eplb_config,
+             expert_placement_strategy=self.expert_placement_strategy,
++            expert_placement_file=self.expert_placement_file,
+             max_parallel_loading_workers=self.max_parallel_loading_workers,
+             disable_custom_all_reduce=self.disable_custom_all_reduce,
+             ray_workers_use_nsight=self.ray_workers_use_nsight,
+diff --git a/vllm/v1/worker/gpu_worker.py b/vllm/v1/worker/gpu_worker.py
+index 4c02c05..0fd5157 100644
+--- a/vllm/v1/worker/gpu_worker.py
++++ b/vllm/v1/worker/gpu_worker.py
+@@ -685,6 +685,73 @@ class Worker(WorkerBase):
+         # worker will always be healthy as long as it's running.
+         return
+ 
++    def reset_expert_profile(self) -> dict[str, int]:
++        """Reset existing EPLB statistics at an explicit idle boundary."""
++        state = self.model_runner.eplb_state
++        if state is None:
++            raise RuntimeError("expert profiling requires --enable-eplb")
++        torch.cuda.synchronize()
++        for model_state in state.model_states.values():
++            model_state.expert_load_pass.zero_()
++            model_state.expert_load_window.zero_()
++        state.expert_load_window_step = 0
++        return {"rank": self.rank, "models": len(state.model_states)}
++
++    def dump_expert_profile(self, output_directory: str) -> dict[str, str | int]:
++        """All-reduce and dump logical counts/mapping at an explicit boundary."""
++        import json
++        from pathlib import Path
++
++        import numpy as np
++
++        from vllm.distributed.parallel_state import get_ep_group
++
++        state = self.model_runner.eplb_state
++        if state is None:
++            raise RuntimeError("expert profiling requires --enable-eplb")
++        torch.cuda.synchronize()
++        global_loads = state.rearrange(execute_shuffle=False)
++        if global_loads is None or len(global_loads) != 1:
++            raise RuntimeError("expected one profiled MoE model")
++        ep_group = get_ep_group().device_group
++        result: dict[str, str | int] = {"rank": ep_group.rank()}
++        if ep_group.rank() == 0:
++            directory = Path(output_directory)
++            directory.mkdir(parents=True, exist_ok=True)
++            counts_path = directory / "expert_counts.npz"
++            mapping_path = directory / "expert_mapping.json"
++            counts = global_loads[0].to(torch.int64).cpu().numpy()
++            np.savez_compressed(counts_path, expert_counts=counts)
++            model_state = next(iter(state.model_states.values()))
++            physical = model_state.physical_to_logical_map.cpu().tolist()
++            experts_per_rank = model_state.physical_to_logical_map.shape[1] // ep_group.size()
++            logical_to_rank = []
++            logical_to_physical_slot = []
++            for layer_physical in physical:
++                rank_row = [-1] * len(layer_physical)
++                slot_row = [-1] * len(layer_physical)
++                for physical_id, logical_id in enumerate(layer_physical):
++                    rank_row[logical_id] = physical_id // experts_per_rank
++                    slot_row[logical_id] = physical_id % experts_per_rank
++                logical_to_rank.append(rank_row)
++                logical_to_physical_slot.append(slot_row)
++            mapping_path.write_text(json.dumps({
++                "schema_version": 1,
++                "num_layers": len(physical),
++                "num_experts": len(physical[0]),
++                "num_ranks": ep_group.size(),
++                "experts_per_rank": experts_per_rank,
++                "physical_to_logical": physical,
++                "logical_to_rank": logical_to_rank,
++                "logical_to_physical_slot": logical_to_physical_slot,
++            }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
++            result.update({
++                "expert_counts": str(counts_path),
++                "expert_mapping": str(mapping_path),
++            })
++        torch.cuda.synchronize()
++        return result
++
+     def _eplb_before_scale_down(self, old_ep_size: int, new_ep_size: int) -> None:
+         from vllm.distributed.parallel_state import get_ep_group
+ 
