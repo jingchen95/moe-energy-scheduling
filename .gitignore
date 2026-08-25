@@ -30,6 +30,7 @@ __pycache__/
 .ruff_cache/
 .venv/
 venv/
+.deps/
 
 # Local configuration and editor files
 .env

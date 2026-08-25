@@ -1,9 +1,11 @@
 experiment:
-  repetitions: 3
-  warmup_s: 60
-  measurement_s: 300
-  cooldown_s: 30
-  monitor_interval_s: 0.1
+  repetitions: 2
+  warmup_requests: 8
+  settle_before_s: 5
+  settle_after_s: 5
+  monitor_interval_s: 0.2
+  max_concurrency: 256
+  request_timeout_s: 900
   slo:
     ttft_p99_s: null
     tpot_p99_s: null
@@ -11,9 +13,7 @@ experiment:
     low: 0.30
     medium: 0.65
     high: 0.825
-  policies:
-    - B1
-    - B2
-    - B3
-    - B4
-    - Joint
+  milestone_c:
+    placement: default
+    graphics_clock: maximum_supported
+    measured_requests_per_workload: 200

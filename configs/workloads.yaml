@@ -4,14 +4,16 @@ workloads:
     - code
     - math
   prompt_length_buckets:
-    - [128, 256]
-    - [256, 512]
+    preferred: [128, 256]
+    fallback: [64, 192]
   decoding:
     temperature: 0.0
     seed: 0
-    max_output_tokens: 64
+    max_output_tokens: 128
   trace_fields:
     - request_id
-    - workload
+    - category
     - prompt
+    - prompt_tokens
+    - max_output_tokens
     - arrival_offset_s

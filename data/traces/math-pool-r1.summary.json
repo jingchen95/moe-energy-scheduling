@@ -1,0 +1,16 @@
+{
+  "available_in_bucket": 225,
+  "category": "math",
+  "input_token_max": 231,
+  "input_token_mean": 144.635,
+  "input_token_min": 128,
+  "input_token_p10": 129.0,
+  "input_token_p50": 140.0,
+  "input_token_p90": 164.1,
+  "max_output_tokens": 128,
+  "number_of_prompts": 200,
+  "request_rate": 1.0,
+  "seed": 0,
+  "source": "/data/users/chjing/moe-energy-scheduling/data/datasets/gsm8k-train.jsonl",
+  "trace": "/data/users/chjing/moe-energy-scheduling/data/traces/math-pool-r1.jsonl"
+}

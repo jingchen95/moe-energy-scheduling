@@ -8,11 +8,13 @@ The first target is one Slurm-allocated node with four NVIDIA L40S GPUs,
 vLLM, and `Qwen/Qwen3-30B-A3B`. The preferred parallel layout is TP=1, DP=4,
 with expert parallelism across all four ranks.
 
-## Milestone A
+## Current Status
 
-Milestone A establishes the repository, records the actual environment, and
-validates an OpenAI-compatible expert-parallel smoke test. No vLLM source is
-modified in this milestone.
+Milestone A validated the four-GPU expert-parallel deployment. Milestone C adds
+the deterministic semantic trace, open-loop streaming client, request metrics,
+graphics-clock control, and exact-window four-GPU energy harness. Its full
+general/code/math campaign was intentionally deferred; live endpoint validation
+is a prerequisite of the placement-DVFS coupling pilot.
 
 On Minerva, from the staged repository:
 
@@ -27,4 +29,5 @@ vLLM command/log, responses, and Slurm log are retained on the cluster and
 intentionally ignored by Git.
 
 See [docs/environment.md](docs/environment.md) for verified versions and
-hardware findings, and [HANDOFF.md](HANDOFF.md) for current status.
+hardware findings, [docs/reused_infrastructure.md](docs/reused_infrastructure.md)
+for measurement-code provenance, and [HANDOFF.md](HANDOFF.md) for current status.

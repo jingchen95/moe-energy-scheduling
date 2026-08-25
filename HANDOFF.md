@@ -2,9 +2,12 @@
 
 ## Current working state
 
-Milestone A is complete. The repository is initialized, the real L40S/vLLM
-environment is documented, and TP=1/DP=4 with four expert-parallel ranks serves
-`Qwen/Qwen3-30B-A3B` successfully through the OpenAI-compatible endpoint.
+Milestone C harness implementation is complete. The full Milestone C
+experimental campaign was intentionally deferred after the research plan
+changed to a placement-DVFS coupling pilot. Live validation of the streaming
+benchmark client is still pending and is a prerequisite of Milestone D; it will
+be performed during the first instrumented server launch to avoid another cold
+model load.
 
 The project is staged on Minerva at:
 
@@ -14,31 +17,49 @@ The project is staged on Minerva at:
 
 ## Completed steps
 
-- Created the requested repository layout, YAML configs, safety guidance, and
-  ignored result directories.
-- Added configuration-driven vLLM launch, exact-PID/process-group shutdown,
-  graphics-clock reset, environment inspection, and Slurm smoke tooling.
-- Inspected vLLM 0.15.1 as installed from site-packages; no package was changed.
-- Captured Uranus OS, CUDA/driver, GPU memory/power/clocks, topology, NVML
-  energy support, package locations, cache state, and runtime backend.
-- Completed Slurm job `254959`: three deterministic prompts returned HTTP 200,
-  `smoke-status.txt` is `PASS`, and `exit-status.txt` is `0`.
-- Confirmed TP=1/DP=4/EP=4 fits at 16.38 GiB of model weights per GPU.
-- Confirmed all four L40S GPUs expose NVML total-energy counters.
-- Confirmed custom per-layer expert placement is not exposed upstream and will
-  require a recorded patch in Milestone E.
+- Milestone A validated Qwen3-30B-A3B with TP=1, DP=4, EP=4 and vLLM 0.15.1
+  on four L40S GPUs using `allgather_reducescatter`.
+- Located the prior measurement implementation in
+  `/data/users/chjing/vLLM_test` at commit `0eb8926` and documented the reuse
+  boundary in `docs/reused_infrastructure.md`.
+- Added graphics-only per-GPU clock discovery, locking, readback, and reset.
+- Added fixed-period four-GPU NVML telemetry and cumulative-energy window
+  accounting, with trapezoidal power integration only as an unsupported-counter
+  fallback.
+- Completed Slurm integration job `255097`: all four GPUs exposed 210-2520 MHz,
+  a 975 MHz lock read back on every GPU, the four-GPU energy delta was positive,
+  and cleanup restored default clocks.
+- Added canonical semantic JSONL parsing, deterministic trace generation,
+  open-loop asynchronous streaming replay, request-level TTFT/TPOT/E2E and
+  send-delay metrics, unique run directories, and normalized run summaries.
+- Selected Databricks Dolly 15k, Google MBPP, and OpenAI GSM8K and generated
+  deterministic 200-request pools in the common 128-256 chat-template-token
+  range with seed 0 and 128 maximum output tokens.
+- The CPU-safe suite passes: `13 passed` in the Minerva `cuda-env`, using a
+  project-local ignored `.deps/` installation of pytest because pytest is not
+  installed in that conda environment.
 
-## Unresolved problems
+## Deferred or unresolved
 
-- vLLM's cold four-rank load from shared storage took 1,236.3 seconds. This is
-  not a correctness blocker but must remain outside measured windows.
-- vLLM 0.15.1 logged shutdown finalizer warnings after group-wide SIGTERM. The
-  stop script has been refined to request parent-led shutdown first; that exact
-  refinement has not yet been exercised by another full model launch.
-- Milestone B GPU control and monitoring modules remain intentional stubs.
+- The benchmark client has not yet been validated against the live vLLM
+  streaming endpoint. Milestone D must validate 10-20 requests before accepting
+  any research measurements.
+- Rate calibration and the general/code/math Milestone C baseline campaign were
+  deliberately not run. No baseline tables or workload comparison figure exist.
+- Slurm job `255098` was canceled during model loading because Uranus was not
+  exclusively allocated. Its partial directory is invalid research data and is
+  retained under `results/raw/server-255098-20260825T170451Z`.
+- The current vLLM site-packages installation is unmodified. Expert activation
+  instrumentation and arbitrary static placement require inspection and a
+  reproducible patch in Milestone D.
 
 ## Exact next command
 
+After the Milestone C closeout commit:
+
 ```bash
-git switch -c milestone-b-dvfs-monitor
+git switch -c milestone-d-placement-dvfs-coupling
 ```
+
+Milestone D must first inspect vLLM EPLB/map internals, then combine live client
+validation with the first instrumented default-placement server launch.
