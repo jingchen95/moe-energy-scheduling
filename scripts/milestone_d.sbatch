@@ -200,22 +200,45 @@ repeat_key_runs() {
     done
 }
 
-launch_server default_linear
-set_clocks '2520,2520,2520,2520'
-p0_validation="$(run_one p0-live-validation default_linear '' \
-    "${controller}/gsm8k-validation-15-r0.5.jsonl" '2520,2520,2520,2520')"
-python -m tools.validate_live_run "${p0_validation}" > "${controller}/live-validation.json"
-p0_profile="$(run_one p0-frozen-profile default_linear '' \
-    "${controller}/gsm8k-50-r0.5.jsonl" '2520,2520,2520,2520' 1)"
-python -m tools.validate_live_run "${p0_profile}" --require-expert-profile \
-    > "${controller}/p0-profile-validation.json"
+resume_controller="${MILESTONE_D_RESUME_CONTROLLER:-}"
+if [[ -n "${resume_controller}" ]]; then
+    resume_controller="$(realpath "${resume_controller}")"
+    [[ -f "${resume_controller}/runs.tsv" ]] || {
+        printf 'resume controller has no run manifest: %s\n' "${resume_controller}" >&2
+        exit 1
+    }
+    cp -a "${resume_controller}/placements/." "${controller}/placements/"
+    cp "${resume_controller}/placement-generation.json" "${controller}/"
+    awk -F '\t' 'NR > 1 && $2 == "default_linear"' \
+        "${resume_controller}/runs.tsv" >> "${manifest}"
+    p0_validation="$(awk -F '\t' '$1 == "p0-live-validation" {print $4}' \
+        "${resume_controller}/runs.tsv")"
+    p0_profile="$(awk -F '\t' '$1 == "p0-frozen-profile" {print $4}' \
+        "${resume_controller}/runs.tsv")"
+    [[ -f "${p0_validation}/requests.jsonl" ]] || exit 1
+    [[ -f "${p0_profile}/expert_counts.npz" ]] || exit 1
+    cp "${resume_controller}/gsm8k-50-r0.5.jsonl" "${controller}/"
+    cp "${resume_controller}/gsm8k-validation-15-r0.5.jsonl" "${controller}/"
+    printf '%s\n' "${resume_controller}" > "${controller}/resumed-from.txt"
+else
+    launch_server default_linear
+    set_clocks '2520,2520,2520,2520'
+    p0_validation="$(run_one p0-live-validation default_linear '' \
+        "${controller}/gsm8k-validation-15-r0.5.jsonl" '2520,2520,2520,2520')"
+    python -m tools.validate_live_run "${p0_validation}" > "${controller}/live-validation.json"
+    p0_profile="$(run_one p0-frozen-profile default_linear '' \
+        "${controller}/gsm8k-50-r0.5.jsonl" '2520,2520,2520,2520' 1)"
+    python -m tools.validate_live_run "${p0_profile}" --require-expert-profile \
+        > "${controller}/p0-profile-validation.json"
+    python -m src.placement --counts "${p0_profile}/expert_counts.npz" \
+        --output-dir "${controller}/placements" --num-groups 1 \
+        > "${controller}/placement-generation.json"
+    uniform_runs default_linear "${controller}/placements/default_linear.json"
+    stop_server
+fi
+
 frozen_counts="${p0_profile}/expert_counts.npz"
 frozen_default_mapping="${p0_profile}/expert_mapping.json"
-python -m src.placement --counts "${p0_profile}/expert_counts.npz" \
-    --output-dir "${controller}/placements" --num-groups 1 \
-    > "${controller}/placement-generation.json"
-uniform_runs default_linear "${controller}/placements/default_linear.json"
-stop_server
 
 for placement_name in upstream_default_eplb diagnostic_load_concentrated; do
     placement_file="${controller}/placements/${placement_name}.json"
