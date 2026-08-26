@@ -12,6 +12,7 @@ from pathlib import Path
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run_dir", type=Path)
+    parser.add_argument("--require-expert-profile", action="store_true")
     args = parser.parse_args()
     metrics = json.loads((args.run_dir / "metrics.json").read_text())
     energy = json.loads((args.run_dir / "energy.json").read_text())
@@ -41,8 +42,10 @@ def main() -> None:
         raise SystemExit("GPU samples do not cover the measurement start")
     if max(sample_times) < energy["measurement_end_monotonic_s"] - tolerance:
         raise SystemExit("GPU samples do not cover the measurement end")
-    if interval <= 0 or not (args.run_dir / "expert_counts.npz").exists():
-        raise SystemExit("measurement window or expert-profile output is missing")
+    if interval <= 0:
+        raise SystemExit("measurement window is invalid")
+    if args.require_expert_profile and not (args.run_dir / "expert_counts.npz").exists():
+        raise SystemExit("expert-profile output is missing")
     print(json.dumps({"status": "PASS", "run_dir": str(args.run_dir),
                       "completed": len(requests),
                       "send_delay_p99_ms": metrics["client_send_delay_p99_ms"]}))

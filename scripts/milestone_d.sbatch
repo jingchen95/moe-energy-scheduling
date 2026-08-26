@@ -207,6 +207,8 @@ p0_validation="$(run_one p0-live-validation default_linear '' \
 python -m tools.validate_live_run "${p0_validation}" > "${controller}/live-validation.json"
 p0_profile="$(run_one p0-frozen-profile default_linear '' \
     "${controller}/gsm8k-50-r0.5.jsonl" '2520,2520,2520,2520' 1)"
+python -m tools.validate_live_run "${p0_profile}" --require-expert-profile \
+    > "${controller}/p0-profile-validation.json"
 frozen_counts="${p0_profile}/expert_counts.npz"
 frozen_default_mapping="${p0_profile}/expert_mapping.json"
 python -m src.placement --counts "${p0_profile}/expert_counts.npz" \
