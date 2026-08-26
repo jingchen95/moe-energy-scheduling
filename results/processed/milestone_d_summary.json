@@ -1,0 +1,198 @@
+{
+  "controller": "results/raw/milestone-d-255131-20260826T104006Z",
+  "placement_statistics": [
+    {
+      "file": "/data/users/chjing/moe-energy-scheduling/results/raw/milestone-d-255129-20260826T094813Z/placements/default_linear.json",
+      "max_over_mean": 1.1221463197799249,
+      "per_gpu_load": [
+        5887013,
+        4868805,
+        5177445,
+        5051569
+      ],
+      "placement": "default_linear"
+    },
+    {
+      "file": "/data/users/chjing/moe-energy-scheduling/results/raw/milestone-d-255129-20260826T094813Z/placements/upstream_default_eplb.json",
+      "max_over_mean": 1.0000236361196506,
+      "per_gpu_load": [
+        5246175,
+        5246332,
+        5246164,
+        5246161
+      ],
+      "placement": "upstream_default_eplb"
+    },
+    {
+      "file": "/data/users/chjing/moe-energy-scheduling/results/raw/milestone-d-255129-20260826T094813Z/placements/diagnostic_load_concentrated.json",
+      "max_over_mean": 2.933111115685844,
+      "per_gpu_load": [
+        15387711,
+        3481809,
+        1642426,
+        472886
+      ],
+      "placement": "diagnostic_load_concentrated"
+    }
+  ],
+  "repeatability": [
+    {
+      "configuration": "uniform-high",
+      "energy_mean_j": 67375.989,
+      "energy_stdev_j": 415.9304581790093,
+      "placement": "upstream_default_eplb",
+      "repetitions": 3,
+      "tpot_p99_mean_ms": 11.114919257223155,
+      "tpot_p99_stdev_ms": 0.12442499707424905
+    },
+    {
+      "configuration": "gpu0-medium",
+      "energy_mean_j": 64076.35233333333,
+      "energy_stdev_j": 297.32054184219135,
+      "placement": "upstream_default_eplb",
+      "repetitions": 3,
+      "tpot_p99_mean_ms": 12.074811918467889,
+      "tpot_p99_stdev_ms": 0.11516739911101566
+    },
+    {
+      "configuration": "uniform-high",
+      "energy_mean_j": 64744.75266666667,
+      "energy_stdev_j": 136.44457829585411,
+      "placement": "diagnostic_load_concentrated",
+      "repetitions": 3,
+      "tpot_p99_mean_ms": 15.745611851680486,
+      "tpot_p99_stdev_ms": 0.020750655902182998
+    },
+    {
+      "configuration": "gpu0-medium",
+      "energy_mean_j": 58511.193,
+      "energy_stdev_j": 275.0568150746361,
+      "placement": "diagnostic_load_concentrated",
+      "repetitions": 3,
+      "tpot_p99_mean_ms": 17.402974509810072,
+      "tpot_p99_stdev_ms": 0.043161266224126124
+    }
+  ],
+  "sensitivity": [
+    {
+      "delta_e2e_p99_ms": 123.34901507012546,
+      "delta_gpu_energy_j": -3625.2289999999975,
+      "delta_throughput_requests_s": -0.0005567134956051545,
+      "delta_total_energy_j": -3164.3050000000076,
+      "delta_tpot_p99_ms": 0.9424930908460567,
+      "delta_ttft_p99_ms": -0.8714459976181388,
+      "downclock_frequency_mhz": 1635,
+      "gpu": 0,
+      "high_frequency_mhz": 2520,
+      "perturbation_run": "results/raw/c-math-20260826T104850.937406Z-6bee874b",
+      "placement": "upstream_default_eplb",
+      "predicted_expert_load": 5246175,
+      "reference_run": "results/raw/c-math-20260826T104229.758345Z-7c1f2937"
+    },
+    {
+      "delta_e2e_p99_ms": 114.82266792096198,
+      "delta_gpu_energy_j": -3458.4800000000014,
+      "delta_throughput_requests_s": -0.0005935210262514312,
+      "delta_total_energy_j": -2772.255999999994,
+      "delta_tpot_p99_ms": 0.8947515581903147,
+      "delta_ttft_p99_ms": -0.05952239502221346,
+      "downclock_frequency_mhz": 1635,
+      "gpu": 1,
+      "high_frequency_mhz": 2520,
+      "perturbation_run": "results/raw/c-math-20260826T105054.676756Z-dc1616fe",
+      "placement": "upstream_default_eplb",
+      "predicted_expert_load": 5246332,
+      "reference_run": "results/raw/c-math-20260826T104229.758345Z-7c1f2937"
+    },
+    {
+      "delta_e2e_p99_ms": 117.145158322528,
+      "delta_gpu_energy_j": -3506.876,
+      "delta_throughput_requests_s": -0.0005902454501081067,
+      "delta_total_energy_j": -2782.097000000009,
+      "delta_tpot_p99_ms": 0.8890138918856572,
+      "delta_ttft_p99_ms": -0.5153437238186598,
+      "downclock_frequency_mhz": 1635,
+      "gpu": 2,
+      "high_frequency_mhz": 2520,
+      "perturbation_run": "results/raw/c-math-20260826T105302.523093Z-82db3cac",
+      "placement": "upstream_default_eplb",
+      "predicted_expert_load": 5246164,
+      "reference_run": "results/raw/c-math-20260826T104229.758345Z-7c1f2937"
+    },
+    {
+      "delta_e2e_p99_ms": 89.37328125350177,
+      "delta_gpu_energy_j": -3871.549000000001,
+      "delta_throughput_requests_s": -0.00038188165296171306,
+      "delta_total_energy_j": -3147.160999999993,
+      "delta_tpot_p99_ms": 0.7238333901449092,
+      "delta_ttft_p99_ms": -5.302536673843861,
+      "downclock_frequency_mhz": 1635,
+      "gpu": 3,
+      "high_frequency_mhz": 2520,
+      "perturbation_run": "results/raw/c-math-20260826T105508.635139Z-f1f14e7c",
+      "placement": "upstream_default_eplb",
+      "predicted_expert_load": 5246161,
+      "reference_run": "results/raw/c-math-20260826T104229.758345Z-7c1f2937"
+    },
+    {
+      "delta_e2e_p99_ms": 110.24958800058812,
+      "delta_gpu_energy_j": -5216.822,
+      "delta_throughput_requests_s": -0.0010037699098956465,
+      "delta_total_energy_j": -6415.802000000003,
+      "delta_tpot_p99_ms": 1.7191048267510087,
+      "delta_ttft_p99_ms": -111.85007294639934,
+      "downclock_frequency_mhz": 1635,
+      "gpu": 0,
+      "high_frequency_mhz": 2520,
+      "perturbation_run": "results/raw/c-math-20260826T111411.954270Z-68d4946b",
+      "placement": "diagnostic_load_concentrated",
+      "predicted_expert_load": 15387711,
+      "reference_run": "results/raw/c-math-20260826T110749.161203Z-885f6515"
+    },
+    {
+      "delta_e2e_p99_ms": -8.944659419357777,
+      "delta_gpu_energy_j": -3631.3460000000014,
+      "delta_throughput_requests_s": -0.0005370200168669514,
+      "delta_total_energy_j": -4389.671999999999,
+      "delta_tpot_p99_ms": 0.8015633928479513,
+      "delta_ttft_p99_ms": -113.00450266338873,
+      "downclock_frequency_mhz": 1635,
+      "gpu": 1,
+      "high_frequency_mhz": 2520,
+      "perturbation_run": "results/raw/c-math-20260826T111617.198898Z-437d5a2c",
+      "placement": "diagnostic_load_concentrated",
+      "predicted_expert_load": 3481809,
+      "reference_run": "results/raw/c-math-20260826T110749.161203Z-885f6515"
+    },
+    {
+      "delta_e2e_p99_ms": -8.506462257355452,
+      "delta_gpu_energy_j": -3528.0910000000003,
+      "delta_throughput_requests_s": -0.0005831366137568073,
+      "delta_total_energy_j": -4220.128000000004,
+      "delta_tpot_p99_ms": 0.8437587984096968,
+      "delta_ttft_p99_ms": -112.23341085948039,
+      "downclock_frequency_mhz": 1635,
+      "gpu": 2,
+      "high_frequency_mhz": 2520,
+      "perturbation_run": "results/raw/c-math-20260826T111825.201942Z-f2cee456",
+      "placement": "diagnostic_load_concentrated",
+      "predicted_expert_load": 1642426,
+      "reference_run": "results/raw/c-math-20260826T110749.161203Z-885f6515"
+    },
+    {
+      "delta_e2e_p99_ms": 5.353772435337305,
+      "delta_gpu_energy_j": -3606.646999999999,
+      "delta_throughput_requests_s": -0.0006322211670258815,
+      "delta_total_energy_j": -4210.508000000002,
+      "delta_tpot_p99_ms": 0.912960484939239,
+      "delta_ttft_p99_ms": -109.75509699899693,
+      "downclock_frequency_mhz": 1635,
+      "gpu": 3,
+      "high_frequency_mhz": 2520,
+      "perturbation_run": "results/raw/c-math-20260826T112031.941981Z-2973e226",
+      "placement": "diagnostic_load_concentrated",
+      "predicted_expert_load": 472886,
+      "reference_run": "results/raw/c-math-20260826T110749.161203Z-885f6515"
+    }
+  ]
+}

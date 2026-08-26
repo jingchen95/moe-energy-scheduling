@@ -38,3 +38,15 @@ joint placement + heterogeneous DVFS
 
 Milestone D tests H1 only, with limited exploratory evidence toward H2. H2 and
 H3 remain hypotheses unless later controlled measurements support them.
+
+## Milestone D checkpoint
+
+The GSM8K placement-DVFS pilot supports H1: downclocking the rank assigned the
+largest predicted expert load under the diagnostic concentrated placement had
+a materially larger TPOT penalty than the same GPU perturbation under the
+load-balanced placement. This is a one-model, one-workload pilot result, not a
+general claim.
+
+The three uniform-frequency curves did not show a placement-dependent choice
+of energy-minimizing frequency at relative TPOT budgets of 1.05x, 1.10x, or
+1.20x. H2 therefore remains open, and H3 was not tested.

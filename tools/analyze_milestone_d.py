@@ -25,7 +25,9 @@ def _runs(controller: Path) -> list[dict[str, Any]]:
 def _write_csv(path: Path, rows: list[dict[str, Any]], fields: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as stream:
-        writer = csv.DictWriter(stream, fieldnames=fields, extrasaction="ignore")
+        writer = csv.DictWriter(
+            stream, fieldnames=fields, extrasaction="ignore", lineterminator="\n",
+        )
         writer.writeheader()
         writer.writerows(rows)
 
@@ -105,6 +107,14 @@ def main() -> None:
     markers = {"upstream_default_eplb": "o", "diagnostic_load_concentrated": "s"}
     labels = {"upstream_default_eplb": "P1 load-balanced",
               "diagnostic_load_concentrated": "P2 load-concentrated"}
+    annotation_offsets = {
+        ("delta_tpot_p99_ms", "upstream_default_eplb", 1): (4, -13),
+        ("delta_tpot_p99_ms", "upstream_default_eplb", 2): (4, 6),
+        ("delta_e2e_p99_ms", "upstream_default_eplb", 1): (4, -13),
+        ("delta_e2e_p99_ms", "upstream_default_eplb", 2): (4, 5),
+        ("delta_e2e_p99_ms", "diagnostic_load_concentrated", 1): (4, 4),
+        ("delta_e2e_p99_ms", "diagnostic_load_concentrated", 2): (4, 14),
+    }
     figure, axes = plt.subplots(1, 2, figsize=(9, 3.8))
     for placement in placements:
         selected = [row for row in sensitivity if row["placement"] == placement]
@@ -116,11 +126,14 @@ def main() -> None:
             y = [row[metric] for row in selected]
             axis.scatter(x, y, marker=markers[placement], label=labels[placement])
             for row, x_value, y_value in zip(selected, x, y):
+                offset = annotation_offsets.get((metric, placement, row["gpu"]), (4, 3))
                 axis.annotate(f"GPU{row['gpu']}", (x_value, y_value),
-                              xytext=(4, 3), textcoords="offset points", fontsize=8)
+                              xytext=offset, textcoords="offset points", fontsize=8)
             axis.set_xlabel("Predicted routed-token load")
             axis.set_ylabel(f"{title} (ms)")
             axis.grid(True, alpha=0.25)
+    for axis in axes:
+        axis.margins(x=0.04, y=0.15)
     axes[0].legend(frameon=False)
     figure.tight_layout()
     args.figure.parent.mkdir(parents=True, exist_ok=True)

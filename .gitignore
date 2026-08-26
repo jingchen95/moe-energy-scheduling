@@ -7,9 +7,13 @@ results/raw/*
 !results/processed/
 results/processed/*
 !results/processed/.gitkeep
+!results/processed/milestone_d_uniform.csv
+!results/processed/milestone_d_sensitivity.csv
+!results/processed/milestone_d_summary.json
 !results/figures/
 results/figures/*
 !results/figures/.gitkeep
+!results/figures/milestone_d_dvfs_sensitivity.pdf
 logs/
 slurm-*.out
 slurm-*.err

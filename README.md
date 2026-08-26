@@ -10,18 +10,20 @@ with expert parallelism across all four ranks.
 
 ## Current Status
 
-Milestone A validated the four-GPU expert-parallel deployment. Milestone C adds
+Milestone A validated the four-GPU expert-parallel deployment. Milestone C added
 the deterministic semantic trace, open-loop streaming client, request metrics,
-graphics-clock control, and exact-window four-GPU energy harness. Its full
-general/code/math campaign was intentionally deferred; live endpoint validation
-is a prerequisite of the placement-DVFS coupling pilot.
+graphics-clock control, and exact-window four-GPU energy harness. Milestone D
+completed the first GSM8K placement-DVFS coupling pilot. The pilot supports H1:
+changing placement materially changed the latency and energy effect of
+downclocking an individual GPU. See
+[docs/milestone_d_placement_dvfs.md](docs/milestone_d_placement_dvfs.md).
 
 On Minerva, from the staged repository:
 
 ```bash
 source ~/.bashrc
 conda activate cuda-env
-sbatch scripts/smoke_test.sbatch
+PYTHONPATH=.deps python -m pytest -q
 ```
 
 The job writes a unique directory below `results/raw/`. Its environment,

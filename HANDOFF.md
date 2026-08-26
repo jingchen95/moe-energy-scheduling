@@ -2,12 +2,11 @@
 
 ## Current working state
 
-Milestone C harness implementation is complete. The full Milestone C
-experimental campaign was intentionally deferred after the research plan
-changed to a placement-DVFS coupling pilot. Live validation of the streaming
-benchmark client is still pending and is a prerequisite of Milestone D; it will
-be performed during the first instrumented server launch to avoid another cold
-model load.
+Milestone D is complete. The deterministic serving harness, frozen expert-load
+profile, arbitrary static placement, uniform DVFS curves, single-GPU
+perturbations, repeatability trials, processed tables, and diagnostic figure are
+available. H1 is supported for the one-workload pilot: placement materially
+changed per-GPU DVFS sensitivity.
 
 The project is staged on Minerva at:
 
@@ -15,51 +14,88 @@ The project is staged on Minerva at:
 /data/users/chjing/moe-energy-scheduling
 ```
 
+The active branch is `milestone-d-placement-dvfs-coupling`. The vLLM wheel is
+restored to its unpatched state and GPU graphics-clock locks were reset.
+
 ## Completed steps
 
-- Milestone A validated Qwen3-30B-A3B with TP=1, DP=4, EP=4 and vLLM 0.15.1
-  on four L40S GPUs using `allgather_reducescatter`.
-- Located the prior measurement implementation in
-  `/data/users/chjing/vLLM_test` at commit `0eb8926` and documented the reuse
-  boundary in `docs/reused_infrastructure.md`.
-- Added graphics-only per-GPU clock discovery, locking, readback, and reset.
-- Added fixed-period four-GPU NVML telemetry and cumulative-energy window
-  accounting, with trapezoidal power integration only as an unsupported-counter
-  fallback.
-- Completed Slurm integration job `255097`: all four GPUs exposed 210-2520 MHz,
-  a 975 MHz lock read back on every GPU, the four-GPU energy delta was positive,
-  and cleanup restored default clocks.
-- Added canonical semantic JSONL parsing, deterministic trace generation,
-  open-loop asynchronous streaming replay, request-level TTFT/TPOT/E2E and
-  send-delay metrics, unique run directories, and normalized run summaries.
-- Selected Databricks Dolly 15k, Google MBPP, and OpenAI GSM8K and generated
-  deterministic 200-request pools in the common 128-256 chat-template-token
-  range with seed 0 and 128 maximum output tokens.
-- The CPU-safe suite passes: `13 passed` in the Minerva `cuda-env`, using a
-  project-local ignored `.deps/` installation of pytest because pytest is not
-  installed in that conda environment.
+- Milestone C closeout commit: `ef276ad`.
+- Milestone D infrastructure commits: `bdbc10a`, `d5ee90f`, `b8e98f7`,
+  `423308e`, `c0c6259`, and `474652a`.
+- Live OpenAI streaming validation passed with 15/15 requests, plausible
+  TTFT/TPOT, positive four-GPU energy, and about 2 ms p99 send delay.
+- Recorded and exercised `patches/vllm-0.15.1-placement-profile.patch`, including
+  apply/verify/revert hashes and `--expert-placement-file`.
+- Captured one frozen default-placement GSM8K expert profile and generated P0
+  linear, P1 upstream `DefaultEplbPolicy`, and P2 diagnostic concentrated maps.
+- Used the fixed 50-request GSM8K trace (128-191 input tokens, 128 output tokens,
+  0.5 requests/s) for every measured configuration.
+- Selected supported graphics clocks 2520, 1635, and 1005 MHz. Actual average
+  clocks matched targets in all runs.
+- Slurm job `255131` completed the P1/P2 campaign with exit code 0 on an
+  exclusive Uranus allocation. It resumes the immutable profile and P0 curve
+  from job `255129`; `resumed-from.txt` records this provenance.
+- All 29 manifest rows have zero request failures, use cumulative NVML energy,
+  and have at most 2.61 ms p99 send delay.
+- The complete CPU-safe suite passes: `20 passed in 0.28s` with
+  `PYTHONPATH=.deps python -m pytest -q` in `cuda-env`.
+- Generated `results/processed/milestone_d_uniform.csv`,
+  `results/processed/milestone_d_sensitivity.csv`,
+  `results/processed/milestone_d_summary.json`, and
+  `results/figures/milestone_d_dvfs_sensitivity.pdf`.
 
-## Deferred or unresolved
+## Central result
 
-- The benchmark client has not yet been validated against the live vLLM
-  streaming endpoint. Milestone D must validate 10-20 requests before accepting
-  any research measurements.
-- Rate calibration and the general/code/math Milestone C baseline campaign were
-  deliberately not run. No baseline tables or workload comparison figure exist.
-- Slurm job `255098` was canceled during model loading because Uranus was not
-  exclusively allocated. Its partial directory is invalid research data and is
-  retained under `results/raw/server-255098-20260825T170451Z`.
-- The current vLLM site-packages installation is unmodified. Expert activation
-  instrumentation and arbitrary static placement require inspection and a
-  reproducible patch in Milestone D.
+P1 predicted rank loads are essentially equal (max/mean 1.00002). P2 assigns
+15.39M predicted routed tokens to GPU0 versus 0.47M-3.48M to the other GPUs
+(max/mean 2.933).
+
+Downclocking GPU0 from 2520 to 1635 MHz increases p99 TPOT by 0.942 ms under P1
+and 1.719 ms under P2, an 82% larger penalty. Under P2, the hot GPU's penalty is
+about twice the median cool-GPU penalty. Three-trial means reproduce the GPU0
+effect: +0.960 ms for P1 and +1.657 ms for P2. H1 is therefore supported for
+this pilot.
+
+The uniform curves do not provide positive H2 evidence: at relative p99 TPOT
+budgets of 1.05x, 1.10x, and 1.20x, P0/P1/P2 all select high, high, and medium,
+respectively. No Joint optimizer was implemented.
+
+## Slurm jobs and retained failures
+
+- `255099`: partial P0 data; failed on the fourth collective profile dump.
+- `255128`: live run succeeded; orchestration failed because the validator
+  still required profile output in the streaming-validation phase.
+- `255129`: valid frozen profile, placements, P0 curve, and P1 semantic run;
+  stopped at the original exact-token semantic gate.
+- `255130`: retained failed retry; collective profile dump timed out.
+- `255131`: successful resumed P1/P2 campaign, 50:50 elapsed, exit code 0.
+
+No failed or partial run is included in the processed result tables.
+
+## Unresolved issues
+
+- vLLM 0.15.1 collective expert-profile dumping is intermittently deadlocking.
+  Reuse the accepted frozen profile until this RPC is debugged separately.
+- Custom placement preserves at least an eight-token required prefix and an
+  observed minimum 15-token prefix, but later greedy tokens can diverge because
+  expert reordering changes BF16 kernel/reduction order. All divergence details
+  are retained in the controller validation JSON files.
+- TTFT p99 has non-monotonic outliers at 0.5 requests/s. Use TPOT as the primary
+  coupling signal and strengthen TTFT repetition in later SLO studies.
+- The pilot covers only GSM8K and one intentionally strong P2 intervention.
+
+## Recommended next step
+
+H1 is clearly supported, so proceed to:
+
+> Milestone E - test sequential frozen EPLB plus heterogeneous DVFS versus
+> frequency-aware Joint placement under common TTFT/TPOT SLOs.
+
+Do not discard the current negative H2 observation, and retain P1 as the same
+frozen EPLB placement for all sequential baselines.
 
 ## Exact next command
 
-After the Milestone C closeout commit:
-
 ```bash
-git switch -c milestone-d-placement-dvfs-coupling
+git switch -c milestone-e-sequential-vs-joint
 ```
-
-Milestone D must first inspect vLLM EPLB/map internals, then combine live client
-validation with the first instrumented default-placement server launch.
