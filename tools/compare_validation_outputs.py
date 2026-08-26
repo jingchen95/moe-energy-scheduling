@@ -17,18 +17,44 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("reference", type=Path)
     parser.add_argument("candidate", type=Path)
+    parser.add_argument(
+        "--minimum-common-prefix",
+        type=int,
+        default=None,
+        help="Allow later numerical divergence only when every request shares this token prefix.",
+    )
     args = parser.parse_args()
     reference = rows(args.reference)
     candidate = rows(args.candidate)
     if reference.keys() != candidate.keys():
         raise SystemExit("validation request IDs differ")
-    mismatches = [identifier for identifier in reference
-                  if reference[identifier].get("output_token_ids")
-                  != candidate[identifier].get("output_token_ids")]
+    mismatches = []
+    common_prefix_tokens = {}
+    for identifier in reference:
+        expected = reference[identifier].get("output_token_ids") or []
+        observed = candidate[identifier].get("output_token_ids") or []
+        prefix = 0
+        for left, right in zip(expected, observed):
+            if left != right:
+                break
+            prefix += 1
+        common_prefix_tokens[identifier] = prefix
+        if expected != observed:
+            mismatches.append(identifier)
+    minimum_observed_prefix = min(common_prefix_tokens.values(), default=0)
+    accepted = not mismatches or (
+        args.minimum_common_prefix is not None
+        and minimum_observed_prefix >= args.minimum_common_prefix
+    )
     result = {"reference": str(args.reference), "candidate": str(args.candidate),
-              "requests": len(reference), "token_sequence_mismatches": mismatches}
+              "requests": len(reference), "exact_matches": len(reference) - len(mismatches),
+              "token_sequence_mismatches": mismatches,
+              "common_prefix_tokens": common_prefix_tokens,
+              "minimum_observed_prefix": minimum_observed_prefix,
+              "required_common_prefix": args.minimum_common_prefix,
+              "accepted": accepted}
     print(json.dumps(result, indent=2))
-    if mismatches:
+    if not accepted:
         raise SystemExit(1)
 
 

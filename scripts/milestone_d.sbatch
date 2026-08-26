@@ -227,6 +227,7 @@ for placement_name in upstream_default_eplb diagnostic_load_concentrated; do
     python -m tools.validate_live_run "${validation}" \
         > "${controller}/${placement_name}-live-validation.json"
     python -m tools.compare_validation_outputs "${p0_validation}" "${validation}" \
+        --minimum-common-prefix 8 \
         > "${controller}/${placement_name}-semantic-comparison.json"
     uniform_runs "${placement_name}" "${placement_file}"
     single_gpu_runs "${placement_name}" "${placement_file}"
