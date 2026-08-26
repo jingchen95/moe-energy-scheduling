@@ -359,13 +359,6 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
     (run_dir / "energy.json").write_text(
         json.dumps(energy, indent=2, sort_keys=True) + "\n", encoding="utf-8",
     )
-    if args.expert_profile:
-        profile_results = await collective_rpc(
-            args.base_url, "dump_expert_profile", args=[str(run_dir.resolve())],
-        )
-        (run_dir / "expert_profile_rpc.json").write_text(
-            json.dumps(profile_results, indent=2, sort_keys=True) + "\n", encoding="utf-8",
-        )
     with (run_dir / "requests.jsonl").open("x", encoding="utf-8") as stream:
         for row in rows:
             stream.write(json.dumps(row, sort_keys=True) + "\n")
@@ -382,6 +375,13 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
     (run_dir / "metrics.json").write_text(
         json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8",
     )
+    if args.expert_profile:
+        profile_results = await collective_rpc(
+            args.base_url, "dump_expert_profile", args=[str(run_dir.resolve())],
+        )
+        (run_dir / "expert_profile_rpc.json").write_text(
+            json.dumps(profile_results, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+        )
     if args.settle_after_s:
         await asyncio.sleep(args.settle_after_s)
     print(json.dumps({"run_dir": str(run_dir), "metrics": metrics}, sort_keys=True))

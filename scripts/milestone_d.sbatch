@@ -123,11 +123,11 @@ run_one() {
     local placement_file="$3"
     local trace="$4"
     local clocks="$5"
+    local collect_profile="${6:-0}"
     local args=(
         --trace "${trace}"
         --request-rate 0.5
         --local-files-only
-        --expert-profile
         --run-label "${label}"
         --placement-name "${placement_name}"
         --vllm-patch-manifest patches/vllm-0.15.1-placement-profile.json
@@ -138,10 +138,24 @@ run_one() {
     if [[ -n "${placement_file}" ]]; then
         args+=(--placement-file "${placement_file}")
     fi
+    if [[ "${collect_profile}" -eq 1 ]]; then
+        args+=(--expert-profile)
+    fi
     local output="${controller}/${label}.json"
     python -m src.benchmark "${args[@]}" > "${output}" 2>&1
     local run_dir
     run_dir="$(python -c 'import json,sys; print(json.loads(open(sys.argv[1]).read().splitlines()[-1])["run_dir"])' "${output}")"
+    if [[ -n "${frozen_counts:-}" && "${collect_profile}" -eq 0 ]]; then
+        cp "${frozen_counts}" "${run_dir}/expert_counts.npz"
+        if [[ -n "${placement_file}" ]]; then
+            cp "${placement_file}" "${run_dir}/expert_mapping.json"
+        else
+            cp "${frozen_default_mapping}" "${run_dir}/expert_mapping.json"
+        fi
+        sha256sum "${frozen_counts}" \
+            "${run_dir}/expert_mapping.json" > "${run_dir}/frozen-profile-hashes.txt"
+        printf '%s\n' "${p0_profile}" > "${run_dir}/frozen-profile-source.txt"
+    fi
     printf '%s\t%s\t%s\t%s\n' "${label}" "${placement_name}" "${clocks}" "${run_dir}" >> "${manifest}"
     printf '%s\n' "${run_dir}"
 }
@@ -192,7 +206,9 @@ p0_validation="$(run_one p0-live-validation default_linear '' \
     "${controller}/gsm8k-validation-15-r0.5.jsonl" '2520,2520,2520,2520')"
 python -m tools.validate_live_run "${p0_validation}" > "${controller}/live-validation.json"
 p0_profile="$(run_one p0-frozen-profile default_linear '' \
-    "${controller}/gsm8k-50-r0.5.jsonl" '2520,2520,2520,2520')"
+    "${controller}/gsm8k-50-r0.5.jsonl" '2520,2520,2520,2520' 1)"
+frozen_counts="${p0_profile}/expert_counts.npz"
+frozen_default_mapping="${p0_profile}/expert_mapping.json"
 python -m src.placement --counts "${p0_profile}/expert_counts.npz" \
     --output-dir "${controller}/placements" --num-groups 1 \
     > "${controller}/placement-generation.json"
