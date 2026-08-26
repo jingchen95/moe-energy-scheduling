@@ -53,6 +53,48 @@ def aggregate_rank_loads(counts: np.ndarray, logical_to_rank: np.ndarray) -> np.
     return loads
 
 
+def validate_phase_counts(
+    prefill_counts: np.ndarray,
+    decode_counts: np.ndarray,
+    total_counts: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Validate phase-separated counts and optionally enforce conservation.
+
+    Counts are logical-expert token assignments with shape ``[layers, experts]``.
+    When a total profile is supplied, every element must equal the sum of the two
+    phase profiles.  This catches mixed-batch accounting mistakes before a model
+    is fit to the profile.
+    """
+    prefill = validate_counts(prefill_counts)
+    decode = validate_counts(decode_counts)
+    if prefill.shape != decode.shape:
+        raise ValueError("prefill and decode count shapes must match")
+    if total_counts is not None:
+        total = validate_counts(total_counts)
+        if total.shape != prefill.shape:
+            raise ValueError("total and phase count shapes must match")
+        if not np.array_equal(prefill + decode, total):
+            raise ValueError("phase counts do not conserve total expert counts")
+    return prefill, decode
+
+
+def aggregate_phase_rank_loads(
+    prefill_counts: np.ndarray,
+    decode_counts: np.ndarray,
+    logical_to_rank: np.ndarray,
+    total_counts: np.ndarray | None = None,
+) -> dict[str, np.ndarray]:
+    """Return prefill, decode, and total loads assigned to each EP rank."""
+    prefill, decode = validate_phase_counts(
+        prefill_counts, decode_counts, total_counts
+    )
+    return {
+        "prefill": aggregate_rank_loads(prefill, logical_to_rank),
+        "decode": aggregate_rank_loads(decode, logical_to_rank),
+        "total": aggregate_rank_loads(prefill + decode, logical_to_rank),
+    }
+
+
 def load_diagnostics(counts: np.ndarray) -> dict[str, Any]:
     value = validate_counts(counts).astype(np.float64)
     means = value.mean(axis=1)
