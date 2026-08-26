@@ -4,9 +4,16 @@
 
 Milestone D remains complete at commit `d233672`. Milestone E experiment code,
 CPU planning/analysis tools, and Slurm jobs are prepared on branch
-`milestone-e-sequential-vs-joint`, but no Milestone E job has been submitted
-because Minerva and the L40S nodes are unavailable. No Milestone E result or
-scientific classification exists yet.
+`milestone-e-sequential-vs-joint`. The exhaustive Sequential Stage A job
+`255132` was submitted on 2026-08-26 and is running exclusively on Uranus from
+code commit `da7c5cd`. No Milestone E result or scientific classification
+exists until this sweep and the later Joint/repeatability stages complete.
+
+The active controller is:
+
+```text
+results/raw/milestone-e-sequential-255132-20260826T140049Z
+```
 
 The accepted Milestone D source on Minerva is:
 
@@ -14,8 +21,7 @@ The accepted Milestone D source on Minerva is:
 /data/users/chjing/moe-energy-scheduling/results/raw/milestone-d-255131-20260826T104006Z
 ```
 
-The vLLM installation and GPU clocks were not touched during this local code
-preparation.
+The pre-submission CPU-safe suite passed on Minerva: `28 passed in 3.09s`.
 
 ## Prepared components
 
@@ -40,7 +46,7 @@ preparation.
   cumulative NVML energy, monitor samples, output-token IDs, patch state, and
   unique raw run directories. They never call the expert-profile RPC.
 
-## Verification completed locally
+## Verification completed
 
 - Python source compilation passes with bytecode redirected to `/tmp`.
 - `bash -n` passes for all Milestone E shell/Slurm scripts.
@@ -48,17 +54,19 @@ preparation.
 - A direct standard-library check confirms 81 unique frequency tuples and
   deterministic eight-candidate selection.
 
-The full pytest suite could not run on this Mac because its system Python has
-neither NumPy nor pytest. Dependencies were deliberately not installed. Run
-the established cluster command before submission when Minerva is available:
+The full suite could not run on this Mac because its system Python has neither
+NumPy nor pytest; dependencies were deliberately not installed. The established
+Minerva environment was used before submission:
 
 ```bash
 PYTHONPATH=.deps python -m pytest -q
 ```
 
-## Staged commands - do not run until cluster access is confirmed
+Result: `28 passed in 3.09s`.
 
-Stage A, exhaustive Sequential B4:
+## Staged execution commands
+
+Stage A, exhaustive Sequential B4, was submitted as job `255132` with:
 
 ```bash
 MILESTONE_D_CONTROLLER=results/raw/milestone-d-255131-20260826T104006Z \
@@ -116,25 +124,25 @@ python -m tools.analyze_milestone_e \
 
 ## Unresolved issues
 
-- Minerva/L40S availability blocks CPU-suite confirmation in the established
-  environment and every real measurement.
+- Sequential job `255132` is still active; no Stage A result is available yet.
 - The 81-point sweep has not established B3/B4 optima; Joint candidates cannot
   be selected until it does.
 - The H/M/M/L placement sanity statistics need the accepted raw profile and are
   generated immediately before Joint candidate creation.
 - Joint output divergence remains a known interpretation limitation; the new
   jobs retain exact-match fraction and minimum/median common-prefix lengths.
-- A four-hour Sequential allocation is expected to fit based on Milestone D,
-  but the first live run will verify the wall-time estimate.
+- The four-hour Sequential allocation still needs to demonstrate that all 81
+  points fit in one job; resume support is available if infrastructure or wall
+  time interrupts it.
 
 ## Exact next command
 
-Do not submit while the cluster is unavailable. Once the user confirms access,
-first run:
+Monitor the active Sequential sweep without submitting another job:
 
 ```bash
-PYTHONPATH=.deps python -m pytest -q
+squeue -j 255132
 ```
 
-If that passes, the next command is the Stage A `sbatch` command above. Do not
-begin Joint submission before the 81-point completeness gate passes.
+After it completes, verify `exit-status.txt`, confirm 81 unique successful
+manifest rows, and only then run the CPU-only Joint planning command above. Do
+not begin Joint submission before the 81-point completeness gate passes.
