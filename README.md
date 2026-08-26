@@ -19,8 +19,8 @@ downclocking an individual GPU. See
 [docs/milestone_d_placement_dvfs.md](docs/milestone_d_placement_dvfs.md).
 
 Milestone E code and Slurm jobs are prepared. The 81-point frozen-EPLB
-Sequential sweep has completed on Uranus; eight frequency-aware Joint
-candidates are planned but not yet submitted. See
+Sequential sweep and all eight frequency-aware Joint candidates have completed
+on Uranus; three-trial repeatability is still pending. See
 [docs/milestone_e_sequential_vs_joint.md](docs/milestone_e_sequential_vs_joint.md).
 
 On Minerva, from the staged repository:

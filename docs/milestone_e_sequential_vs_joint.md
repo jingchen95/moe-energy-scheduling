@@ -4,8 +4,8 @@
 
 The implementation and Slurm jobs are prepared. The 81-point Sequential B4
 sweep has completed successfully on Uranus, and the deterministic Joint plan
-has passed its CPU-only sanity check. Joint candidate and repeatability GPU
-jobs remain unsubmitted; the central result is therefore still pending.
+has passed its CPU-only sanity check. All eight Joint candidates have now
+completed successfully; repeatability and final classification remain pending.
 
 ## Research question
 
@@ -64,6 +64,31 @@ The generated eight-candidate plan uses the measured frontier. For H/M/M/L,
 the frequency-aware placement has normalized-load max/mean 1.015 versus 1.522
 for P1 under the registered `s(f)=f/2520` proxy.
 
+## Joint candidate checkpoint
+
+All eight candidates passed live validation with 50/50 requests, zero failures,
+one trace hash, cumulative NVML energy, exact target clocks, and cleanup. The
+candidate-level result is:
+
+| Candidate | Frequencies (MHz) | Joint raw loads (M tokens) | Norm max/mean | TTFT p99 (ms) | TPOT p99 (ms) | Energy (J) | J/request | SLO 12/13/15 | Sequential TPOT / J |
+|---:|---|---|---:|---:|---:|---:|---:|---|---:|
+| 0 | M,H,H,H | 3.746,5.774,5.733,5.733 | 1.004 | 95.169 | 12.204 | 64101.444 | 1282.029 | N/Y/Y | 11.951 / 63906.976 |
+| 1 | M,H,M,H | 4.181,6.348,4.177,6.279 | 1.011 | 95.131 | 12.292 | 60214.108 | 1204.282 | N/Y/Y | 12.171 / 59982.698 |
+| 2 | H,M,M,H | 6.408,4.157,4.141,6.278 | 1.006 | 96.711 | 12.314 | 60447.844 | 1208.957 | N/Y/Y | 12.091 / 60694.421 |
+| 3 | M,M,M,M | 5.246,5.246,5.246,5.246 | 1.000 | 96.990 | 12.663 | 52450.538 | 1049.011 | N/Y/Y | 12.471 / 52474.447 |
+| 4 | M,M,L,M | 5.825,5.811,3.567,5.782 | 1.003 | 312.394 | 14.366 | 50111.227 | 1002.225 | N/N/Y | 14.134 / 50083.909 |
+| 5 | H,H,L,H | 6.252,6.190,2.422,6.120 | 1.015 | 319.827 | 13.562 | 62746.389 | 1254.928 | N/N/Y | 13.728 / 62361.796 |
+| 6 | L,L,L,M | 4.622,4.623,4.624,7.116 | 1.014 | 172.531 | 14.765 | 48646.724 | 972.934 | N/N/Y | 14.683 / 48661.697 |
+| 7 | L,L,L,L | 5.246,5.246,5.246,5.246 | 1.000 | 300.393 | 15.211 | 47946.757 | 958.935 | N/N/N | 15.248 / 47913.387 |
+
+No Sequential-infeasible tuple became Joint-feasible at any registered SLO.
+At TPOT <= 13 ms and TTFT <= 500 ms, candidate 3 is the best measured Joint
+configuration: 52,450.538 J versus exhaustive B4's 52,474.447 J, a 0.0456%
+reduction. This single-run difference is not a robust result until the planned
+three-trial repeatability comparison is complete. Output exact-match fractions
+were 0.14-0.28; minimum common prefixes were 4-13 tokens and medians were
+51.0-68.5 tokens.
+
 ## Staged execution
 
 No script in this milestone calls nested `sbatch`. The campaign has four
@@ -99,7 +124,7 @@ before updating this document with a scientific conclusion.
 
 ## Current limitations
 
-The Joint comparison result is not available yet. The eventual pilot will still cover one model, one
+The repeatability result is not available yet. The eventual pilot will still cover one model, one
 workload, one low request rate, one L40S node, only three frequency levels, no
 replication/migration, a linear speed proxy, and a bounded placement search.
 Greedy outputs may diverge after an initially common prefix because custom

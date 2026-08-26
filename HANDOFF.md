@@ -7,9 +7,9 @@ CPU planning/analysis tools, and Slurm jobs are prepared on branch
 `milestone-e-sequential-vs-joint`. The exhaustive Sequential Stage A job
 `255132` was submitted on 2026-08-26 and is running exclusively on Uranus from
 code commit `da7c5cd`; it completed successfully. The CPU-only Joint plan was
-then generated and passed its H/M/M/L sanity gate. No Joint GPU result or
-scientific classification exists until the later candidate/repeatability stages
-complete.
+then generated and passed its H/M/M/L sanity gate. Joint array `255135` then
+measured all eight candidates successfully; repeatability and final
+classification remain pending.
 
 The active controller is:
 
@@ -67,6 +67,18 @@ The pre-submission CPU-safe suite passed on Minerva: `28 passed in 3.09s`.
   contains eight deterministic candidates. H/M/M/L normalized pressure is
   1.015 for frequency-aware placement versus 1.522 for P1 under the fixed
   `s(f)=f/2520` proxy, with raw load shifted toward the high-frequency rank.
+- Joint array `255135`: all eight tasks completed on Uranus (about 3:42-3:57
+  each), with 50/50 requests, zero failures, one trace hash, positive NVML
+  energy, exact target-clock readback, and `PASS` live validation. Every task
+  reverted the vLLM patch and reset graphics clocks.
+- No candidate made a Sequential-infeasible tuple feasible at the 12, 13, or
+  15 ms TPOT SLOs. The best 13 ms Joint point is candidate 3, `(M,M,M,M)`,
+  at 52,450.538 J and p99 TPOT 12.663 ms versus B4's 52,474.447 J and
+  12.471 ms: 23.909 J or 0.0456% lower energy. This is not yet a robust claim;
+  the required three-trial repeatability stage has not run.
+- Joint output-token exact-match fractions were 0.14-0.28, with minimum common
+  prefixes of 4-13 tokens and median prefixes of 51.0-68.5 tokens; this known
+  custom-placement limitation is retained in each candidate controller.
 
 The full suite could not run on this Mac because its system Python has neither
 NumPy nor pytest; dependencies were deliberately not installed. The established
@@ -138,7 +150,7 @@ python -m tools.analyze_milestone_e \
 
 ## Unresolved issues
 
-- Joint GPU candidates and three-trial repeatability have not been submitted.
+- Three-trial repeatability has not been submitted.
 - Joint output divergence remains a known interpretation limitation; the new
   jobs retain exact-match fraction and minimum/median common-prefix lengths.
 - The processed Milestone E CSV/JSON tables and figures require the Joint and
@@ -153,5 +165,5 @@ cd /data/users/chjing/moe-energy-scheduling
 cat results/raw/milestone-e-joint-plan-255132-20260826T140049Z/sanity-hmml.json
 ```
 
-After review, the next GPU action is the serialized eight-task Joint array
-command above. Do not submit it until the user confirms.
+After review, the next GPU action is the repeat-plan command above; it must not
+be submitted until the user confirms.
