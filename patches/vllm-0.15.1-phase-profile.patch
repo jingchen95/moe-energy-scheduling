@@ -1,6 +1,6 @@
 --- a/vllm/model_executor/layers/fused_moe/router/base_router.py
 +++ b/vllm/model_executor/layers/fused_moe/router/base_router.py
-@@ -5,13 +5,108 @@
+@@ -5,13 +5,116 @@
  
  import torch
  
@@ -74,42 +74,50 @@
 +        if isinstance(cached, torch.Tensor) and cached.numel() == topk_ids.shape[0]:
 +            return cached.to(device=topk_ids.device)
 +        metadata = _attention_metadata(ctx)
++        # FlashAttention 0.15.1 stores request query lengths rather than
++        # explicit phase counts. A one-token query is a decode row in the
++        # non-speculative pilot; newer backends may expose a direct count.
++        query_start_loc = getattr(metadata, "query_start_loc", None)
 +        local_decode = int(getattr(metadata, "num_decode_tokens", 0) or 0)
++        if local_decode == 0:
++            local_decode = int(getattr(metadata, "num_decodes", 0) or 0)
 +        dp_metadata = ctx.dp_metadata
 +        if dp_metadata is None:
 +            sizes = [int(topk_ids.shape[0])]
-+            decode_counts = [min(max(local_decode, 0), sizes[0])]
++            local_start = 0
++            local_end = sizes[0]
 +        else:
 +            sizes_value = dp_metadata.get_chunk_sizes_across_dp_rank()
 +            if sizes_value is None:
 +                sizes_value = dp_metadata.num_tokens_across_dp_cpu.tolist()
 +            sizes = [int(value) for value in sizes_value]
-+            local_value = torch.tensor([local_decode], dtype=torch.int64)
-+            gathered = [torch.zeros_like(local_value) for _ in sizes]
-+            torch.distributed.all_gather(
-+                gathered, local_value, group=get_dp_group().cpu_group
-+            )
-+            decode_counts = [
-+                min(max(int(value.item()), 0), size)
-+                for value, size in zip(gathered, sizes)
-+            ]
++            dp_rank = get_dp_group().rank_in_group
++            local_start = sum(sizes[:dp_rank])
++            local_end = local_start + sizes[dp_rank]
 +        if sum(sizes) != topk_ids.shape[0]:
 +            raise RuntimeError(
 +                "phase metadata token sizes do not match routed token rows: "
 +                f"{sum(sizes)} != {topk_ids.shape[0]}"
 +            )
++        local_size = local_end - local_start
 +        mask = torch.zeros(topk_ids.shape[0], dtype=torch.bool, device=topk_ids.device)
-+        offset = 0
-+        for size, decode_count in zip(sizes, decode_counts):
-+            if decode_count:
-+                mask[offset : offset + decode_count] = True
-+            offset += size
++        if isinstance(query_start_loc, torch.Tensor) and query_start_loc.numel() > 1:
++            query_lens = (query_start_loc[1:] - query_start_loc[:-1]).long()
++            local_mask = torch.repeat_interleave(query_lens == 1, query_lens)
++            if local_mask.numel() != local_size:
++                raise RuntimeError(
++                    "attention query lengths do not match local DP token rows: "
++                    f"{local_mask.numel()} != {local_size}"
++                )
++            mask[local_start:local_end] = local_mask
++        elif local_decode:
++            mask[local_start : local_start + min(local_decode, local_size)] = True
 +        ctx.additional_kwargs["moe_phase_decode_mask"] = mask
 +        return mask
  
      @torch.compile(dynamic=True, backend=current_platform.simple_compile_backend)
      def eplb_map_to_physical_and_record(
-@@ -154,6 +249,19 @@
+@@ -154,6 +257,19 @@
              assert self.eplb_state.expert_load_view is not None
              assert self.eplb_state.logical_to_physical_map is not None
              assert self.eplb_state.logical_replica_count is not None

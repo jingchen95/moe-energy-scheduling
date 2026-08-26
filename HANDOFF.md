@@ -1,5 +1,71 @@
 # Handoff
 
+## Latest status — Milestone F
+
+Milestone F is complete on branch `milestone-f-service-model` through the
+offline diagnosis and one accepted no-collective phase-profile run. The
+Milestone E measurements were reused; no repeatability sweep, new Joint search,
+or online scheduler was started.
+
+### Completed
+
+- Added `src/service_model.py` with Amdahl and small max-GPU service-time fits,
+  phase-count validation/aggregation, candidate rescoring, correlations, and
+  load-dependent P1/P2 perturbation analysis in `tools/analyze_milestone_f.py`.
+- Added the opt-in vLLM 0.15.1 phase instrumentation patch stack. FlashAttention
+  query lengths classify one-token rows as decode and each DP rank marks only
+  its own contiguous token block; no collective runs in the measured forward.
+- Final validation job `255174` completed with 50/50 requests, zero failures,
+  positive NVML energy, exact prefill+decode conservation, and successful patch
+  and clock cleanup. Profile run:
+  `results/raw/milestone-f-phase-255174-20260826T214727Z/runs/c-math-20260826T214834.669632Z-0248d849`.
+- Phase totals: 20,365,056 routed assignments; 17,926,656 prefill (88.03%) and
+  2,438,400 decode (11.97%). The earlier 255149 profile that used a temporary
+  cross-rank count was discarded from analysis.
+- Generated `docs/milestone_f_service_model.md` and the three processed tables
+  plus `milestone_f_summary.json` under `results/processed/`.
+
+### Diagnosis
+
+- Uniform P1 measurements at 2520/1635/1005 MHz fit
+  `T = T_fixed + T_freq * fmax/f` with fixed 8.394 ms, frequency-sensitive
+  2.717 ms, sensitive fraction 0.245, and fit MAE 0.074 ms. The old
+  `TPOT(high)*fmax/f` proxy has 5.853 ms MAE.
+- Decode-only candidate pressure did not provide a clearly better positive
+  correlation with measured TPOT (Pearson -0.493, Spearman -0.429; n=8) than
+  aggregate pressure (Pearson -0.414, Spearman -0.333). The empirical service
+  model reduces aggregate candidate MAE from 4.660 to 2.026 ms, but its
+  rank-order accuracy is lower (0.821 vs 0.893), so it does not explain all
+  placement residuals.
+- Existing D perturbations show higher TPOT penalty for the concentrated high
+  load GPU0 (1.719 ms) than the balanced P1 GPU0 (0.942 ms), but the eight-point
+  diagnostic is not a causal fit. Classification: `B_FREQUENCY_MODEL_DOMINANT`.
+
+### Validation and unresolved issues
+
+- CPU-safe tests on Minerva remain `32 passed` before the final analyzer-only
+  edits; local Mac Python lacks NumPy/pytest. The analyzer and patch files pass
+  syntax/diff checks locally and the analyzer ran successfully on Minerva.
+- Profile runs `255145`/`255147`/`255148` were failed or superseded debugging
+  attempts; only `255174` is accepted for phase analysis. CUDA graphs require
+  `--enforce-eager` for this opt-in instrumentation.
+- Communication, synchronization, and grouped-GEMM effects are not measured;
+  output divergence between custom placements remains a Milestone E limitation.
+
+### Exact next command
+
+Do not launch another GPU job yet. Review the diagnosis with:
+
+```bash
+cd /data/users/chjing/moe-energy-scheduling
+cat docs/milestone_f_service_model.md
+```
+
+If proceeding, the recommended next milestone is a small offline Joint pilot
+using decode-only profiles and the empirical `T(L,f)` model before adding any
+communication-aware objective. Do not rerun the 81-point sweep or the E
+repeatability stage.
+
 ## Current working state
 
 Milestone D remains complete at commit `d233672`. Milestone E experiment code,

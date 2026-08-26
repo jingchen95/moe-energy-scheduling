@@ -28,6 +28,7 @@ counts conserve the total profile at dump time. The base patch is applied and
 reverted explicitly by the Milestone F Slurm job, and exact before/after hashes
 are recorded in `vllm-0.15.1-phase-profile.json` and each run directory.
 
-The DP phase mask uses vLLM's existing CPU-group metadata to communicate the
-small local decode counts once per forward; it does not add a router pass or an
-RPC. This assumption is checked against the all-gather token-row count.
+The DP phase mask uses vLLM's existing per-rank token-count metadata and local
+attention query lengths. Each rank marks only its own contiguous token block,
+so no cross-rank collective or profiling RPC is added to the measured forward
+path. The final profile dump performs the existing out-of-window reduction.

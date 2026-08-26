@@ -46,6 +46,22 @@ def _metrics_rows(root: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def _controller_metric_rows(root: Path) -> list[dict[str, Any]]:
+    """Read the compact top-level metric wrappers emitted by Milestone D."""
+    rows: list[dict[str, Any]] = []
+    for path in sorted(root.glob("*.json")):
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        metrics = value.get("metrics") if isinstance(value, dict) else None
+        if isinstance(metrics, dict) and metrics.get("target_clocks_mhz"):
+            metrics = dict(metrics)
+            metrics["_path"] = str(path)
+            rows.append(metrics)
+    return rows
+
+
 def _frequency_tuple(row: dict[str, Any]) -> tuple[int, ...]:
     return tuple(int(value) for value in row["target_clocks_mhz"])
 
@@ -161,13 +177,15 @@ def _fit_candidate_models(
     output: list[dict[str, Any]] = []
     models: dict[str, Any] = {}
     reference_frequency = np.full(4, FMAX_MHZ, dtype=float)
-    reference_load = np.asarray(p1_loads["aggregate"], dtype=float)
-    reference_pressure = float(np.max(reference_load * FMAX_MHZ / reference_frequency))
     reference_tpot = float(
         next(row["tpot_p99_ms"] for row in sequential
              if _frequency_tuple(row) == (int(FMAX_MHZ),) * 4)
     )
     for basis in BASIS_NAMES:
+        reference_load = np.asarray(p1_loads[basis], dtype=float)
+        reference_pressure = float(
+            np.max(reference_load * FMAX_MHZ / reference_frequency)
+        )
         base = np.asarray(p1_loads[basis], dtype=float) / 1e6
         train_loads = np.repeat(base[None, :], len(sequential), axis=0)
         model = fit_service_time_model(
@@ -194,7 +212,10 @@ def _fit_candidate_models(
             frequencies = np.asarray([candidate["frequency_tuple"]], dtype=float)
             predicted = float(predict_service_time(model, loads, frequencies)[0])
             actual = float(candidate["metrics"]["tpot_p99_ms"])
-            raw = np.asarray(candidate_loads[key]["aggregate"], dtype=float)
+            raw = np.asarray(candidate_loads[key][basis], dtype=float)
+            aggregate_raw = np.asarray(
+                candidate_loads[key]["aggregate"], dtype=float
+            )
             pressure = raw * FMAX_MHZ / frequencies[0]
             old_prediction = reference_tpot * float(np.max(pressure)) / reference_pressure
             output.append({
@@ -203,11 +224,20 @@ def _fit_candidate_models(
                 "frequency_tuple": json.dumps(candidate["frequency_tuple"]),
                 "basis": basis,
                 "placement": candidate.get("placement_name", "frequency_aware"),
-                "aggregate_load_g0": float(raw[0]),
-                "aggregate_load_g1": float(raw[1]),
-                "aggregate_load_g2": float(raw[2]),
-                "aggregate_load_g3": float(raw[3]),
+                "aggregate_load_g0": float(aggregate_raw[0]),
+                "aggregate_load_g1": float(aggregate_raw[1]),
+                "aggregate_load_g2": float(aggregate_raw[2]),
+                "aggregate_load_g3": float(aggregate_raw[3]),
+                "basis_load_g0": float(raw[0]),
+                "basis_load_g1": float(raw[1]),
+                "basis_load_g2": float(raw[2]),
+                "basis_load_g3": float(raw[3]),
+                "max_normalized_pressure": float(np.max(pressure) / np.mean(pressure)),
                 "old_max_normalized_pressure": float(np.max(pressure) / np.mean(pressure)),
+                "aggregate_max_normalized_pressure": float(
+                    np.max(aggregate_raw * FMAX_MHZ / frequencies[0])
+                    / np.mean(aggregate_raw * FMAX_MHZ / frequencies[0])
+                ),
                 "old_linear_predicted_tpot_p99_ms": old_prediction,
                 "predicted_tpot_p99_ms": predicted,
                 "measured_tpot_p99_ms": actual,
@@ -249,6 +279,86 @@ def _load_candidates(joint_root: Path) -> list[dict[str, Any]]:
     return candidates
 
 
+def _correlation(x: list[float], y: list[float]) -> dict[str, float]:
+    """Return Pearson and rank correlations for a small diagnostic sample."""
+    left = np.asarray(x, dtype=np.float64)
+    right = np.asarray(y, dtype=np.float64)
+    if left.size < 2 or right.size != left.size:
+        return {"n": float(left.size), "pearson": float("nan"), "spearman": float("nan")}
+    pearson = float(np.corrcoef(left, right)[0, 1])
+    left_rank = np.argsort(np.argsort(left)).astype(np.float64)
+    right_rank = np.argsort(np.argsort(right)).astype(np.float64)
+    spearman = float(np.corrcoef(left_rank, right_rank)[0, 1])
+    return {"n": float(left.size), "pearson": pearson, "spearman": spearman}
+
+
+def _load_dependent_sensitivity(
+    d_controller: Path,
+    placements: dict[str, Any],
+    phase_counts: dict[str, np.ndarray],
+) -> list[dict[str, Any]]:
+    """Compare the existing D single-GPU perturbations with each high ref."""
+    rows = _controller_metric_rows(d_controller)
+    output: list[dict[str, Any]] = []
+    for placement_name, short_name in (
+        ("P1_upstream_eplb", "upstream_default_eplb"),
+        ("P2_diagnostic_load_concentrated", "diagnostic_load_concentrated"),
+    ):
+        placement = placements[placement_name]
+        loads = {
+            basis: aggregate_rank_loads(counts, placement.logical_to_rank)
+            for basis, counts in phase_counts.items()
+        }
+        high_candidates = [
+            row for row in rows
+            if row.get("placement_name") == short_name
+            and _frequency_tuple(row) == (int(FMAX_MHZ),) * 4
+            and "uniform-high" in str(row.get("run_label", ""))
+            and "rep" not in str(row.get("run_label", ""))
+        ]
+        if not high_candidates:
+            continue
+        reference = high_candidates[0]
+        for gpu in range(4):
+            targets = [
+                row for row in rows
+                if row.get("placement_name") == short_name
+                and _frequency_tuple(row)[gpu] == 1635
+                and all(
+                    value == int(FMAX_MHZ) if index != gpu else value == 1635
+                    for index, value in enumerate(_frequency_tuple(row))
+                )
+                and str(row.get("run_label", "")) == f"{short_name}-gpu{gpu}-medium"
+            ]
+            if not targets:
+                continue
+            target = targets[0]
+            output.append({
+                "placement": placement_name,
+                "gpu": gpu,
+                "frequency_mhz": 1635,
+                "reference_run_id": reference.get("run_id", ""),
+                "target_run_id": target.get("run_id", ""),
+                "aggregate_load": int(loads["aggregate"][gpu]),
+                "prefill_load": int(loads["prefill"][gpu]),
+                "decode_load": int(loads["decode"][gpu]),
+                "reference_tpot_p99_ms": float(reference["tpot_p99_ms"]),
+                "target_tpot_p99_ms": float(target["tpot_p99_ms"]),
+                "delta_tpot_p99_ms": float(
+                    target["tpot_p99_ms"] - reference["tpot_p99_ms"]
+                ),
+                "reference_energy_j": float(reference["total_gpu_energy_j"]),
+                "target_energy_j": float(target["total_gpu_energy_j"]),
+                "delta_total_energy_j": float(
+                    target["total_gpu_energy_j"] - reference["total_gpu_energy_j"]
+                ),
+                "delta_gpu_energy_j": float(
+                    target[f"gpu{gpu}_energy_j"] - reference[f"gpu{gpu}_energy_j"]
+                ),
+            })
+    return output
+
+
 def _write_doc(
     path: Path,
     *,
@@ -256,8 +366,11 @@ def _write_doc(
     phase_hash: str,
     placements: dict[str, Any],
     phase_summary: dict[str, dict[str, list[int]]],
+    phase_accounting: dict[str, Any],
     frequency_model: dict[str, Any],
     service_models: dict[str, Any],
+    pressure_correlations: dict[str, Any],
+    sensitivity_rows: list[dict[str, Any]],
     classification: str,
 ) -> None:
     lines = [
@@ -275,7 +388,8 @@ def _write_doc(
         "",
         f"Phase profile available: **{phase_available}**. Profile SHA-256: `{phase_hash}`.",
         "",
-        "The vLLM patch keeps the existing EPLB routed-token counter and adds opt-in prefill/decode windows. It uses the scheduler's attention metadata and DP-rank token-block ordering; the dump rejects any per-expert conservation mismatch.",
+        "The vLLM patch keeps the existing EPLB routed-token counter and adds opt-in prefill/decode windows. It uses local scheduler attention metadata and the existing DP-rank token-block ordering; no collective is executed by the phase mask during a measured forward. The dump rejects any per-expert conservation mismatch.",
+        f"The accepted profile contains {phase_accounting['total_sum']:,} routed expert assignments: {phase_accounting['prefill_sum']:,} prefill ({phase_accounting['prefill_fraction']:.2%}) and {phase_accounting['decode_sum']:,} decode ({phase_accounting['decode_fraction']:.2%}). Per-layer and per-expert totals are retained in `milestone_f_summary.json`; the CSV contains the GPU-assigned breakdown for P0/P1/P2.",
         "",
         "## Placement loads",
         "",
@@ -296,14 +410,45 @@ def _write_doc(
         "The old proxy assumes `TPOT(f) = TPOT(high) * fmax/f`. The replacement fits `T(f) = a + b*fmax/f` to the three measured uniform P1 points. The fitted fixed component, frequency-sensitive component, residuals, and leave-one-configuration-out errors are recorded in `results/processed/milestone_f_frequency_model.csv` and `milestone_f_summary.json`.",
         "",
         f"Amdahl fit: fixed = {frequency_model['fixed_ms']:.4f} ms, frequency-sensitive at max = {frequency_model['frequency_ms_at_fmax']:.4f} ms, sensitive fraction = {frequency_model['frequency_sensitive_fraction_at_fmax']:.3f}, MAE = {frequency_model['mae_ms']:.4f} ms.",
+        f"The old linear three-point proxy has MAE {frequency_model.get('old_proxy_mae_ms', float('nan')):.4f} ms; the Amdahl fit reduces this error while retaining an interpretable fixed component.",
+        "",
+        "## Candidate pressure versus measured TPOT",
+        "",
+        "The original linear pressure is recomputed separately from aggregate, prefill-only, and decode-only loads. These eight-candidate correlations are descriptive only.",
+        "",
+        "| basis | Pearson r | Spearman r | n |",
+        "|---|---:|---:|---:|",
+    ])
+    for basis in BASIS_NAMES:
+        value = pressure_correlations[basis]
+        lines.append(
+            f"| {basis} | {value['pearson']:.3f} | {value['spearman']:.3f} | {int(value['n'])} |"
+        )
+    lines.extend([
+        "",
+        "## Existing P1/P2 downclock diagnostic",
+        "",
+        "The accepted Milestone D single-GPU perturbations provide a small load-dependent check. Deltas are target minus same-placement all-high reference; they are not new measurements.",
+        "",
+        "| placement | GPU | aggregate load | prefill load | decode load | ΔTPOT p99 (ms) | Δtotal energy (J) | ΔGPU energy (J) |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
+    ])
+    for row in sensitivity_rows:
+        lines.append(
+            f"| {row['placement']} | {row['gpu']} | {row['aggregate_load']} | {row['prefill_load']} | {row['decode_load']} | {row['delta_tpot_p99_ms']:.3f} | {row['delta_total_energy_j']:.1f} | {row['delta_gpu_energy_j']:.1f} |"
+        )
+    lines.extend([
+        "",
+        "The corresponding load-versus-ΔTPOT correlations are stored in `milestone_f_summary.json`; with only eight perturbations they are diagnostic, not a fitted causal law.",
         "",
         "## Service-model diagnosis",
         "",
         "For each candidate, the model uses a max-GPU proxy `a + b*L_g + c*L_g*(fmax/f_g - 1)`. Fits are trained on the accepted 81-row Sequential P1 sweep and evaluated on the eight existing Joint candidates; no Joint measurement is changed or rerun.",
         "",
         f"Diagnostic classification: **{classification}**.",
+        f"For aggregate candidate rescoring, old-pressure MAE is {service_models['aggregate']['candidate_old_mae_ms']:.3f} ms and the empirical model MAE is {service_models['aggregate']['candidate_new_mae_ms']:.3f} ms; rank-order accuracy is {service_models['aggregate']['candidate_new_rank_order_accuracy']:.3f} versus {service_models['aggregate']['candidate_old_rank_order_accuracy']:.3f} for the old score.",
         "",
-        "The old linear pressure score failed because it conflated prefill and decode work, assumed frequency-proportional service time, and treated token load as sufficient to determine the synchronized system tail. The empirical model separates phase loads where available and estimates the frequency-sensitive term from measured service behavior; remaining residual is not attributed to experts without communication/synchronization instrumentation.",
+        "The frequency-proportional part of the old score is contradicted by the uniform P1 measurements. Decode-only pressure does not produce a clearly better positive correlation on eight Joint candidates, and the empirical candidate model still has residual error; communication/synchronization and grouped-GEMM effects therefore remain plausible missing terms rather than established causes.",
         "",
         "## Limitations",
         "",
@@ -375,7 +520,9 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
         candidate_rows,
         ["candidate_index", "label", "frequency_tuple", "basis", "placement",
          "aggregate_load_g0", "aggregate_load_g1", "aggregate_load_g2", "aggregate_load_g3",
-         "old_max_normalized_pressure", "old_linear_predicted_tpot_p99_ms",
+         "basis_load_g0", "basis_load_g1", "basis_load_g2", "basis_load_g3",
+         "max_normalized_pressure", "old_max_normalized_pressure",
+         "aggregate_max_normalized_pressure", "old_linear_predicted_tpot_p99_ms",
          "predicted_tpot_p99_ms", "measured_tpot_p99_ms",
          "prediction_residual_ms", "energy_j", "slo_tpot_13_ms"],
     )
@@ -396,30 +543,75 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
         [row["measured_tpot_p99_ms"] for row in aggregate_predictions],
         [row["predicted_tpot_p99_ms"] for row in aggregate_predictions],
     )
+    old_frequency_accuracy = prediction_metrics(
+        [float(row["tpot_p99_ms"]) for row in frequency_rows],
+        [float(row["old_linear_predicted_tpot_ms"]) for row in frequency_rows],
+    )
+    frequency_model["old_proxy_mae_ms"] = old_frequency_accuracy["mae_ms"]
+    service_models["aggregate"]["candidate_old_mae_ms"] = old_accuracy["mae_ms"]
+    service_models["aggregate"]["candidate_new_mae_ms"] = new_accuracy["mae_ms"]
+    service_models["aggregate"]["candidate_old_rank_order_accuracy"] = old_accuracy[
+        "rank_order_accuracy"
+    ]
+    service_models["aggregate"]["candidate_new_rank_order_accuracy"] = new_accuracy[
+        "rank_order_accuracy"
+    ]
+    pressure_correlations: dict[str, Any] = {}
+    for basis in BASIS_NAMES:
+        selected = [row for row in candidate_rows if row["basis"] == basis]
+        pressure_correlations[basis] = _correlation(
+            [float(row["max_normalized_pressure"]) for row in selected],
+            [float(row["measured_tpot_p99_ms"]) for row in selected],
+        )
+    sensitivity_rows = _load_dependent_sensitivity(
+        Path(args.d_controller), placements, counts_by_basis
+    )
+    sensitivity_correlation = {
+        basis: _correlation(
+            [float(row[f"{basis}_load"]) for row in sensitivity_rows],
+            [float(row["delta_tpot_p99_ms"]) for row in sensitivity_rows],
+        )
+        for basis in ("aggregate", "prefill", "decode")
+    }
     if not phase_available:
-        classification = "E_inconclusive_phase_profile_unavailable"
-    elif new_accuracy["rank_order_accuracy"] > old_accuracy["rank_order_accuracy"] and new_accuracy["mae_ms"] < old_accuracy["mae_ms"]:
-        classification = "B_frequency_or_service_model_dominant"
-    elif new_accuracy["mae_ms"] >= old_accuracy["mae_ms"] and new_accuracy["rank_order_accuracy"] <= old_accuracy["rank_order_accuracy"]:
-        classification = "D_load_only_insufficient_residual_communication_or_sync_candidate"
+        classification = "E_INCONCLUSIVE"
+    elif (
+        old_frequency_accuracy["mae_ms"]
+        > 2.0 * max(frequency_model["mae_ms"], 1e-9)
+    ):
+        # The three uniform points identify a large, directly measured
+        # departure from the linear f/fmax slowdown assumption.
+        classification = "B_FREQUENCY_MODEL_DOMINANT"
+    elif new_accuracy["mae_ms"] >= old_accuracy["mae_ms"]:
+        classification = "D_LOAD_ONLY_MODEL_INSUFFICIENT"
     else:
-        classification = "E_inconclusive"
+        classification = "E_INCONCLUSIVE"
 
+    phase_accounting = {
+        "total_sum": int(total_counts.sum()),
+        "prefill_sum": int(prefill_counts.sum()),
+        "decode_sum": int(decode_counts.sum()),
+        "prefill_fraction": float(prefill_counts.sum() / total_counts.sum()),
+        "decode_fraction": float(decode_counts.sum() / total_counts.sum()),
+        "conserves_total": bool(np.array_equal(total_counts, prefill_counts + decode_counts)),
+        "per_layer_total": total_counts.sum(axis=1).astype(int).tolist(),
+        "per_layer_prefill": prefill_counts.sum(axis=1).astype(int).tolist(),
+        "per_layer_decode": decode_counts.sum(axis=1).astype(int).tolist(),
+        "per_expert_total": total_counts.sum(axis=0).astype(int).tolist(),
+        "per_expert_prefill": prefill_counts.sum(axis=0).astype(int).tolist(),
+        "per_expert_decode": decode_counts.sum(axis=0).astype(int).tolist(),
+    }
     summary = {
         "milestone": "F",
         "phase_profile_available": phase_available,
         "phase_profile_path": str(phase_path),
         "phase_profile_sha256": phase_hash,
-        "phase_accounting": {
-            "total_sum": int(total_counts.sum()),
-            "prefill_sum": int(prefill_counts.sum()),
-            "decode_sum": int(decode_counts.sum()),
-            "conserves_total": bool(np.array_equal(total_counts, prefill_counts + decode_counts)),
-        },
+        "phase_accounting": phase_accounting,
         "frequency_model": frequency_model,
         "frequency_old_proxy": {
             "description": "uniform P1 TPOT(high) * fmax/f",
             "rows": frequency_rows,
+            "prediction_metrics": old_frequency_accuracy,
         },
         "service_models": service_models,
         "candidate_count": len(candidates),
@@ -427,6 +619,9 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
             "old_linear_pressure": old_accuracy,
             "empirical_service_model": new_accuracy,
         },
+        "candidate_pressure_correlations": pressure_correlations,
+        "load_dependent_sensitivity": sensitivity_rows,
+        "load_sensitivity_correlations": sensitivity_correlation,
         "classification": classification,
         "inputs": {
             "sequential_root": str(args.sequential_root),
@@ -446,8 +641,11 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
         phase_hash=phase_hash,
         placements=placements,
         phase_summary=phase_summary,
+        phase_accounting=phase_accounting,
         frequency_model=frequency_model,
         service_models=service_models,
+        pressure_correlations=pressure_correlations,
+        sensitivity_rows=sensitivity_rows,
         classification=classification,
     )
     return summary

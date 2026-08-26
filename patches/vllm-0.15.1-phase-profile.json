@@ -4,7 +4,7 @@
   "patch_files": [
     {
       "path": "vllm-0.15.1-phase-profile.patch",
-      "sha256": "d42287b08269417507c15909d07458cd811b8ccb379da0a30dbd0cec1ff52657"
+      "sha256": "333238d8601b4f43a1f5171cfc3bf66f4cc13ce64b5003df37a539ee15c79644"
     },
     {
       "path": "vllm-0.15.1-phase-state.patch",
@@ -19,7 +19,7 @@
   "files": {
     "vllm/model_executor/layers/fused_moe/router/base_router.py": {
       "before": "1ecac39612738415e2c40b774373622119101b55942e1c01da6a51b65efcf7e6",
-      "after": "db4f6236e82200d957ad2d40650b9076f46623732dbad519a641cc73d459339e"
+      "after": "1420f6c807207b1b6349e4efe4b23ce25501ad8e7866b82db6ed3476ea03663b"
     },
     "vllm/model_executor/layers/fused_moe/layer.py": {
       "before": "3794e47f6bc0beb40f7e7168c3f00569fb560f96a26d74116ba000a8d84357e6",
