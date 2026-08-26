@@ -84,6 +84,7 @@ sha256sum patches/vllm-0.15.1-phase-*.patch patches/vllm-0.15.1-phase-profile.js
 python -m src.config configs/model_qwen3_30b_a3b_profile.yaml -- \
     > "${controller}/server/vllm-command.txt"
 setsid scripts/serve_vllm.sh --config configs/model_qwen3_30b_a3b_profile.yaml \
+    -- --enforce-eager \
     > "${controller}/server/vllm.log" 2>&1 &
 server_pid=$!
 printf '%s\n' "${server_pid}" > "${pid_file}"
