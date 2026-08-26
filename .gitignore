@@ -10,10 +10,17 @@ results/processed/*
 !results/processed/milestone_d_uniform.csv
 !results/processed/milestone_d_sensitivity.csv
 !results/processed/milestone_d_summary.json
+!results/processed/milestone_e_sequential_all.csv
+!results/processed/milestone_e_joint_candidates.csv
+!results/processed/milestone_e_policy_summary.csv
+!results/processed/milestone_e_repeatability.csv
+!results/processed/milestone_e_summary.json
 !results/figures/
 results/figures/*
 !results/figures/.gitkeep
 !results/figures/milestone_d_dvfs_sensitivity.pdf
+!results/figures/milestone_e_main.pdf
+!results/figures/milestone_e_pareto.pdf
 logs/
 slurm-*.out
 slurm-*.err

@@ -1,0 +1,38 @@
+milestone_e:
+  status: prepared_not_submitted
+  research_hypothesis: frequency-aware placement can improve energy under a common SLO
+  model_config: configs/model_qwen3_30b_a3b_profile.yaml
+  accepted_milestone_d_controller: results/raw/milestone-d-255131-20260826T104006Z
+  workload:
+    category: math
+    dataset: OpenAI GSM8K train
+    requests: 50
+    request_rate: 0.5
+    input_tokens: [128, 191]
+    output_tokens: 128
+    temperature: 0.0
+    seed: 0
+    regenerate_trace: false
+  common_slos:
+    ttft_p99_ms: 500.0
+    tpot_p99_ms: [12.0, 13.0, 15.0]
+  frequencies_mhz:
+    high: 2520
+    medium: 1635
+    low: 1005
+  sequential:
+    placement: upstream_default_eplb
+    exhaustive_configurations: 81
+    evaluation_order_seed: 20260826
+  joint:
+    speed_proxy: frequency_mhz / 2520
+    candidate_budget: 8
+    local_swap_passes: 4
+    placement_restarts: serialized_slurm_array
+  repeatability:
+    primary_tpot_slo_ms: 13.0
+    trials: 3
+  dynamic_eplb: false
+  expert_profile_rpc: false
+  expert_replication: false
+  prefix_caching: false

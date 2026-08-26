@@ -18,6 +18,12 @@ changing placement materially changed the latency and energy effect of
 downclocking an individual GPU. See
 [docs/milestone_d_placement_dvfs.md](docs/milestone_d_placement_dvfs.md).
 
+Milestone E code and Slurm jobs are prepared but have not been submitted while
+Minerva and the L40S nodes are unavailable. The staged campaign exhaustively
+measures all 81 frozen-EPLB frequency tuples before selecting a bounded set of
+frequency-aware Joint placements. See
+[docs/milestone_e_sequential_vs_joint.md](docs/milestone_e_sequential_vs_joint.md).
+
 On Minerva, from the staged repository:
 
 ```bash

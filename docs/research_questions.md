@@ -36,7 +36,7 @@ may be inferior to:
 joint placement + heterogeneous DVFS
 ```
 
-Milestone D tests H1 only, with limited exploratory evidence toward H2. H2 and
+Milestone D tested H1 only, with limited exploratory evidence toward H2. H2 and
 H3 remain hypotheses unless later controlled measurements support them.
 
 ## Milestone D checkpoint
@@ -50,3 +50,11 @@ general claim.
 The three uniform-frequency curves did not show a placement-dependent choice
 of energy-minimizing frequency at relative TPOT budgets of 1.05x, 1.10x, or
 1.20x. H2 therefore remains open, and H3 was not tested.
+
+## Milestone E boundary
+
+Milestone E is prepared to test H3 with a strong Sequential baseline: the
+frozen P1 placement is measured at every tuple in the registered three-level,
+four-GPU frequency space. A bounded set of frequency-aware placements is then
+measured at identical paired tuples under common absolute TTFT/TPOT limits.
+No Milestone E job has run yet, so H3 remains open.

@@ -167,6 +167,116 @@ def diagnostic_concentrated_placement(
     return result
 
 
+def frequency_aware_placement(
+    counts: np.ndarray, frequencies: list[int] | tuple[int, ...], *,
+    speed_factors: list[float] | tuple[float, ...] | None = None,
+    num_ranks: int = 4, max_swap_passes: int = 4,
+    reference_frequency_mhz: int = 2520,
+) -> Placement:
+    """Balance frozen expert load against heterogeneous capacity per layer.
+
+    The speed proxy defaults to ``frequency / 2520``. It is a
+    pre-registered placement heuristic, not a performance-scaling model.
+    """
+    weights = validate_counts(counts)
+    clocks = tuple(int(value) for value in frequencies)
+    if len(clocks) != num_ranks or any(value <= 0 for value in clocks):
+        raise ValueError("one positive frequency is required per rank")
+    if speed_factors is None:
+        if reference_frequency_mhz <= 0:
+            raise ValueError("reference_frequency_mhz must be positive")
+        speeds = tuple(value / reference_frequency_mhz for value in clocks)
+    else:
+        speeds = tuple(float(value) for value in speed_factors)
+    if len(speeds) != num_ranks or any(value <= 0 for value in speeds):
+        raise ValueError("one positive speed factor is required per rank")
+    if max_swap_passes < 0:
+        raise ValueError("max_swap_passes must be non-negative")
+    layers, experts = weights.shape
+    if experts % num_ranks:
+        raise ValueError("experts must divide evenly across ranks")
+    slots = experts // num_ranks
+    mapping = np.full((layers, experts), -1, dtype=np.int64)
+    before_objectives: list[float] = []
+    after_objectives: list[float] = []
+    total_swaps = 0
+    tolerance = 1e-12
+
+    for layer in range(layers):
+        loads = np.zeros(num_ranks, dtype=np.float64)
+        assigned: list[list[int]] = [[] for _ in range(num_ranks)]
+        order = np.argsort(-weights[layer], kind="stable")
+        for expert in order:
+            eligible = [rank for rank in range(num_ranks) if len(assigned[rank]) < slots]
+            rank = min(eligible, key=lambda value: (loads[value] / speeds[value], value))
+            mapping[layer, expert] = rank
+            assigned[rank].append(int(expert))
+            loads[rank] += float(weights[layer, expert])
+        before_objectives.append(float(max(loads[rank] / speeds[rank]
+                                           for rank in range(num_ranks))))
+
+        for _ in range(max_swap_passes):
+            changed = False
+            current = max(loads[rank] / speeds[rank] for rank in range(num_ranks))
+            for left in range(num_ranks):
+                for right in range(left + 1, num_ranks):
+                    for left_expert in sorted(assigned[left]):
+                        for right_expert in sorted(assigned[right]):
+                            left_weight = float(weights[layer, left_expert])
+                            right_weight = float(weights[layer, right_expert])
+                            candidate_loads = loads.copy()
+                            candidate_loads[left] += right_weight - left_weight
+                            candidate_loads[right] += left_weight - right_weight
+                            objective = max(candidate_loads[rank] / speeds[rank]
+                                            for rank in range(num_ranks))
+                            if objective < current - tolerance:
+                                loads = candidate_loads
+                                assigned[left].remove(left_expert)
+                                assigned[left].append(right_expert)
+                                assigned[right].remove(right_expert)
+                                assigned[right].append(left_expert)
+                                mapping[layer, left_expert] = right
+                                mapping[layer, right_expert] = left
+                                total_swaps += 1
+                                changed = True
+                                current = objective
+                                break
+                        if changed:
+                            break
+                    if changed:
+                        break
+                if changed:
+                    break
+            if not changed:
+                break
+        after_objectives.append(float(max(loads[rank] / speeds[rank]
+                                          for rank in range(num_ranks))))
+
+    result = Placement(
+        "frequency_aware", mapping, num_ranks,
+        {"algorithm": "capacity-normalized constrained LPT plus first-improvement swaps",
+         "frequencies_mhz": list(clocks), "speed_factors": list(speeds),
+         "reference_frequency_mhz": reference_frequency_mhz,
+         "max_swap_passes": max_swap_passes, "local_swaps": total_swaps,
+         "per_layer_before_objective": before_objectives,
+         "per_layer_after_objective": after_objectives,
+         "before_objective": max(before_objectives, default=0.0),
+         "after_objective": max(after_objectives, default=0.0),
+         "replication": False},
+    )
+    result.validate()
+    raw_loads = placement_loads(weights, result).astype(float)
+    result.metadata["per_rank_raw_load"] = raw_loads.tolist()
+    result.metadata["per_rank_normalized_load"] = [
+        float(raw_loads[rank] / speeds[rank]) for rank in range(num_ranks)
+    ]
+    normalized = np.asarray(result.metadata["per_rank_normalized_load"])
+    result.metadata["normalized_max_over_mean"] = (
+        float(normalized.max() / normalized.mean()) if normalized.mean() else 0.0
+    )
+    return result
+
+
 def placement_loads(counts: np.ndarray, placement: Placement) -> np.ndarray:
     placement.validate()
     return aggregate_rank_loads(counts, placement.logical_to_rank)

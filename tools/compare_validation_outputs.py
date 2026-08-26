@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import statistics
 from pathlib import Path
 
 
@@ -48,9 +49,13 @@ def main() -> None:
     )
     result = {"reference": str(args.reference), "candidate": str(args.candidate),
               "requests": len(reference), "exact_matches": len(reference) - len(mismatches),
+              "exact_match_fraction": ((len(reference) - len(mismatches)) / len(reference)
+                                       if reference else 1.0),
               "token_sequence_mismatches": mismatches,
               "common_prefix_tokens": common_prefix_tokens,
               "minimum_observed_prefix": minimum_observed_prefix,
+              "median_observed_prefix": statistics.median(common_prefix_tokens.values())
+              if common_prefix_tokens else 0,
               "required_common_prefix": args.minimum_common_prefix,
               "accepted": accepted}
     print(json.dumps(result, indent=2))

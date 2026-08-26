@@ -6,6 +6,7 @@ import pytest
 from src.placement import (
     Placement,
     diagnostic_concentrated_placement,
+    frequency_aware_placement,
     linear_placement,
     physical_to_rank_placement,
     placement_from_dict,
@@ -53,3 +54,24 @@ def test_diagnostic_placement_concentrates_hot_experts_deterministically():
     assert np.bincount(result.logical_to_rank[0], minlength=4).tolist() == [32] * 4
     loads = placement_loads(counts, result)
     assert loads[0] > loads[1] > loads[2] > loads[3]
+
+
+def test_frequency_aware_placement_obeys_capacity_and_cardinality():
+    counts = np.arange(1, 129, dtype=np.int64)[None, :]
+    result = frequency_aware_placement(counts, (2520, 1635, 1635, 1005))
+    result.validate()
+    assert np.bincount(result.logical_to_rank[0], minlength=4).tolist() == [32] * 4
+    assert result.metadata["speed_factors"] == pytest.approx(
+        [1.0, 1635 / 2520, 1635 / 2520, 1005 / 2520]
+    )
+    raw = result.metadata["per_rank_raw_load"]
+    assert raw[0] > raw[3]
+
+
+def test_frequency_aware_swaps_never_worsen_objective():
+    counts = np.array([np.roll(np.arange(1, 129), shift) for shift in range(3)])
+    result = frequency_aware_placement(counts, (2520, 1635, 1635, 1005),
+                                       max_swap_passes=8)
+    before = result.metadata["per_layer_before_objective"]
+    after = result.metadata["per_layer_after_objective"]
+    assert all(final <= initial for initial, final in zip(before, after))

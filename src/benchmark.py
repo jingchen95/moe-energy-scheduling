@@ -60,6 +60,7 @@ async def _consume_stream(
     replay_epoch_monotonic_s: float,
     tokenizer: Any,
     semaphore: asyncio.Semaphore,
+    store_output_token_ids: bool = False,
 ) -> dict[str, Any]:
     delay = scheduled_monotonic_s - time.monotonic()
     if delay > 0:
@@ -145,7 +146,10 @@ async def _consume_stream(
             row["streamed_text_event_count"] = streamed_text_event_count
             output_bytes = "".join(chunks).encode("utf-8")
             row["output_text_sha256"] = hashlib.sha256(output_bytes).hexdigest()
-            if request.metadata.get("store_output_token_ids"):
+            if store_output_token_ids:
+                # Defer diagnostic tokenization until after the GPU energy window.
+                row["_output_text_for_tokens"] = "".join(chunks)
+            elif request.metadata.get("store_output_token_ids"):
                 row["output_token_ids"] = tokenizer.encode(
                     "".join(chunks), add_special_tokens=False,
                 )
@@ -205,6 +209,7 @@ async def replay_trace(
     max_concurrency: int,
     request_timeout_s: float,
     epoch_monotonic_s: float | None = None,
+    store_output_token_ids: bool = False,
 ) -> list[dict[str, Any]]:
     epoch = time.monotonic() if epoch_monotonic_s is None else epoch_monotonic_s
     deadlines = scheduled_monotonic_times(requests, epoch)
@@ -217,6 +222,7 @@ async def replay_trace(
     async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
         tasks = [asyncio.create_task(_consume_stream(
             session, url, model, request, deadline, epoch, tokenizer, semaphore,
+            store_output_token_ids,
         )) for request, deadline in zip(requests, deadlines)]
         return list(await asyncio.gather(*tasks))
 
@@ -311,6 +317,7 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
         "placement_sha256": _sha256(args.placement_file) if args.placement_file else None,
         "trace_sha256": _sha256(args.trace),
         "target_clocks_mhz": args.target_clocks,
+        "store_output_token_ids": args.store_output_token_ids,
     }
     (run_dir / "resolved_config.yaml").write_text(
         yaml.safe_dump(config, sort_keys=True), encoding="utf-8",
@@ -349,10 +356,18 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
                 max_concurrency=args.max_concurrency,
                 request_timeout_s=args.request_timeout_s,
                 epoch_monotonic_s=replay_epoch,
+                store_output_token_ids=args.store_output_token_ids,
             )
         finally:
             end_samples = reader.sample_all()
             samples = monitor.stop()
+
+    for row in rows:
+        output_text = row.pop("_output_text_for_tokens", None)
+        if output_text is not None:
+            row["output_token_ids"] = tokenizer.encode(
+                output_text, add_special_tokens=False,
+            )
 
     energy = summarize_energy_window(start_samples, end_samples, samples)
     energy["gpu_monitor_missed_deadlines"] = monitor.missed_deadlines
@@ -409,6 +424,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--placement-file", type=Path)
     parser.add_argument("--vllm-patch-manifest", type=Path)
     parser.add_argument("--target-clocks", type=int, nargs=4)
+    parser.add_argument("--store-output-token-ids", action="store_true")
     parser.add_argument("--run-label", required=True)
     parser.add_argument("--placement-name", required=True)
     return parser.parse_args()

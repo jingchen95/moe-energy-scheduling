@@ -2,100 +2,139 @@
 
 ## Current working state
 
-Milestone D is complete. The deterministic serving harness, frozen expert-load
-profile, arbitrary static placement, uniform DVFS curves, single-GPU
-perturbations, repeatability trials, processed tables, and diagnostic figure are
-available. H1 is supported for the one-workload pilot: placement materially
-changed per-GPU DVFS sensitivity.
+Milestone D remains complete at commit `d233672`. Milestone E experiment code,
+CPU planning/analysis tools, and Slurm jobs are prepared on branch
+`milestone-e-sequential-vs-joint`, but no Milestone E job has been submitted
+because Minerva and the L40S nodes are unavailable. No Milestone E result or
+scientific classification exists yet.
 
-The project is staged on Minerva at:
+The accepted Milestone D source on Minerva is:
 
 ```text
-/data/users/chjing/moe-energy-scheduling
+/data/users/chjing/moe-energy-scheduling/results/raw/milestone-d-255131-20260826T104006Z
 ```
 
-The active branch is `milestone-d-placement-dvfs-coupling`. The vLLM wheel is
-restored to its unpatched state and GPU graphics-clock locks were reset.
+The vLLM installation and GPU clocks were not touched during this local code
+preparation.
 
-## Completed steps
+## Prepared components
 
-- Milestone C closeout commit: `ef276ad`.
-- Milestone D infrastructure commits: `bdbc10a`, `d5ee90f`, `b8e98f7`,
-  `423308e`, `c0c6259`, and `474652a`.
-- Live OpenAI streaming validation passed with 15/15 requests, plausible
-  TTFT/TPOT, positive four-GPU energy, and about 2 ms p99 send delay.
-- Recorded and exercised `patches/vllm-0.15.1-placement-profile.patch`, including
-  apply/verify/revert hashes and `--expert-placement-file`.
-- Captured one frozen default-placement GSM8K expert profile and generated P0
-  linear, P1 upstream `DefaultEplbPolicy`, and P2 diagnostic concentrated maps.
-- Used the fixed 50-request GSM8K trace (128-191 input tokens, 128 output tokens,
-  0.5 requests/s) for every measured configuration.
-- Selected supported graphics clocks 2520, 1635, and 1005 MHz. Actual average
-  clocks matched targets in all runs.
-- Slurm job `255131` completed the P1/P2 campaign with exit code 0 on an
-  exclusive Uranus allocation. It resumes the immutable profile and P0 curve
-  from job `255129`; `resumed-from.txt` records this provenance.
-- All 29 manifest rows have zero request failures, use cumulative NVML energy,
-  and have at most 2.61 ms p99 send delay.
-- The complete CPU-safe suite passes: `20 passed in 0.28s` with
-  `PYTHONPATH=.deps python -m pytest -q` in `cuda-env`.
-- Generated `results/processed/milestone_d_uniform.csv`,
-  `results/processed/milestone_d_sensitivity.csv`,
-  `results/processed/milestone_d_summary.json`, and
-  `results/figures/milestone_d_dvfs_sensitivity.pdf`.
+- `configs/milestone_e.yaml` preregisters the trace, SLOs, clock levels, search
+  budget, and immutable-profile policy.
+- `src/placement.py` provides deterministic per-layer frequency-aware LPT
+  placement with exact 32-expert/rank cardinality and bounded improving swaps.
+- `src/search.py` provides 81-tuple enumeration, absolute-SLO filtering,
+  energy selection, Pareto extraction, deterministic Joint candidates, paired
+  comparisons, and conservative repeatability summaries.
+- `tools/prepare_milestone_e.py` creates the seeded Sequential plan, refuses
+  Joint planning without 81 valid unique points, generates 5-8 placements, and
+  creates the 13 ms repeat plan.
+- `tools/analyze_milestone_e.py` is ready to create the required CSV/JSON tables
+  and two PDF figures from real data. It applies a conservative preregistered
+  classification rule and never fabricates missing outputs.
+- `scripts/milestone_e_sequential.sbatch` runs all 81 P1 tuples using one server
+  and records failures instead of replacing them.
+- `scripts/milestone_e_joint.sbatch` and `scripts/milestone_e_repeat.sbatch`
+  are serialized Slurm-array workers. No script submits another job.
+- All jobs retain immutable hashes, actual clocks, request tokens/latencies,
+  cumulative NVML energy, monitor samples, output-token IDs, patch state, and
+  unique raw run directories. They never call the expert-profile RPC.
 
-## Central result
+## Verification completed locally
 
-P1 predicted rank loads are essentially equal (max/mean 1.00002). P2 assigns
-15.39M predicted routed tokens to GPU0 versus 0.47M-3.48M to the other GPUs
-(max/mean 2.933).
+- Python source compilation passes with bytecode redirected to `/tmp`.
+- `bash -n` passes for all Milestone E shell/Slurm scripts.
+- `git diff --check` passes.
+- A direct standard-library check confirms 81 unique frequency tuples and
+  deterministic eight-candidate selection.
 
-Downclocking GPU0 from 2520 to 1635 MHz increases p99 TPOT by 0.942 ms under P1
-and 1.719 ms under P2, an 82% larger penalty. Under P2, the hot GPU's penalty is
-about twice the median cool-GPU penalty. Three-trial means reproduce the GPU0
-effect: +0.960 ms for P1 and +1.657 ms for P2. H1 is therefore supported for
-this pilot.
+The full pytest suite could not run on this Mac because its system Python has
+neither NumPy nor pytest. Dependencies were deliberately not installed. Run
+the established cluster command before submission when Minerva is available:
 
-The uniform curves do not provide positive H2 evidence: at relative p99 TPOT
-budgets of 1.05x, 1.10x, and 1.20x, P0/P1/P2 all select high, high, and medium,
-respectively. No Joint optimizer was implemented.
+```bash
+PYTHONPATH=.deps python -m pytest -q
+```
 
-## Slurm jobs and retained failures
+## Staged commands - do not run until cluster access is confirmed
 
-- `255099`: partial P0 data; failed on the fourth collective profile dump.
-- `255128`: live run succeeded; orchestration failed because the validator
-  still required profile output in the streaming-validation phase.
-- `255129`: valid frozen profile, placements, P0 curve, and P1 semantic run;
-  stopped at the original exact-token semantic gate.
-- `255130`: retained failed retry; collective profile dump timed out.
-- `255131`: successful resumed P1/P2 campaign, 50:50 elapsed, exit code 0.
+Stage A, exhaustive Sequential B4:
 
-No failed or partial run is included in the processed result tables.
+```bash
+MILESTONE_D_CONTROLLER=results/raw/milestone-d-255131-20260826T104006Z \
+  sbatch scripts/milestone_e_sequential.sbatch
+```
+
+After all 81 points succeed, prepare Joint candidates on Minerva (CPU only):
+
+```bash
+seq_controller=$(cat results/raw/milestone-e-sequential-latest.txt)
+profile_run=$(awk -F '\t' '$1 == "p0-frozen-profile" {print $4; exit}' \
+  results/raw/milestone-d-255131-20260826T104006Z/runs.tsv)
+joint_study="results/raw/milestone-e-joint-plan-$(date -u +%Y%m%dT%H%M%SZ)"
+python -m tools.prepare_milestone_e joint-plan \
+  --sequential-controller "${seq_controller}" \
+  --expert-counts "${profile_run}/expert_counts.npz" \
+  --p1-placement results/raw/milestone-d-255131-20260826T104006Z/placements/upstream_default_eplb.json \
+  --output-dir "${joint_study}"
+```
+
+Then inspect `sanity-hmml.json` and `joint-plan.json`. Only after that check,
+submit the exact reported candidate count as a serialized array:
+
+```bash
+candidate_count=$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["candidate_count"])' \
+  "${joint_study}/joint-plan.json")
+MILESTONE_E_JOINT_STUDY="${joint_study}" \
+  sbatch --array="0-$((candidate_count - 1))%1" scripts/milestone_e_joint.sbatch
+```
+
+Repeat planning and final analysis are intentionally gated on those measured
+Joint results. Once every planned Joint candidate has a successful result:
+
+```bash
+repeat_study="results/raw/milestone-e-repeat-plan-$(date -u +%Y%m%dT%H%M%SZ)"
+python -m tools.prepare_milestone_e repeat-plan \
+  --sequential-controller "${seq_controller}" \
+  --joint-study "${joint_study}" \
+  --output-dir "${repeat_study}"
+configuration_count=$(python -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["configurations"]))' \
+  "${repeat_study}/repeat-plan.json")
+MILESTONE_E_REPEAT_STUDY="${repeat_study}" \
+  sbatch --array="0-$((configuration_count - 1))%1" scripts/milestone_e_repeat.sbatch
+```
+
+After all repeat configurations complete:
+
+```bash
+python -m tools.analyze_milestone_e \
+  --milestone-d-controller results/raw/milestone-d-255131-20260826T104006Z \
+  --sequential-controller "${seq_controller}" \
+  --joint-study "${joint_study}" \
+  --repeat-study "${repeat_study}"
+```
 
 ## Unresolved issues
 
-- vLLM 0.15.1 collective expert-profile dumping is intermittently deadlocking.
-  Reuse the accepted frozen profile until this RPC is debugged separately.
-- Custom placement preserves at least an eight-token required prefix and an
-  observed minimum 15-token prefix, but later greedy tokens can diverge because
-  expert reordering changes BF16 kernel/reduction order. All divergence details
-  are retained in the controller validation JSON files.
-- TTFT p99 has non-monotonic outliers at 0.5 requests/s. Use TPOT as the primary
-  coupling signal and strengthen TTFT repetition in later SLO studies.
-- The pilot covers only GSM8K and one intentionally strong P2 intervention.
-
-## Recommended next step
-
-H1 is clearly supported, so proceed to:
-
-> Milestone E - test sequential frozen EPLB plus heterogeneous DVFS versus
-> frequency-aware Joint placement under common TTFT/TPOT SLOs.
-
-Do not discard the current negative H2 observation, and retain P1 as the same
-frozen EPLB placement for all sequential baselines.
+- Minerva/L40S availability blocks CPU-suite confirmation in the established
+  environment and every real measurement.
+- The 81-point sweep has not established B3/B4 optima; Joint candidates cannot
+  be selected until it does.
+- The H/M/M/L placement sanity statistics need the accepted raw profile and are
+  generated immediately before Joint candidate creation.
+- Joint output divergence remains a known interpretation limitation; the new
+  jobs retain exact-match fraction and minimum/median common-prefix lengths.
+- A four-hour Sequential allocation is expected to fit based on Milestone D,
+  but the first live run will verify the wall-time estimate.
 
 ## Exact next command
 
+Do not submit while the cluster is unavailable. Once the user confirms access,
+first run:
+
 ```bash
-git switch -c milestone-e-sequential-vs-joint
+PYTHONPATH=.deps python -m pytest -q
 ```
+
+If that passes, the next command is the Stage A `sbatch` command above. Do not
+begin Joint submission before the 81-point completeness gate passes.
