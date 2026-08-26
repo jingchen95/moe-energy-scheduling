@@ -2,11 +2,10 @@
 
 ## Status
 
-The implementation and Slurm jobs are prepared locally. No Milestone E GPU job
-has been submitted because Minerva and the L40S nodes are currently
-unavailable. Consequently, this document contains the preregistered method, not
-experimental results. The central result remains `INCONCLUSIVE` until the
-prepared campaign is run and repeated.
+The implementation and Slurm jobs are prepared. The 81-point Sequential B4
+sweep has completed successfully on Uranus, and the deterministic Joint plan
+has passed its CPU-only sanity check. Joint candidate and repeatability GPU
+jobs remain unsubmitted; the central result is therefore still pending.
 
 ## Research question
 
@@ -52,10 +51,23 @@ are accepted only when they reduce the maximum per-layer normalized pressure.
 The CPU planning stage records a mandatory H/M/M/L sanity comparison between
 P1 and the generated mapping before any Joint candidate can be submitted.
 
+## Sequential checkpoint
+
+All 81 tuples completed with zero request failures, one immutable trace hash,
+NVML cumulative energy, and maximum p99 send delay of 4.087 ms. The best
+Sequential B4 points were 63,906.976 J at `(M,H,H,H)` for the 12 ms SLO,
+52,474.447 J at `(M,M,M,M)` for 13 ms, and 48,661.697 J at `(L,L,L,M)` for
+15 ms. The corresponding feasible tuple counts were 4, 16, and 77; all passed
+the 500 ms TTFT guard.
+
+The generated eight-candidate plan uses the measured frontier. For H/M/M/L,
+the frequency-aware placement has normalized-load max/mean 1.015 versus 1.522
+for P1 under the registered `s(f)=f/2520` proxy.
+
 ## Staged execution
 
-No script in this milestone calls `sbatch`. When cluster access returns, the
-campaign has four explicit gates:
+No script in this milestone calls nested `sbatch`. The campaign has four
+explicit gates:
 
 1. Run the exhaustive Sequential job. Failed tuples are retained and block the
    Joint planner until all 81 unique tuples succeed.
@@ -65,9 +77,8 @@ campaign has four explicit gates:
    the plan.
 4. Generate and submit the repeatability plan, then run the analyzer.
 
-The exact commands are recorded in `HANDOFF.md`. They are intentionally held
-until the user confirms that Minerva and an exclusive Uranus allocation are
-available.
+The exact commands are recorded in `HANDOFF.md`. The Joint GPU array remains
+held until the user confirms the Sequential checkpoint and candidate plan.
 
 ## Planned outputs
 
@@ -88,7 +99,7 @@ before updating this document with a scientific conclusion.
 
 ## Current limitations
 
-No result is available yet. The eventual pilot will still cover one model, one
+The Joint comparison result is not available yet. The eventual pilot will still cover one model, one
 workload, one low request rate, one L40S node, only three frequency levels, no
 replication/migration, a linear speed proxy, and a bounded placement search.
 Greedy outputs may diverge after an initially common prefix because custom

@@ -6,8 +6,10 @@ Milestone D remains complete at commit `d233672`. Milestone E experiment code,
 CPU planning/analysis tools, and Slurm jobs are prepared on branch
 `milestone-e-sequential-vs-joint`. The exhaustive Sequential Stage A job
 `255132` was submitted on 2026-08-26 and is running exclusively on Uranus from
-code commit `da7c5cd`. No Milestone E result or scientific classification
-exists until this sweep and the later Joint/repeatability stages complete.
+code commit `da7c5cd`; it completed successfully. The CPU-only Joint plan was
+then generated and passed its H/M/M/L sanity gate. No Joint GPU result or
+scientific classification exists until the later candidate/repeatability stages
+complete.
 
 The active controller is:
 
@@ -53,6 +55,18 @@ The pre-submission CPU-safe suite passed on Minerva: `28 passed in 3.09s`.
 - `git diff --check` passes.
 - A direct standard-library check confirms 81 unique frequency tuples and
   deterministic eight-candidate selection.
+- Sequential job `255132`: `COMPLETED`, exit `0`, elapsed `02:51:15` on Uranus.
+- All 81 tuples are unique and complete: 50/50 requests, zero failures, 6,400
+  output tokens, one trace hash, NVML cumulative-energy source, and maximum p99
+  send delay 4.087 ms. Actual average clocks matched every target exactly.
+- Absolute-SLO B4 best points: 12 ms = `(1635,2520,2520,2520)`, 63,906.976 J;
+  13 ms = `(1635,1635,1635,1635)`, 52,474.447 J; 15 ms =
+  `(1005,1005,1005,1635)`, 48,661.697 J. Every point passed the 500 ms TTFT
+  guard; feasible tuple counts were 4, 16, and 77.
+- Joint plan `results/raw/milestone-e-joint-plan-255132-20260826T140049Z`
+  contains eight deterministic candidates. H/M/M/L normalized pressure is
+  1.015 for frequency-aware placement versus 1.522 for P1 under the fixed
+  `s(f)=f/2520` proxy, with raw load shifted toward the high-frequency rank.
 
 The full suite could not run on this Mac because its system Python has neither
 NumPy nor pytest; dependencies were deliberately not installed. The established
@@ -124,25 +138,20 @@ python -m tools.analyze_milestone_e \
 
 ## Unresolved issues
 
-- Sequential job `255132` is still active; no Stage A result is available yet.
-- The 81-point sweep has not established B3/B4 optima; Joint candidates cannot
-  be selected until it does.
-- The H/M/M/L placement sanity statistics need the accepted raw profile and are
-  generated immediately before Joint candidate creation.
+- Joint GPU candidates and three-trial repeatability have not been submitted.
 - Joint output divergence remains a known interpretation limitation; the new
   jobs retain exact-match fraction and minimum/median common-prefix lengths.
-- The four-hour Sequential allocation still needs to demonstrate that all 81
-  points fit in one job; resume support is available if infrastructure or wall
-  time interrupts it.
+- The processed Milestone E CSV/JSON tables and figures require the Joint and
+  repeatability measurements; no scientific classification is justified yet.
 
 ## Exact next command
 
-Monitor the active Sequential sweep without submitting another job:
+Inspect the generated Joint sanity file without submitting another GPU job:
 
 ```bash
-squeue -j 255132
+cd /data/users/chjing/moe-energy-scheduling
+cat results/raw/milestone-e-joint-plan-255132-20260826T140049Z/sanity-hmml.json
 ```
 
-After it completes, verify `exit-status.txt`, confirm 81 unique successful
-manifest rows, and only then run the CPU-only Joint planning command above. Do
-not begin Joint submission before the 81-point completeness gate passes.
+After review, the next GPU action is the serialized eight-task Joint array
+command above. Do not submit it until the user confirms.
