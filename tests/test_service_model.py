@@ -28,7 +28,7 @@ def test_phase_accounting_and_rank_aggregation():
 
 def test_amdahl_fit_recovers_fixed_and_frequency_components():
     frequencies = [2520, 1635, 1005]
-    observed = [5.0, 6.0, 8.0]
+    observed = [5.0, 2.0 + 3.0 * 2520 / 1635, 2.0 + 3.0 * 2520 / 1005]
     model = fit_amdahl(frequencies, observed, fmax_mhz=2520)
     assert model["fixed_ms"] == pytest.approx(2.0, abs=0.1)
     assert model["frequency_ms_at_fmax"] == pytest.approx(3.0, abs=0.1)
@@ -41,7 +41,7 @@ def test_service_model_prediction_and_serialization():
     observed = [4.0, 4.0, 4.5, 5.0]
     model = fit_service_time_model(loads, frequencies, observed, fmax_mhz=2520)
     predicted = predict_service_time(model, loads, frequencies)
-    assert predicted.shape == (3,)
+    assert predicted.shape == (4,)
     assert model_to_dict(model)["coefficients"] == pytest.approx(model["coefficients"])
     metrics = prediction_metrics(observed, predicted)
     assert metrics["mae_ms"] < 1.0
