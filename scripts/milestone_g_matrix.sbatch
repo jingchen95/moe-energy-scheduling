@@ -41,7 +41,7 @@ placement_file="${values[1]}"
 trace="${values[2]}"
 phase_counts="${values[3]}"
 controller="${plan}/measured/${placement_name}-attempt-${SLURM_JOB_ID}"
-mkdir -p "${controller}/runs"
+mkdir -p "${controller}/runs" "${controller}/server"
 pid_file="${controller}/server/vllm.pid"
 server_pid=""
 phase_active=0
@@ -178,4 +178,3 @@ fi
 
 python -m src.gpu_control reset > "${controller}/final-clock-reset.json"
 printf '%s\n' "complete" > "${controller}/status.txt"
-
