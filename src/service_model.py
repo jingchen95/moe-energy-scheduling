@@ -175,6 +175,7 @@ def prediction_metrics(
     return {
         "mae_ms": float(np.mean(np.abs(residual))),
         "rmse_ms": float(np.sqrt(np.mean(residual**2))),
+        "max_abs_error_ms": float(np.max(np.abs(residual))),
         "mape_percent": float(
             np.mean(np.abs(residual) / np.maximum(np.abs(actual), 1e-12)) * 100
         ),

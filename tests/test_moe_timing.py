@@ -19,3 +19,14 @@ def test_timing_aggregation_splits_mixed_rows_and_uses_max_rank():
     assert result["max_rank_prefill_ms"] == pytest.approx(5.0)
     assert result["max_rank_decode_ms"] == pytest.approx(5.0)
     assert result["per_layer"]["l0"]["total_ms"] == pytest.approx(11.0)
+
+
+def test_unknown_phase_uses_observed_decode_row_fallback():
+    result = aggregate_timing_records({
+        0: [{"layer": "l0", "phase": "unknown", "token_rows": 1,
+             "decode_rows": None, "elapsed_ms": 3.0},
+            {"layer": "l0", "phase": "unknown", "token_rows": 129,
+             "decode_rows": None, "elapsed_ms": 7.0}],
+    })
+    assert result["max_rank_decode_ms"] == pytest.approx(3.0)
+    assert result["max_rank_prefill_ms"] == pytest.approx(7.0)

@@ -107,6 +107,12 @@ def matrix_rows(plan_dir: Path) -> list[dict[str, Any]]:
                     "moe_max_rank_total_ms": float(timing["max_rank_total_ms"]),
                     "moe_max_rank_prefill_ms": float(timing["max_rank_prefill_ms"]),
                     "moe_max_rank_decode_ms": float(timing["max_rank_decode_ms"]),
+                    "moe_decode_ms_per_row": float(
+                        timing["max_rank_decode_ms"] / max(
+                            (value["decode_rows"] for value in timing["per_rank"].values()),
+                            default=1.0,
+                        )
+                    ),
                     "moe_sum_rank_total_ms": float(timing["sum_rank_total_ms"]),
                     "moe_decode_rows_max_rank": float(max(
                         (value["decode_rows"] for value in timing["per_rank"].values()),
@@ -160,8 +166,8 @@ def repeatability_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "n_trials": len(values),
             "tpot_p99_mean_ms": float(np.mean([v["tpot_p99_ms"] for v in values])),
             "tpot_p99_std_ms": float(np.std([v["tpot_p99_ms"] for v in values], ddof=1)),
-            "moe_decode_ms_mean": float(np.mean([v["moe_max_rank_decode_ms"] for v in values])),
-            "moe_decode_ms_std": float(np.std([v["moe_max_rank_decode_ms"] for v in values], ddof=1)),
+            "moe_decode_ms_per_row_mean": float(np.mean([v["moe_decode_ms_per_row"] for v in values])),
+            "moe_decode_ms_per_row_std": float(np.std([v["moe_decode_ms_per_row"] for v in values], ddof=1)),
             "energy_j_mean": float(np.mean([v["total_gpu_energy_j"] for v in values])),
             "energy_j_std": float(np.std([v["total_gpu_energy_j"] for v in values], ddof=1)),
         })
@@ -199,9 +205,9 @@ def make_plot(path: Path, rows: list[dict[str, Any]], model_rows: list[dict[str,
         for target, marker in ((1635, "o"), (1005, "s")):
             target_row = next(row for row in values if row["frequency_mhz"] == target)
             axes[0].scatter(high["decode_load_g0"], target_row["tpot_p99_ms"] - high["tpot_p99_ms"], color=color, marker=marker, label=f"{level} {target} MHz")
-            axes[1].scatter(high["decode_load_g0"], target_row["moe_max_rank_decode_ms"] - high["moe_max_rank_decode_ms"], color=color, marker=marker)
+            axes[1].scatter(high["decode_load_g0"], target_row["moe_decode_ms_per_row"] - high["moe_decode_ms_per_row"], color=color, marker=marker)
     axes[0].set(xlabel="GPU0 decode routed tokens", ylabel="TPOT p99 penalty (ms)")
-    axes[1].set(xlabel="GPU0 decode routed tokens", ylabel="MoE decode-region penalty (ms)")
+    axes[1].set(xlabel="GPU0 decode routed tokens", ylabel="MoE decode service penalty (ms / routed row)")
     axes[0].legend(fontsize=7, ncol=2)
     fig.tight_layout()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -235,7 +241,7 @@ def write_doc(
         "",
         "## Platform and timing",
         "",
-        "Qwen/Qwen3-30B-A3B, vLLM 0.15.1, TP=1/DP=4/EP=4, four L40S GPUs on one Uranus node, `allgather_reducescatter`, fixed 50-request GSM8K trace at 0.5 requests/s, and clocks H/M/L = 2520/1635/1005 MHz. The MoE interval is one CUDA-event region around FusedMoE dispatch, expert compute, and combine on each rank. Events are rank-local and resolved only at the explicit profile dump; no collective runs in the measured forward.",
+        "Qwen/Qwen3-30B-A3B, vLLM 0.15.1, TP=1/DP=4/EP=4, four L40S GPUs on one Uranus node, `allgather_reducescatter`, fixed 50-request GSM8K trace at 0.5 requests/s, and clocks H/M/L = 2520/1635/1005 MHz. The MoE interval is one CUDA-event region around FusedMoE dispatch, expert compute, and combine on each rank. Events are rank-local and resolved only at the explicit profile dump; no collective runs in the measured forward. vLLM 0.15.1 cleared phase kwargs before the timing wrapper could retain them, so unknown records are classified explicitly by the observed non-speculative row boundary: 1–2 rows decode and >=129 rows prefill.",
         "",
         "## Controlled load axis",
         "",
@@ -250,25 +256,25 @@ def write_doc(
         "",
         "Deltas are the target frequency minus the corresponding all-high run for the same placement.",
         "",
-        "| level | GPU0 decode load | transition | TPOT p99 penalty (ms) | MoE decode penalty (ms) | energy delta (J) |",
+        "| level | GPU0 decode load | transition | TPOT p99 penalty (ms) | MoE decode service penalty (ms / routed row) | energy delta (J) |",
         "|---|---:|---|---:|---:|---:|",
     ])
     for row in summary["penalty_rows"]:
         lines.append(f"| {row['load_level']} | {row['gpu0_decode_load']} | {row['frequency_transition']} | {row['tpot_penalty_ms']:.3f} | {row['moe_decode_penalty_ms']:.3f} | {row['energy_delta_j']:.1f} |")
     lines.extend([
         "",
-        f"TPOT penalty correlation with GPU0 decode load: Pearson {summary['penalty_correlations']['tpot']['pearson']:.3f}; MoE decode-region penalty correlation: Pearson {summary['penalty_correlations']['moe_decode_region']['pearson']:.3f}. These are four load levels × two transitions and are not a population estimate.",
+        f"TPOT penalty correlation with GPU0 decode load: Pearson {summary['penalty_correlations']['tpot']['pearson']:.3f}; MoE decode service penalty correlation: Pearson {summary['penalty_correlations']['moe_decode_service']['pearson']:.3f}. These are four load levels × two transitions and are not a population estimate.",
         "",
         "## Model comparison",
         "",
-        "| model | target | MAE (ms) | MAPE (%) | max/rank diagnostics | LOO MAE (ms) |",
-        "|---|---|---:|---:|---:|---:|",
+        "| model | target | MAE (ms) | MAPE (%) | max abs (ms) | rank accuracy | LOO MAE (ms) | LOO MAPE (%) | LOO max abs (ms) | LOO rank accuracy |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ])
     for row in model_rows:
-        lines.append(f"| {row['model']} | {row['target']} | {row['mae_ms']:.3f} | {row['mape_percent']:.2f} | {row['rank_order_accuracy']:.3f} | {row['loo_mae_ms'] if row['loo_mae_ms'] is not None else 'n/a'} |")
+        lines.append(f"| {row['model']} | {row['target']} | {row['mae_ms']:.3f} | {row['mape_percent']:.2f} | {row['max_abs_error_ms']:.3f} | {row['rank_order_accuracy']:.3f} | {row['loo_mae_ms'] if row['loo_mae_ms'] is not None else 'n/a'} | {row['loo_mape_percent'] if row['loo_mape_percent'] is not None else 'n/a'} | {row['loo_max_abs_error_ms'] if row['loo_max_abs_error_ms'] is not None else 'n/a'} | {row['loo_rank_order_accuracy'] if row['loo_rank_order_accuracy'] is not None else 'n/a'} |")
     lines.extend([
         "",
-        "Model C is the controlled load × frequency model `T = a + b·max_g(L_g fmax/f_g) + c·max_g(L_g(fmax/f_g − 1))`, with loads expressed in millions of decode routed tokens. It is fitted separately to TPOT and the rank-max MoE decode interval.",
+        "Model C is the controlled load × frequency model `T = a + b·max_g(L_g fmax/f_g) + c·max_g(L_g(fmax/f_g − 1))`, with loads expressed in millions of decode routed tokens. It is fitted separately to TPOT and rank-max MoE decode service time per routed row.",
         "",
         "## Milestone E offline rescoring",
         "",
@@ -313,7 +319,7 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
     loads = np.asarray([[row[f"decode_load_g{gpu}"] for gpu in range(4)] for row in initial], dtype=float) / 1e6
     frequencies = np.asarray([json.loads(row["frequency_tuple"]) for row in initial], dtype=float)
     tpot = np.asarray([row["tpot_p99_ms"] for row in initial], dtype=float)
-    moe = np.asarray([row["moe_max_rank_decode_ms"] for row in initial], dtype=float)
+    moe = np.asarray([row["moe_decode_ms_per_row"] for row in initial], dtype=float)
     g_tpot, g_tpot_loo = fit_cv(loads, frequencies, tpot)
     g_moe, g_moe_loo = fit_cv(loads, frequencies, moe)
     g_tpot_pred = predict_service_time(g_tpot, loads, frequencies)
@@ -337,16 +343,16 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
         ("milestone_g_load_frequency_moe", moe, g_moe_pred, g_moe_loo, prediction_metrics(moe, g_moe_pred)),
     ):
         metrics = prediction_metrics(observed, predicted)
-        model_table.append({"model": name, "target": "tpot_p99_ms" if "moe" not in name else "moe_decode_region_ms", **metrics,
+        model_table.append({"model": name, "target": "tpot_p99_ms" if "moe" not in name else "moe_decode_ms_per_row", **metrics,
                             "loo_mae_ms": loo.get("mae_ms") if loo else None,
                             "loo_mape_percent": loo.get("mape_percent") if loo else None,
+                            "loo_max_abs_error_ms": loo.get("max_abs_error_ms") if loo else None,
                             "loo_rank_order_accuracy": loo.get("rank_order_accuracy") if loo else None,
                             "calibrated_pressure_mae_ms": pressure_metrics.get("mae_ms")})
     write_csv(args.output_root / "milestone_g_model.csv", model_table)
 
     # Rescore the already-measured E candidates using the controlled G model.
     f_candidate_rows = [row for row in csv.DictReader(args.f_candidates.open(newline="", encoding="utf-8")) if row["basis"] == "aggregate"]
-    p1_path = Path(plan["p1_placement"])
     candidate_rows: list[dict[str, Any]] = []
     for row in f_candidate_rows:
         candidate_index = int(row["candidate_index"])
@@ -395,7 +401,7 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
                 "gpu0_decode_load": high["decode_load_g0"],
                 "frequency_transition": f"2520->{frequency}",
                 "tpot_penalty_ms": target["tpot_p99_ms"] - high["tpot_p99_ms"],
-                "moe_decode_penalty_ms": target["moe_max_rank_decode_ms"] - high["moe_max_rank_decode_ms"],
+                "moe_decode_penalty_ms": target["moe_decode_ms_per_row"] - high["moe_decode_ms_per_row"],
                 "energy_delta_j": target["total_gpu_energy_j"] - high["total_gpu_energy_j"],
             })
     load_values = [float(row["gpu0_decode_load"]) for row in penalty_rows]
@@ -403,11 +409,11 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
     moe_penalties = [float(row["moe_decode_penalty_ms"]) for row in penalty_rows]
     penalty_correlations = {
         "tpot": correlation(load_values, tpot_penalties),
-        "moe_decode_region": correlation(load_values, moe_penalties),
+        "moe_decode_service": correlation(load_values, moe_penalties),
     }
     for row in penalty_rows:
         row["load_vs_tpot_pearson"] = penalty_correlations["tpot"]["pearson"]
-        row["load_vs_moe_pearson"] = penalty_correlations["moe_decode_region"]["pearson"]
+        row["load_vs_moe_pearson"] = penalty_correlations["moe_decode_service"]["pearson"]
 
     residuals = (tpot - g_tpot_pred).tolist()
     summary = {
@@ -452,7 +458,7 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
             ),
         },
     }
-    load_increases = penalty_correlations["tpot"]["pearson"] > 0.5 and penalty_correlations["moe_decode_region"]["pearson"] > 0.5
+    load_increases = penalty_correlations["tpot"]["pearson"] > 0.5 and penalty_correlations["moe_decode_service"]["pearson"] > 0.5
     near_slo_mae = float(np.mean([
         abs(float(row["milestone_g_predicted_tpot_ms"]) - float(row["actual_tpot_p99_ms"]))
         for row in candidate_rows if 11.0 <= float(row["actual_tpot_p99_ms"]) <= 15.5
@@ -469,7 +475,7 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
         json.dumps(summary, indent=2, sort_keys=True, allow_nan=True) + "\n", encoding="utf-8"
     )
     model_plot_rows = [
-        {"actual_moe_ms": row["moe_max_rank_decode_ms"], "predicted_moe_ms": g_moe_pred[index],
+        {"actual_moe_ms": row["moe_decode_ms_per_row"], "predicted_moe_ms": g_moe_pred[index],
          "actual_tpot_ms": row["tpot_p99_ms"], "predicted_tpot_ms": g_tpot_pred[index]}
         for index, row in enumerate(initial)
     ]

@@ -1,72 +1,96 @@
 # Handoff
 
-## Latest status — Milestone F
+## Latest status — Milestone G
 
-Milestone F is complete on branch `milestone-f-service-model` through the
-offline diagnosis and one accepted no-collective phase-profile run. The
-Milestone E measurements were reused; no repeatability sweep, new Joint search,
-or online scheduler was started.
+Milestone G controlled load–frequency characterization is complete on branch
+`milestone-g-load-frequency-model`. The 24 accepted measurements (12 initial
+matrix points plus 12 preregistered repeats) were collected on one Uranus node
+with Qwen/Qwen3-30B-A3B, vLLM 0.15.1, TP=1/DP=4/EP=4, four NVIDIA L40S GPUs,
+and `allgather_reducescatter`.
 
 ### Completed
 
-- Added `src/service_model.py` with Amdahl and small max-GPU service-time fits,
-  phase-count validation/aggregation, candidate rescoring, correlations, and
-  load-dependent P1/P2 perturbation analysis in `tools/analyze_milestone_f.py`.
-- Added the opt-in vLLM 0.15.1 phase instrumentation patch stack. FlashAttention
-  query lengths classify one-token rows as decode and each DP rank marks only
-  its own contiguous token block; no collective runs in the measured forward.
-- Final validation job `255174` completed with 50/50 requests, zero failures,
-  positive NVML energy, exact prefill+decode conservation, and successful patch
-  and clock cleanup. Profile run:
-  `results/raw/milestone-f-phase-255174-20260826T214727Z/runs/c-math-20260826T214834.669632Z-0248d849`.
-- Phase totals: 20,365,056 routed assignments; 17,926,656 prefill (88.03%) and
-  2,438,400 decode (11.97%). The earlier 255149 profile that used a temporary
-  cross-rank count was discarded from analysis.
-- Generated `docs/milestone_f_service_model.md` and the three processed tables
-  plus `milestone_f_summary.json` under `results/processed/`.
+- Controlled static placements were generated from the frozen GSM8K expert
+  profile. GPU0 decode loads are LOW `612,845`, MEDIUM `1,234,496`, HIGH
+  `1,576,914`, and VERY_HIGH `1,725,728` routed tokens; every placement has
+  128 experts exactly once and 32 experts per EP rank.
+- The 12-point matrix used GPU0 at H/M/L = 2520/1635/1005 MHz with GPUs 1–3
+  fixed at 2520 MHz. Repeats covered LOW-H/M, HIGH-H/M, and VERY_HIGH-H/M.
+- Job array `255315` completed all four serialized controllers. Every run had
+  50/50 completed requests, zero failures, one trace hash, positive NVML
+  cumulative energy, exact target/actual average clocks, and clock reset.
+- Added opt-in rank-local CUDA-event timing around the FusedMoE dispatch,
+  expert compute, and combine region in
+  `patches/vllm-0.15.1-moe-timing.patch`. Events are resolved only at profile
+  dump; no collective or timing RPC runs in the measured forward.
+- vLLM 0.15.1 cleared phase metadata before the wrapper retained it. The
+  postprocessor uses an explicit fallback: 1–2 token rows are decode and
+  >=129 rows are prefill. This limitation is documented and test-covered.
+- Final compact tables are in `results/processed/`, figures in
+  `results/figures/`, and the report is
+  `docs/milestone_g_load_frequency_model.md`.
+- The complete Minerva CPU-safe suite passes: `36 passed, 2 warnings`.
 
-### Diagnosis
+### Findings and decision gate
 
-- Uniform P1 measurements at 2520/1635/1005 MHz fit
-  `T = T_fixed + T_freq * fmax/f` with fixed 8.394 ms, frequency-sensitive
-  2.717 ms, sensitive fraction 0.245, and fit MAE 0.074 ms. The old
-  `TPOT(high)*fmax/f` proxy has 5.853 ms MAE.
-- Decode-only candidate pressure did not provide a clearly better positive
-  correlation with measured TPOT (Pearson -0.493, Spearman -0.429; n=8) than
-  aggregate pressure (Pearson -0.414, Spearman -0.333). The empirical service
-  model reduces aggregate candidate MAE from 4.660 to 2.026 ms, but its
-  rank-order accuracy is lower (0.821 vs 0.893), so it does not explain all
-  placement residuals.
-- Existing D perturbations show higher TPOT penalty for the concentrated high
-  load GPU0 (1.719 ms) than the balanced P1 GPU0 (0.942 ms), but the eight-point
-  diagnostic is not a causal fit. Classification: `B_FREQUENCY_MODEL_DOMINANT`.
+- TPOT p99 downclock penalties relative to each placement's all-high run were
+  not monotonic: Pearson correlation with GPU0 decode load was `-0.178` over
+  eight paired transitions. Normalized MoE service penalties were also
+  non-monotonic (Pearson `-0.606`).
+- Model C is the interpretable max-GPU load/frequency model
+  `a + b*max(L*fmax/f) + c*max(L*(fmax/f - 1))`. Its TPOT leave-one-out MAE
+  was `17.36 ms`, MAPE `16.21%`, maximum error `43.02 ms`, and rank-order
+  accuracy `0.621`. Its MoE per-row proxy leave-one-out MAE was `0.171 ms`,
+  maximum error `0.390 ms`, and rank-order accuracy `0.515`.
+- On the existing eight Milestone E Joint candidates, offline Model C
+  rescoring had MAE `108.18 ms`, maximum error `113.95 ms`, and rank-order
+  accuracy `0.036`, versus Milestone F MAE `2.03 ms` and Milestone E MAE
+  `4.66 ms`. This is an out-of-domain diagnostic, not a new GPU experiment.
+- Classification: **`G1_NOT_SUPPORTED`**. The controlled load axis did not
+  show reliable load-dependent DVFS sensitivity beyond run-to-run variation;
+  the TPOT model is not accurate enough to justify another placement/DVFS
+  search.
 
-### Validation and unresolved issues
+### Unresolved issues
 
-- CPU-safe tests on Minerva remain `32 passed` before the final analyzer-only
-  edits; local Mac Python lacks NumPy/pytest. The analyzer and patch files pass
-  syntax/diff checks locally and the analyzer ran successfully on Minerva.
-- Profile runs `255145`/`255147`/`255148` were failed or superseded debugging
-  attempts; only `255174` is accepted for phase analysis. CUDA graphs require
-  `--enforce-eager` for this opt-in instrumentation.
-- Communication, synchronization, and grouped-GEMM effects are not measured;
-  output divergence between custom placements remains a Milestone E limitation.
+- The timing patch's phase fallback is explicit but not a retained vLLM phase
+  tag; a future instrumentation pass could expose phase metadata directly.
+- No direct all-to-all, synchronization, grouped-GEMM, or wait-time timer is
+  available, and custom placement can change BF16 reduction order/output
+  identity. No new claim about semantic expert skew is made.
+- Results cover one model, one GSM8K trace, one node, three clocks, no
+  replication, and no migration. Raw runs remain on Minerva under
+  `results/raw/milestone-g-plan-20260829T085033Z-retry` and are ignored by Git.
 
-### Exact next command
+## Earlier milestones
 
-Do not launch another GPU job yet. Review the diagnosis with:
+- Milestone D established the placement perturbation and static mapping path.
+- Milestone E measured the exhaustive Sequential B4 sweep and eight Joint
+  candidates; its best 13 ms point was `52,450.538 J` versus the Sequential
+  B4 optimum `52,474.447 J` (0.0456% lower, not repeatability-confirmed).
+- Milestone F diagnosed the frequency-dominant component and added the phase
+  profile used as the frozen G input.
+
+## Exact next command
+
+Do not launch another GPU job and do not implement Joint v2. Review the final
+negative decision gate and compact evidence:
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-cat docs/milestone_f_service_model.md
+cat docs/milestone_g_load_frequency_model.md
+cat results/processed/milestone_g_summary.json
 ```
 
-If proceeding, the recommended next milestone is a small offline Joint pilot
-using decode-only profiles and the empirical `T(L,f)` model before adding any
-communication-aware objective. Do not rerun the 81-point sweep or the E
-repeatability stage.
+The recommended next research decision is to reconsider whether placement
+belongs in the DVFS objective. If the thesis is retained, first add direct
+communication/synchronization timing or repeat the coupling experiment with a
+stronger controlled intervention; do not start Joint v2 from this result.
 
-## Current working state
+## Archived milestone-E notes (superseded by the G status above)
+
+The following execution details are retained for provenance only. The G status
+and exact next command above are authoritative.
 
 Milestone D remains complete at commit `d233672`. Milestone E experiment code,
 CPU planning/analysis tools, and Slurm jobs are prepared on branch
@@ -74,8 +98,8 @@ CPU planning/analysis tools, and Slurm jobs are prepared on branch
 `255132` was submitted on 2026-08-26 and is running exclusively on Uranus from
 code commit `da7c5cd`; it completed successfully. The CPU-only Joint plan was
 then generated and passed its H/M/M/L sanity gate. Joint array `255135` then
-measured all eight candidates successfully; repeatability and final
-classification remain pending.
+measured all eight candidates successfully; the later G study superseded the
+pending E follow-up for the current research decision.
 
 The active controller is:
 
@@ -114,7 +138,7 @@ The pre-submission CPU-safe suite passed on Minerva: `28 passed in 3.09s`.
   cumulative NVML energy, monitor samples, output-token IDs, patch state, and
   unique raw run directories. They never call the expert-profile RPC.
 
-## Verification completed
+## Historical verification completed
 
 - Python source compilation passes with bytecode redirected to `/tmp`.
 - `bash -n` passes for all Milestone E shell/Slurm scripts.
@@ -156,7 +180,7 @@ PYTHONPATH=.deps python -m pytest -q
 
 Result: `28 passed in 3.09s`.
 
-## Staged execution commands
+## Historical staged execution commands
 
 Stage A, exhaustive Sequential B4, was submitted as job `255132` with:
 
@@ -214,7 +238,7 @@ python -m tools.analyze_milestone_e \
   --repeat-study "${repeat_study}"
 ```
 
-## Unresolved issues
+## Historical Milestone-E unresolved issues
 
 - Three-trial repeatability has not been submitted.
 - Joint output divergence remains a known interpretation limitation; the new
@@ -222,7 +246,7 @@ python -m tools.analyze_milestone_e \
 - The processed Milestone E CSV/JSON tables and figures require the Joint and
   repeatability measurements; no scientific classification is justified yet.
 
-## Exact next command
+## Archived Milestone-E next command (superseded)
 
 Inspect the generated Joint sanity file without submitting another GPU job:
 

@@ -11,11 +11,18 @@ def _phase_split(record: dict[str, Any]) -> tuple[float, float, float]:
     elapsed = float(record["elapsed_ms"])
     token_rows = int(record.get("token_rows", 0) or 0)
     decode_rows = record.get("decode_rows")
-    if record.get("phase") == "decode":
+    phase = record.get("phase")
+    # vLLM 0.15.1 clears forward-context kwargs after routing.  In the
+    # pilot's non-speculative trace, decode invocations have 1-2 rows while
+    # chunked-prefill invocations have >=129 rows; use that explicit fallback
+    # only when the patch could not retain phase metadata.
+    if phase == "unknown" and decode_rows is None:
+        phase = "decode" if token_rows <= 2 else "prefill"
+    if phase == "decode":
         return 0.0, elapsed, float(decode_rows or token_rows)
-    if record.get("phase") == "prefill":
+    if phase == "prefill":
         return elapsed, 0.0, 0.0
-    if record.get("phase") == "mixed" and token_rows > 0 and decode_rows is not None:
+    if phase == "mixed" and token_rows > 0 and decode_rows is not None:
         fraction = min(1.0, max(0.0, float(decode_rows) / token_rows))
         return elapsed * (1.0 - fraction), elapsed * fraction, float(decode_rows)
     return elapsed, 0.0, 0.0
