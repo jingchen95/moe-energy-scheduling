@@ -32,3 +32,15 @@ The DP phase mask uses vLLM's existing per-rank token-count metadata and local
 attention query lengths. Each rank marks only its own contiguous token block,
 so no cross-rank collective or profiling RPC is added to the measured forward
 path. The final profile dump performs the existing out-of-window reduction.
+
+## Milestone G MoE timing instrumentation
+
+`vllm-0.15.1-moe-timing.patch` is an opt-in patch applied after the phase
+stack. With `VLLM_MOE_TIMING=1`, it records one CUDA-event interval around each
+FusedMoE dispatch/compute/combine region and tags it with the local phase mask
+and token-row count. Events are retained in rank-local memory and resolved only
+at the explicit profile dump after a local `torch.cuda.synchronize()`; no
+collective runs in the measured forward. The worker writes
+`moe_timing_rank<N>.json` alongside the phase profile. `reset_expert_profile`
+clears pending events before each measured trace. The timing manager requires the
+Milestone F phase patch to be active and reverts only its own patch.

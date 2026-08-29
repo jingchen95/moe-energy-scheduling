@@ -189,3 +189,65 @@ def model_to_dict(model: Mapping[str, Any]) -> dict[str, Any]:
     for key, value in model.items():
         result[key] = value.tolist() if isinstance(value, np.ndarray) else value
     return result
+
+
+def fit_load_frequency_model(
+    loads: Sequence[float], frequencies_mhz: Sequence[float],
+    observed_ms: Sequence[float], *, fmax_mhz: float,
+) -> dict[str, Any]:
+    """Fit the scalar controlled-load model ``a + bL + cL(fmax/f - 1)``."""
+    load_values = _as_vector(loads, "loads")
+    frequency_values = _as_vector(frequencies_mhz, "frequencies_mhz")
+    observed = _as_vector(observed_ms, "observed_ms")
+    if (load_values.size != frequency_values.size
+            or load_values.size != observed.size
+            or np.any(load_values < 0)
+            or np.any(frequency_values <= 0)
+            or fmax_mhz <= 0):
+        raise ValueError("loads, frequencies, and observations must have matching valid lengths")
+    design = np.column_stack((
+        np.ones_like(load_values),
+        load_values,
+        load_values * (float(fmax_mhz) / frequency_values - 1.0),
+    ))
+    coefficients, _, rank, _ = np.linalg.lstsq(design, observed, rcond=None)
+    if rank < min(design.shape):
+        raise ValueError("load-frequency design is rank deficient")
+    predicted = design @ coefficients
+    residual = observed - predicted
+    return {
+        "model": "a_plus_b_load_plus_c_load_frequency_slowdown",
+        "fmax_mhz": float(fmax_mhz),
+        "coefficients": coefficients.tolist(),
+        "a_ms": float(coefficients[0]),
+        "b_ms_per_load": float(coefficients[1]),
+        "c_ms_per_load": float(coefficients[2]),
+        "predicted_ms": predicted.tolist(),
+        "observed_ms": observed.tolist(),
+        "residual_ms": residual.tolist(),
+        "mae_ms": float(np.mean(np.abs(residual))),
+        "rmse_ms": float(np.sqrt(np.mean(residual ** 2))),
+        "mape_percent": float(
+            np.mean(np.abs(residual) / np.maximum(np.abs(observed), 1e-12)) * 100
+        ),
+        "n_configs": int(load_values.size),
+    }
+
+
+def predict_load_frequency_model(
+    model: Mapping[str, Any], loads: Sequence[float], frequencies_mhz: Sequence[float],
+) -> np.ndarray:
+    """Predict from a serialized scalar load-frequency model."""
+    load_values = _as_vector(loads, "loads")
+    frequency_values = _as_vector(frequencies_mhz, "frequencies_mhz")
+    if load_values.size != frequency_values.size:
+        raise ValueError("loads and frequencies must have matching lengths")
+    coefficients = np.asarray(model["coefficients"], dtype=np.float64)
+    if coefficients.shape != (3,):
+        raise ValueError("load-frequency model coefficients must contain three values")
+    fmax = float(model["fmax_mhz"])
+    return np.column_stack((
+        np.ones_like(load_values),
+        load_values,
+        load_values * (fmax / frequency_values - 1.0),
+    )) @ coefficients

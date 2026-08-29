@@ -5,8 +5,10 @@ from src.expert_profile import aggregate_phase_rank_loads, validate_phase_counts
 from src.service_model import (
     fit_amdahl,
     fit_service_time_model,
+    fit_load_frequency_model,
     model_to_dict,
     prediction_metrics,
+    predict_load_frequency_model,
     predict_service_time,
 )
 
@@ -52,3 +54,13 @@ def test_service_model_rejects_bad_shapes():
         fit_service_time_model(
             np.ones((2, 4)), np.ones((3, 4)), [1, 2], fmax_mhz=2520
         )
+
+
+def test_load_frequency_model_recovers_interaction_and_predicts():
+    loads = np.array([1.0, 2.0, 1.0, 2.0, 3.0, 3.0])
+    frequencies = np.array([2520, 2520, 1635, 1635, 2520, 1005])
+    observed = 2.0 + 0.5 * loads + 0.25 * loads * (2520 / frequencies - 1.0)
+    model = fit_load_frequency_model(loads, frequencies, observed, fmax_mhz=2520)
+    predicted = predict_load_frequency_model(model, loads, frequencies)
+    assert model["coefficients"] == pytest.approx([2.0, 0.5, 0.25])
+    assert predicted == pytest.approx(observed)

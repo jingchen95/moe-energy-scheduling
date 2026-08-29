@@ -167,6 +167,87 @@ def diagnostic_concentrated_placement(
     return result
 
 
+def controlled_load_placements(
+    counts: np.ndarray,
+    *,
+    base: Placement | None = None,
+    concentrated: Placement | None = None,
+    num_ranks: int = 4,
+) -> list[Placement]:
+    """Create four deterministic GPU0-load levels from two valid endpoints.
+
+    The base endpoint is normally upstream EPLB and the concentrated endpoint
+    is the diagnostic descending-load mapping.  For each layer, a fraction of
+    the highest-load experts that move onto rank 0 in the concentrated mapping
+    are swapped with the lowest-load rank-0 experts from the base mapping.
+    Each swap preserves every rank's cardinality, while monotonically moving
+    the controlled load axis toward the concentrated endpoint.
+    """
+    weights = validate_counts(counts)
+    layers, experts = weights.shape
+    if base is None:
+        base = upstream_balanced_placement(weights, num_groups=8, num_ranks=num_ranks)
+    if concentrated is None:
+        concentrated = diagnostic_concentrated_placement(weights, num_ranks=num_ranks)
+    base.validate()
+    concentrated.validate()
+    if (base.num_layers, base.num_experts, base.num_ranks) != (
+        layers, experts, num_ranks
+    ) or (concentrated.num_layers, concentrated.num_experts,
+          concentrated.num_ranks) != (layers, experts, num_ranks):
+        raise ValueError("controlled placement endpoints do not match counts")
+    if num_ranks < 2:
+        raise ValueError("controlled load levels require at least two ranks")
+
+    levels = (
+        ("LOW", 0.0),
+        ("MEDIUM", 1.0 / 3.0),
+        ("HIGH", 2.0 / 3.0),
+        ("VERY_HIGH", 1.0),
+    )
+    placements: list[Placement] = []
+    for name, alpha in levels:
+        mapping = base.logical_to_rank.copy()
+        swaps = 0
+        for layer in range(layers):
+            base_row = base.logical_to_rank[layer]
+            target_row = concentrated.logical_to_rank[layer]
+            incoming = [
+                int(expert_id) for expert_id in range(experts)
+                if base_row[expert_id] != 0 and target_row[expert_id] == 0
+            ]
+            outgoing = [
+                int(expert_id) for expert_id in range(experts)
+                if base_row[expert_id] == 0 and target_row[expert_id] != 0
+            ]
+            incoming.sort(key=lambda expert_id: (-int(weights[layer, expert_id]), expert_id))
+            outgoing.sort(key=lambda expert_id: (int(weights[layer, expert_id]), expert_id))
+            count = int(round(alpha * min(len(incoming), len(outgoing))))
+            for incoming_id, outgoing_id in zip(incoming[:count], outgoing[:count]):
+                source_rank = int(mapping[layer, incoming_id])
+                if source_rank == 0 or int(mapping[layer, outgoing_id]) != 0:
+                    raise ValueError("controlled placement swap lost rank-0 invariant")
+                mapping[layer, incoming_id] = 0
+                mapping[layer, outgoing_id] = source_rank
+                swaps += 1
+        placement = Placement(
+            f"controlled_{name.lower()}",
+            mapping,
+            num_ranks,
+            {
+                "algorithm": "rank-0 interpolation between upstream EPLB and descending-load endpoints",
+                "base_placement": base.name,
+                "concentrated_placement": concentrated.name,
+                "alpha": alpha,
+                "swaps": swaps,
+                "replication": False,
+            },
+        )
+        placement.validate()
+        placements.append(placement)
+    return placements
+
+
 def frequency_aware_placement(
     counts: np.ndarray, frequencies: list[int] | tuple[int, ...], *,
     speed_factors: list[float] | tuple[float, ...] | None = None,

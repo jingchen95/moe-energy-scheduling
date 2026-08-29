@@ -6,6 +6,7 @@ import pytest
 from src.placement import (
     Placement,
     diagnostic_concentrated_placement,
+    controlled_load_placements,
     frequency_aware_placement,
     linear_placement,
     physical_to_rank_placement,
@@ -75,3 +76,21 @@ def test_frequency_aware_swaps_never_worsen_objective():
     before = result.metadata["per_layer_before_objective"]
     after = result.metadata["per_layer_after_objective"]
     assert all(final <= initial for initial, final in zip(before, after))
+
+
+def test_controlled_load_levels_preserve_invariants_and_order_gpu0_load():
+    counts = np.tile(np.arange(1, 129, dtype=np.int64), (2, 1))
+    levels = controlled_load_placements(counts)
+    assert [p.name for p in levels] == [
+        "controlled_low", "controlled_medium", "controlled_high",
+        "controlled_very_high",
+    ]
+    loads = [placement_loads(counts, placement) for placement in levels]
+    for placement in levels:
+        placement.validate()
+    assert [int(value[0]) for value in loads] == sorted(int(value[0]) for value in loads)
+    assert loads[0][0] < loads[-1][0]
+    assert np.array_equal(
+        levels[-1].logical_to_rank == 0,
+        diagnostic_concentrated_placement(counts).logical_to_rank == 0,
+    )
