@@ -20,6 +20,9 @@ results/processed/*
 !results/processed/milestone_g_model.csv
 !results/processed/milestone_g_rescore_e.csv
 !results/processed/milestone_g_summary.json
+!results/processed/milestone_h_ground_truth_matrix.csv
+!results/processed/milestone_h_oracle_summary.csv
+!results/processed/milestone_h_summary.json
 !results/figures/
 results/figures/*
 !results/figures/.gitkeep

@@ -1,0 +1,33 @@
+milestone_h:
+  status: prepared_not_submitted
+  objective: measured_placement_dvfs_ground_truth
+  model_config: configs/model_qwen3_30b_a3b_profile.yaml
+  node: uranus
+  gpu_count: 4
+  parallel: TP=1/DP=4/EP=4
+  workload:
+    trace: gsm8k-50-r0.5.jsonl
+    requests: 50
+    request_rate: 0.5
+    max_output_tokens: 128
+    temperature: 0.0
+    seed: 0
+  frequencies_mhz: [2520, 1635, 1005]
+  placements:
+    - P0_default_linear
+    - P1_upstream_eplb
+    - P2_controlled_medium
+    - P3_controlled_high
+    - P4_controlled_very_high
+  slos:
+    ttft_p99_ms: 500.0
+    tpot_p99_ms: [12.0, 13.0, 15.0]
+  matrix:
+    placement_count: 5
+    frequency_tuple_count: 81
+    measured_rows: 405
+  selection:
+    sequential_high_frequency_primary_metric: tpot_p99_ms
+    sequential_ttft_hard_limit_ms: 500.0
+    joint_selection: minimum_measured_total_gpu_energy
+  models: none

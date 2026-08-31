@@ -1,6 +1,55 @@
 # Handoff
 
-## Latest status — Milestone G
+## Latest status — Ground-truth Placement × DVFS sweep (prepared)
+
+The new exhaustive ground-truth sweep is prepared on branch
+`milestone-h-ground-truth-placement-dvfs`, created from the completed
+Milestone G commit. No new GPU job has been submitted yet.
+
+### Preparation completed
+
+- Added `configs/milestone_h_ground_truth.yaml`,
+  `tools/prepare_milestone_h.py`, `tools/analyze_milestone_h.py`,
+  `scripts/milestone_h_ground_truth.sbatch`, and CPU-safe oracle tests.
+- The fixed matrix is P0 default linear, P1 accepted upstream EPLB, and the
+  accepted P2/P3/P4 controlled-medium/high/very-high mappings, each crossed
+  with all 81 H/M/L frequency tuples.
+- P1 reuse is gated on exact trace/mapping hashes, vLLM/model/runtime settings,
+  50/50 completion, zero failures, NVML cumulative energy, and actual clocks.
+- Selection uses measured p99 TPOT as the Sequential high-frequency placement
+  criterion, a hard p99 TTFT <= 500 ms limit, and measured total energy only.
+  No service model, load proxy, or post-hoc placement generation is used.
+
+### Pending
+
+- Generate and inspect the unique ground-truth plan on Minerva.
+- Commit the preparation, then submit the four new placement arrays as one
+  serialized `%1` Slurm array on Uranus. P1's 81 rows will be reused, so no P1
+  GPU rerun is planned.
+- Analyze the validated 405-row matrix and update this handoff with the
+  Sequential-vs-Joint Oracle result.
+
+### Exact next command
+
+```bash
+cd /data/users/chjing/moe-energy-scheduling
+source /data/users/chjing/miniforge3/bin/activate cuda-env
+python tools/prepare_milestone_h.py \
+  --trace results/raw/milestone-e-sequential-255132-20260826T140049Z/gsm8k-50-r0.5.jsonl \
+  --phase-counts results/raw/milestone-f-phase-255174-20260826T214727Z/runs/c-math-20260826T214834.669632Z-0248d849/expert_counts.npz \
+  --p1-controller results/raw/milestone-e-sequential-255132-20260826T140049Z \
+  --p0 results/raw/milestone-d-255131-20260826T104006Z/placements/default_linear.json \
+  --p1 results/raw/milestone-d-255131-20260826T104006Z/placements/upstream_default_eplb.json \
+  --p2 results/raw/milestone-g-plan-20260829T085033Z-retry/placements/controlled_medium.json \
+  --p3 results/raw/milestone-g-plan-20260829T085033Z-retry/placements/controlled_high.json \
+  --p4 results/raw/milestone-g-plan-20260829T085033Z-retry/placements/controlled_very_high.json \
+  --output-dir results/raw/milestone-h-plan-$(date -u +%Y%m%dT%H%M%SZ)
+```
+
+Do not submit until the generated `matrix-plan.json` and
+`p1-reuse-summary.json` pass inspection.
+
+## Milestone G (completed)
 
 Milestone G controlled load–frequency characterization is complete on branch
 `milestone-g-load-frequency-model`. The 24 accepted measurements (12 initial
@@ -71,7 +120,7 @@ and `allgather_reducescatter`.
 - Milestone F diagnosed the frequency-dominant component and added the phase
   profile used as the frozen G input.
 
-## Exact next command
+## Milestone G exact next command (superseded)
 
 Do not launch another GPU job and do not implement Joint v2. Review the final
 negative decision gate and compact evidence:

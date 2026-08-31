@@ -71,10 +71,14 @@ me_launch_server() {
     local server_dir="${controller}/server"
     mkdir -p "${server_dir}"
     ME_PID_FILE="${server_dir}/vllm.pid"
-    python -m src.config configs/model_qwen3_30b_a3b_profile.yaml -- \
-        --expert-placement-file "${placement_file}" > "${server_dir}/vllm-command.txt"
+    local -a placement_args=()
+    if [[ -n "${placement_file}" ]]; then
+        placement_args=(-- --expert-placement-file "${placement_file}")
+    fi
+    python -m src.config configs/model_qwen3_30b_a3b_profile.yaml \
+        "${placement_args[@]}" > "${server_dir}/vllm-command.txt"
     setsid scripts/serve_vllm.sh --config configs/model_qwen3_30b_a3b_profile.yaml \
-        -- --expert-placement-file "${placement_file}" > "${server_dir}/vllm.log" 2>&1 &
+        "${placement_args[@]}" > "${server_dir}/vllm.log" 2>&1 &
     ME_SERVER_PID=$!
     printf '%s\n' "${ME_SERVER_PID}" > "${ME_PID_FILE}"
     local ready=0
