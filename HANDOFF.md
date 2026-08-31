@@ -22,8 +22,13 @@ Milestone G commit. No new GPU job has been submitted yet.
 
 ### Pending
 
-- Generate and inspect the unique ground-truth plan on Minerva.
-- Commit the preparation, then submit the four new placement arrays as one
+- Plan `results/raw/milestone-h-plan-20260831T100000Z` is generated and passed
+  inspection: 81 P1 rows are reusable, the matrix is 5 x 81 = 405 rows, and
+  the trace hash is `721638a6250b929de05c2c355c8bc9b20258db7b28fedb94acb5572136571cbc`.
+- The P0/P1/P2/P3/P4 aggregate max/mean diagnostics are 1.078/1.012/2.038/
+  2.543/2.750 respectively. These values are diagnostics only.
+- The preparation commit is `619decf`; the trace-path correction is `ce8d78e`.
+  Submit the four new placement arrays as one
   serialized `%1` Slurm array on Uranus. P1's 81 rows will be reused, so no P1
   GPU rerun is planned.
 - Analyze the validated 405-row matrix and update this handoff with the
