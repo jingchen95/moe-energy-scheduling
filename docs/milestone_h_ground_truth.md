@@ -24,6 +24,9 @@ replication, migration, and online scheduling are outside this experiment.
 - Workload: the accepted 50-request GSM8K trace at 0.5 requests/s, fixed
   ordering/arrival offsets, temperature 0, seed 0, and 128 output-token limit.
 - Frequency levels: H/M/L = 2520/1635/1005 MHz.
+- Frequency tuples use one shared seeded permutation (seed `20260831`) for all
+  newly measured placements, so tuple position is not coupled to elapsed job
+  time while the complete 81-point set is unchanged.
 - SLOs: TTFT p99 <= 500 ms and TPOT p99 <= 12, 13, or 15 ms.
 
 ## Fixed placement set

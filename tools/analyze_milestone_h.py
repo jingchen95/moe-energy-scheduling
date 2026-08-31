@@ -132,11 +132,33 @@ def _validate_run(
 
 
 def _successful_controller(study: Path, task_index: int) -> Path:
-    paths = sorted((study / "measured").glob(f"task-{task_index:02d}-attempt-*/runs.tsv"))
-    complete = [path for path in paths if path.exists()]
-    if len(complete) != 1:
-        raise ValueError(f"expected one completed controller for task {task_index}, found {len(complete)}")
-    return complete[0].parent
+    candidates = sorted((study / "measured").glob(f"task-{task_index:02d}-attempt-*"))
+    complete: list[Path] = []
+    for controller in candidates:
+        result_path = controller / "result.json"
+        manifest_path = controller / "runs.tsv"
+        if not result_path.is_file() or not manifest_path.is_file():
+            continue
+        try:
+            result = json.loads(result_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if result.get("status") != "complete":
+            continue
+        try:
+            entries = load_runs(controller)
+        except (OSError, ValueError, KeyError, TypeError, csv.Error):
+            continue
+        tuples = {tuple(entry["frequency_tuple"]) for entry in entries}
+        if len(entries) == 81 and len(tuples) == 81:
+            complete.append(controller)
+    if len(complete) > 1:
+        raise ValueError(
+            f"multiple completed controllers for task {task_index}: {complete}"
+        )
+    if not complete:
+        raise ValueError(f"no completed controller for task {task_index}")
+    return complete[0]
 
 
 def load_matrix(plan_dir: Path) -> list[dict[str, Any]]:

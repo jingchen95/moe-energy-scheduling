@@ -23,6 +23,9 @@ TTFT_LIMIT_MS = 500.0
 TPOT_LIMITS_MS = (12.0, 13.0, 15.0)
 EXPECTED_REQUESTS = 50
 EXPECTED_OUTPUT_TOKENS = 6400
+# One shared order across all newly measured placements avoids coupling tuple
+# position to elapsed job time while keeping the sweep exactly reproducible.
+FREQUENCY_ORDER_SEED = 20260831
 
 
 def sha256(path: Path) -> str:
@@ -178,7 +181,9 @@ def ground_truth_plan(args: argparse.Namespace) -> None:
             "diagnostics": diag,
         })
 
-    tuples = [list(values) for values in enumerate_frequency_tuples(DEFAULT_FREQUENCIES_MHZ)]
+    tuples = [list(values) for values in enumerate_frequency_tuples(
+        DEFAULT_FREQUENCIES_MHZ, seed=FREQUENCY_ORDER_SEED,
+    )]
     plan = {
         "schema_version": 1,
         "study": "ground_truth_placement_dvfs",
@@ -195,6 +200,7 @@ def ground_truth_plan(args: argparse.Namespace) -> None:
         "model_config_sha256": sha256(model_config),
         "runtime_fingerprint": runtime_fingerprint,
         "frequencies_mhz": list(DEFAULT_FREQUENCIES_MHZ),
+        "frequency_order_seed": FREQUENCY_ORDER_SEED,
         "frequency_tuple_count": len(tuples),
         "placement_count": len(placements),
         "expected_matrix_rows": len(placements) * len(tuples),

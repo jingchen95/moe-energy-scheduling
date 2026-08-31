@@ -1,6 +1,13 @@
 import json
 
+import pytest
+
+from tools import analyze_milestone_h
 from tools.analyze_milestone_h import select_oracles
+
+
+def _complete_rows():
+    return [{"frequency_tuple": [index, 0, 0, 0]} for index in range(81)]
 
 
 def _row(placement, frequency, tpot, energy, ttft=100.0):
@@ -35,3 +42,42 @@ def test_ground_truth_oracles_use_measured_latency_and_energy_only():
     assert [row["sequential_placement"] for row in summary] == ["P2"] * 3
     assert [row["joint_placement"] for row in summary] == ["P4"] * 3
     assert all(row["joint_strictly_lower_energy"] for row in summary)
+
+
+def test_retry_selector_ignores_incomplete_attempts(tmp_path, monkeypatch):
+    measured = tmp_path / "measured"
+    failed = measured / "task-00-attempt-failed"
+    complete = measured / "task-00-attempt-complete"
+    failed.mkdir(parents=True)
+    complete.mkdir(parents=True)
+    (failed / "runs.tsv").write_text("partial\n", encoding="utf-8")
+    (complete / "runs.tsv").write_text("complete\n", encoding="utf-8")
+    (complete / "result.json").write_text(
+        json.dumps({"status": "complete"}) + "\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        analyze_milestone_h,
+        "load_runs",
+        lambda _path: _complete_rows(),
+    )
+
+    assert analyze_milestone_h._successful_controller(tmp_path, 0) == complete
+
+
+def test_retry_selector_rejects_two_complete_attempts(tmp_path, monkeypatch):
+    measured = tmp_path / "measured"
+    for name in ("attempt-a", "attempt-b"):
+        controller = measured / f"task-00-{name}"
+        controller.mkdir(parents=True)
+        (controller / "runs.tsv").write_text("complete\n", encoding="utf-8")
+        (controller / "result.json").write_text(
+            json.dumps({"status": "complete"}) + "\n", encoding="utf-8"
+        )
+    monkeypatch.setattr(
+        analyze_milestone_h,
+        "load_runs",
+        lambda _path: _complete_rows(),
+    )
+
+    with pytest.raises(ValueError, match="multiple completed"):
+        analyze_milestone_h._successful_controller(tmp_path, 0)
