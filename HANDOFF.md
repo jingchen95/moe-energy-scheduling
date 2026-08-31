@@ -35,7 +35,7 @@ Milestone G commit. No new GPU job has been submitted yet.
 cd /data/users/chjing/moe-energy-scheduling
 source /data/users/chjing/miniforge3/bin/activate cuda-env
 python tools/prepare_milestone_h.py \
-  --trace results/raw/milestone-e-sequential-255132-20260826T140049Z/gsm8k-50-r0.5.jsonl \
+  --trace results/raw/milestone-e-sequential-255132-20260826T140049Z/trace.jsonl \
   --phase-counts results/raw/milestone-f-phase-255174-20260826T214727Z/runs/c-math-20260826T214834.669632Z-0248d849/expert_counts.npz \
   --p1-controller results/raw/milestone-e-sequential-255132-20260826T140049Z \
   --p0 results/raw/milestone-d-255131-20260826T104006Z/placements/default_linear.json \
