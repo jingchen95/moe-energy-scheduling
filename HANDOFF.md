@@ -1,12 +1,13 @@
 # Handoff
 
-## Latest status — Ground-truth Placement × DVFS sweep (submitted)
+## Latest status — Ground-truth Placement × DVFS sweep (resource-canceled)
 
 The new exhaustive ground-truth sweep is prepared on branch
 `milestone-h-ground-truth-placement-dvfs`, created from the completed
 Milestone G commit. The first pending array was canceled before any task
-started after correcting its tuple ordering; the replacement array uses the
-seeded plan below.
+started after correcting its tuple ordering. Replacement array `255352` was
+then canceled by Slurm before launch because Uranus resources were unavailable;
+the seeded plan below remains valid and no new measurement data was produced.
 
 ### Preparation completed
 
@@ -26,7 +27,7 @@ seeded plan below.
   attempt with `result.json` status `complete` and 81 unique completed tuples;
   partial/failed retries remain on disk but are ignored.
 
-### Submitted / pending
+### Canceled before launch
 
 - Plan `results/raw/milestone-h-plan-20260831T100215Z-seeded` is generated and
   passed
@@ -35,9 +36,12 @@ seeded plan below.
 - The P0/P1/P2/P3/P4 aggregate max/mean diagnostics are 1.078/1.012/2.038/
   2.543/2.750 respectively. These values are diagnostics only.
 - Reliability-fix commit `2d45fdb` is pushed to GitHub. The old pending array
-  `255351` was canceled before execution. Replacement array `255352` is
-  submitted as one serialized `%1` array on Uranus; P1's 81 rows are reused,
-  so no P1 GPU rerun is planned.
+  `255351` was canceled before execution. Replacement array `255352` was
+  recorded by Slurm as `CANCELLED` with reason `Resources` at
+  `2026-08-31T13:53:14` without a node allocation or array-task records. At
+  that time Uranus was occupied by job `255348`; no H sweep task ran and no
+  measured artifacts were created. P1's 81 rows remain reusable, so no P1 GPU
+  rerun is planned.
 - Analyze the validated 405-row matrix and update this handoff with the
   Sequential-vs-Joint Oracle result.
 
@@ -63,8 +67,9 @@ The generated `matrix-plan.json` and `p1-reuse-summary.json` passed inspection.
 Submit the corrected array with:
 
 ```bash
-MILESTONE_H_STUDY=results/raw/milestone-h-plan-20260831T100215Z-seeded \
-  sbatch --array=0-3%1 scripts/milestone_h_ground_truth.sbatch
+ squeue -w uranus
+ MILESTONE_H_STUDY=results/raw/milestone-h-plan-20260831T100215Z-seeded \
+   sbatch --array=0-3%1 scripts/milestone_h_ground_truth.sbatch
 ```
 
 ## Milestone G (completed)
