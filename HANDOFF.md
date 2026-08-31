@@ -45,32 +45,18 @@ the seeded plan below remains valid and no new measurement data was produced.
 - Analyze the validated 405-row matrix and update this handoff with the
   Sequential-vs-Joint Oracle result.
 
-### Exact next command
+### Exact next command (after Uranus is free)
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
 source /data/users/chjing/miniforge3/bin/activate cuda-env
-python tools/prepare_milestone_h.py \
-  --trace results/raw/milestone-e-sequential-255132-20260826T140049Z/trace.jsonl \
-  --phase-counts results/raw/milestone-f-phase-255174-20260826T214727Z/runs/c-math-20260826T214834.669632Z-0248d849/expert_counts.npz \
-  --p1-controller results/raw/milestone-e-sequential-255132-20260826T140049Z \
-  --p0 results/raw/milestone-d-255131-20260826T104006Z/placements/default_linear.json \
-  --p1 results/raw/milestone-d-255131-20260826T104006Z/placements/upstream_default_eplb.json \
-  --p2 results/raw/milestone-g-plan-20260829T085033Z-retry/placements/controlled_medium.json \
-  --p3 results/raw/milestone-g-plan-20260829T085033Z-retry/placements/controlled_high.json \
-  --p4 results/raw/milestone-g-plan-20260829T085033Z-retry/placements/controlled_very_high.json \
-  --output-dir results/raw/milestone-h-plan-20260831T100215Z-seeded
+squeue -w uranus
+MILESTONE_H_STUDY=results/raw/milestone-h-plan-20260831T100215Z-seeded \
+  sbatch --array=0-3%1 scripts/milestone_h_ground_truth.sbatch
 ```
 
-The generated `matrix-plan.json` and `p1-reuse-summary.json` passed inspection.
-
-Submit the corrected array with:
-
-```bash
- squeue -w uranus
- MILESTONE_H_STUDY=results/raw/milestone-h-plan-20260831T100215Z-seeded \
-   sbatch --array=0-3%1 scripts/milestone_h_ground_truth.sbatch
-```
+The seeded plan and its `matrix-plan.json`/`p1-reuse-summary.json` have
+already passed inspection; do not recreate that output directory.
 
 ## Milestone G (completed)
 
