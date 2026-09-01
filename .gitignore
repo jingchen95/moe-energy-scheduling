@@ -38,7 +38,7 @@ results/figures/*
 !results/figures/milestone_e_pareto.pdf
 !results/figures/milestone_g_load_vs_dvfs_penalty.pdf
 !results/figures/milestone_g_predicted_vs_actual.pdf
-!results/figures/milestone_i_pareto.pdf
+!results/figures/milestone_i_pareto.svg
 logs/
 slurm-*.out
 slurm-*.err

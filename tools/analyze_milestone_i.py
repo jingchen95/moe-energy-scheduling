@@ -11,6 +11,7 @@ import math
 from pathlib import Path
 import statistics
 from typing import Any, Iterable
+from xml.sax.saxutils import escape
 
 import yaml
 
@@ -228,6 +229,14 @@ def aggregate_repetitions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "trace_sha256": group[0]["trace_sha256"],
             "placement_sha256": group[0]["placement_sha256"],
         }
+        for phase in ("aggregate", "prefill", "decode"):
+            for gpu in range(4):
+                key = f"{phase}_expert_load_g{gpu}"
+                if key in group[0]:
+                    value[key] = group[0][key]
+            key = f"{phase}_max_over_mean"
+            if key in group[0]:
+                value[key] = group[0][key]
         for name in metric_names:
             values = [float(row[name]) for row in group]
             value[f"{name}_mean"] = statistics.mean(values)
@@ -307,7 +316,14 @@ def classify_opportunity(oracle_rows: list[dict[str, Any]]) -> dict[str, Any]:
         decision = "B_WEAK_OPPORTUNITY"
     else:
         decision = "C_NOT_PROMISING"
+    maximum_row = max(feasible, key=lambda row: float(row["energy_saving_pct"]), default=None)
+    sub_five = [float(row["energy_saving_pct"]) for row in feasible
+                if float(row["energy_saving_pct"]) < 5.0]
     return {"decision": decision, "maximum_energy_saving_pct": max_saving,
+            "maximum_saving_tpot_slo_ms": (
+                float(maximum_row["tpot_slo_ms"]) if maximum_row else None
+            ),
+            "maximum_saving_below_5pct_pct": max(sub_five, default=0.0),
             "slo_width_with_at_least_5pct_saving_ms": strong_width}
 
 
@@ -372,6 +388,11 @@ def _load_experiment_rows(plan_dir: Path) -> tuple[dict[str, Any], list[dict[str
                 row[f"gpu{gpu}_actual_clock_mhz"] = metrics[f"gpu{gpu}_avg_sm_clock"]
                 row[f"gpu{gpu}_energy_j"] = metrics[f"gpu{gpu}_energy_j"]
                 row[f"gpu{gpu}_avg_power_w"] = metrics[f"gpu{gpu}_avg_power_w"]
+            diagnostics = spec["diagnostics"]
+            for phase in ("aggregate", "prefill", "decode"):
+                for gpu, load in enumerate(diagnostics[f"{phase}_expert_load"]):
+                    row[f"{phase}_expert_load_g{gpu}"] = load
+                row[f"{phase}_max_over_mean"] = diagnostics[f"{phase}_max_over_mean"]
             rows.append(row)
     observed = {(row["placement"], tuple(row["frequency_tuple"]), row["repetition"])
                 for row in rows}
@@ -422,7 +443,7 @@ def _write_report(path: Path, plan: dict[str, Any], aggregate: list[dict[str, An
     calibration = payload["calibration"]
     lines = [
         "# Higher-load Placement × DVFS Repeatability Check", "", "## Method", "",
-        f"P1/HHHH calibration estimated stable saturation throughput at **{calibration['saturation_throughput_requests_s']:.3f} req/s**. The preregistered 65% target selected **{plan['request_rate']:.3f} req/s**. The fixed trace contains 300 deterministic GSM8K requests and is identical across all 132 measured runs.",
+        f"P1/HHHH calibration measured a conservative capacity lower bound of **{calibration['saturation_throughput_requests_s']:.3f} req/s** before client scheduling became invalid. The fixed 65% target selected **{plan['request_rate']:.3f} req/s**, the closest client-valid measured rate. The fixed trace contains 300 deterministic GSM8K requests and is identical across all 132 measured runs.",
         "", "Four preregistered placements (P1-P4), 11 targeted H/M/L tuples, and three independent measurement windows per configuration were measured. Selection uses measured serving behavior only; expert-load diagnostics and performance models are not used.",
         "", "## HHHH placement selection", "",
         "| placement | TTFT p99 mean ± std (ms) | TPOT p99 mean ± std (ms) | energy mean ± std (J) |",
@@ -447,34 +468,77 @@ def _write_report(path: Path, plan: dict[str, Any], aggregate: list[dict[str, An
         else:
             lines.append(f"| {row['tpot_slo_ms']:.0f} ms | yes | {row['sequential_placement']} {row['sequential_frequency_tuple']} | {row['joint_placement']} {row['joint_frequency_tuple']} | {row['energy_saving_pct']:.3f}% |")
     decision = payload["decision"]
+    maximum = max((row for row in oracle if row.get("feasible")),
+                  key=lambda row: float(row["energy_saving_pct"]))
+    maximum_threshold = float(maximum["tpot_slo_ms"])
+    next_row = next((row for row in oracle
+                     if row.get("feasible") and math.isclose(
+                         float(row["tpot_slo_ms"]), maximum_threshold + 0.1,
+                     )), None)
+    max_joint = next(row for row in aggregate
+                     if row["placement"] == maximum["joint_placement"]
+                     and row["frequency_tuple"] == maximum["joint_frequency_tuple"])
+    next_seq = min((row for row in aggregate
+                    if row["placement"] == maximum["sequential_placement"]
+                    and float(row["tpot_p99_ms_mean"]) > maximum_threshold),
+                   key=lambda row: float(row["tpot_p99_ms_mean"]))
     lines.extend(["", "## Decision", "",
-                  f"**{decision['decision']}**. The maximum saving anywhere on the complete 0.1 ms exploratory SLO grid is {decision['maximum_energy_saving_pct']:.3f}%. Preregistered 12/13/15 ms rows are reported above rather than replaced by a favorable post-hoc threshold.",
+                  f"**{decision['decision']}**. The numerical maximum is {decision['maximum_energy_saving_pct']:.3f}% at the single exploratory {maximum_threshold:.1f} ms threshold. It is a boundary artifact, not a broad saving: the Joint point TPOT is {max_joint['tpot_p99_ms_mean']:.3f} ± {max_joint['tpot_p99_ms_std']:.3f} ms while the next Sequential DVFS point is {next_seq['tpot_p99_ms_mean']:.3f} ± {next_seq['tpot_p99_ms_std']:.3f} ms. Their mean separation is smaller than repeat variability. At {maximum_threshold + 0.1:.1f} ms the saving is {(float(next_row['energy_saving_pct']) if next_row else 0.0):.3f}%.",
+                  "",
+                  f"Excluding >=5% one-grid boundary effects, the largest measured saving is {decision['maximum_saving_below_5pct_pct']:.3f}% and also occurs only over a narrow SLO interval. The data therefore support a weak, noise-sensitive interaction, not a strong systems opportunity. Preregistered 12/13/15 ms rows remain visible above and are not replaced by a favorable post-hoc threshold.",
                   "", "## Limitations", "",
-                  "One model, one GSM8K trace, one four-L40S node, four fixed placements, 11 targeted tuples, no replication/migration, and a 500 ms TTFT guard. P99 values are summarized across three windows but remain workload- and system-specific."])
+                  "The calibration found a 22.434 req/s measured capacity lower bound, not an exact server saturation point: offered rates above 24 req/s became client-scheduling-invalid. One model, one GSM8K trace, one four-L40S node, four fixed placements, 11 targeted tuples, no replication/migration, and a 500 ms TTFT guard. P99 values are summarized across three windows but remain workload- and system-specific."])
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _write_figure(path: Path, aggregate: list[dict[str, Any]],
                   frontier: list[dict[str, Any]]) -> None:
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(figsize=(6.2, 4.0))
-    for placement in sorted({row["placement"] for row in aggregate}):
-        rows = [row for row in aggregate if row["placement"] == placement]
-        ax.scatter([row["tpot_p99_ms_mean"] for row in rows],
-                   [row["joules_per_request_mean"] for row in rows], s=20, alpha=0.65,
-                   label=placement)
-    ax.plot([row["tpot_p99_ms_mean"] for row in frontier],
-            [row["joules_per_request_mean"] for row in frontier], color="black",
-            linewidth=1.2, label="measured frontier")
-    ax.set_xlabel("Mean of repeated TPOT p99 (ms)")
-    ax.set_ylabel("GPU joules / request")
-    ax.grid(alpha=0.25)
-    ax.legend(ncol=2, fontsize=8)
-    fig.tight_layout()
+    width, height = 760, 480
+    left, right, top, bottom = 82, 26, 28, 62
+    plot_w, plot_h = width - left - right, height - top - bottom
+    xs = [float(row["tpot_p99_ms_mean"]) for row in aggregate]
+    ys = [float(row["joules_per_request_mean"]) for row in aggregate]
+    x_pad = max((max(xs) - min(xs)) * 0.05, 0.5)
+    y_pad = max((max(ys) - min(ys)) * 0.05, 0.5)
+    x0, x1 = min(xs) - x_pad, max(xs) + x_pad
+    y0, y1 = min(ys) - y_pad, max(ys) + y_pad
+
+    def point(row: dict[str, Any]) -> tuple[float, float]:
+        x = left + (float(row["tpot_p99_ms_mean"]) - x0) / (x1 - x0) * plot_w
+        y = top + (y1 - float(row["joules_per_request_mean"])) / (y1 - y0) * plot_h
+        return x, y
+
+    colors = {"P1": "#147d64", "P2": "#d97706", "P3": "#2563a6", "P4": "#b4235a"}
+    svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+           '<rect width="100%" height="100%" fill="white"/>',
+           f'<line x1="{left}" y1="{top + plot_h}" x2="{left + plot_w}" y2="{top + plot_h}" stroke="#333"/>',
+           f'<line x1="{left}" y1="{top}" x2="{left}" y2="{top + plot_h}" stroke="#333"/>']
+    for index in range(6):
+        x = left + index / 5 * plot_w
+        value = x0 + index / 5 * (x1 - x0)
+        svg.extend([f'<line x1="{x:.1f}" y1="{top}" x2="{x:.1f}" y2="{top + plot_h}" stroke="#ddd"/>',
+                    f'<text x="{x:.1f}" y="{top + plot_h + 22}" text-anchor="middle" font-size="11">{value:.1f}</text>'])
+        y = top + index / 5 * plot_h
+        yvalue = y1 - index / 5 * (y1 - y0)
+        svg.extend([f'<line x1="{left}" y1="{y:.1f}" x2="{left + plot_w}" y2="{y:.1f}" stroke="#ddd"/>',
+                    f'<text x="{left - 9}" y="{y + 4:.1f}" text-anchor="end" font-size="11">{yvalue:.1f}</text>'])
+    if frontier:
+        coordinates = " ".join(f"{x:.1f},{y:.1f}" for x, y in map(point, frontier))
+        svg.append(f'<polyline points="{coordinates}" fill="none" stroke="#111" stroke-width="2"/>')
+    for row in aggregate:
+        x, y = point(row)
+        color = colors.get(str(row["placement"]), "#666")
+        svg.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{color}" fill-opacity="0.72"><title>{escape(str(row["placement"]))} {escape(str(row["frequency_tuple"]))}</title></circle>')
+    svg.extend([f'<text x="{left + plot_w / 2:.1f}" y="{height - 16}" text-anchor="middle" font-size="13">Mean of repeated TPOT p99 (ms)</text>',
+                f'<text x="18" y="{top + plot_h / 2:.1f}" text-anchor="middle" font-size="13" transform="rotate(-90 18 {top + plot_h / 2:.1f})">GPU joules / request</text>'])
+    for index, placement in enumerate(sorted(colors)):
+        x = left + 12 + index * 82
+        svg.extend([f'<circle cx="{x}" cy="{top + 10}" r="4" fill="{colors[placement]}"/>',
+                    f'<text x="{x + 9}" y="{top + 14}" font-size="11">{placement}</text>'])
+    svg.append("</svg>")
     path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(path)
-    plt.close(fig)
+    path.write_text("\n".join(svg) + "\n", encoding="utf-8")
 
 
 def main() -> None:
@@ -492,7 +556,7 @@ def main() -> None:
     experiment.add_argument("--report", type=Path,
                             default=Path("docs/milestone_i_higher_load.md"))
     experiment.add_argument("--figure", type=Path,
-                            default=Path("results/figures/milestone_i_pareto.pdf"))
+                            default=Path("results/figures/milestone_i_pareto.svg"))
     experiment.set_defaults(func=analyze_experiment)
     args = parser.parse_args()
     args.func(args)

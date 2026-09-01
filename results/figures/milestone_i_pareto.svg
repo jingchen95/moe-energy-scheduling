@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="480" viewBox="0 0 760 480">
+<rect width="100%" height="100%" fill="white"/>
+<line x1="82" y1="418" x2="734" y2="418" stroke="#333"/>
+<line x1="82" y1="28" x2="82" y2="418" stroke="#333"/>
+<line x1="82.0" y1="28" x2="82.0" y2="418" stroke="#ddd"/>
+<text x="82.0" y="440" text-anchor="middle" font-size="11">63.5</text>
+<line x1="82" y1="28.0" x2="734" y2="28.0" stroke="#ddd"/>
+<text x="73" y="32.0" text-anchor="end" font-size="11">72.7</text>
+<line x1="212.4" y1="28" x2="212.4" y2="418" stroke="#ddd"/>
+<text x="212.4" y="440" text-anchor="middle" font-size="11">67.9</text>
+<line x1="82" y1="106.0" x2="734" y2="106.0" stroke="#ddd"/>
+<text x="73" y="110.0" text-anchor="end" font-size="11">68.1</text>
+<line x1="342.8" y1="28" x2="342.8" y2="418" stroke="#ddd"/>
+<text x="342.8" y="440" text-anchor="middle" font-size="11">72.4</text>
+<line x1="82" y1="184.0" x2="734" y2="184.0" stroke="#ddd"/>
+<text x="73" y="188.0" text-anchor="end" font-size="11">63.5</text>
+<line x1="473.2" y1="28" x2="473.2" y2="418" stroke="#ddd"/>
+<text x="473.2" y="440" text-anchor="middle" font-size="11">76.9</text>
+<line x1="82" y1="262.0" x2="734" y2="262.0" stroke="#ddd"/>
+<text x="73" y="266.0" text-anchor="end" font-size="11">58.9</text>
+<line x1="603.6" y1="28" x2="603.6" y2="418" stroke="#ddd"/>
+<text x="603.6" y="440" text-anchor="middle" font-size="11">81.4</text>
+<line x1="82" y1="340.0" x2="734" y2="340.0" stroke="#ddd"/>
+<text x="73" y="344.0" text-anchor="end" font-size="11">54.3</text>
+<line x1="734.0" y1="28" x2="734.0" y2="418" stroke="#ddd"/>
+<text x="734.0" y="440" text-anchor="middle" font-size="11">85.9</text>
+<line x1="82" y1="418.0" x2="734" y2="418.0" stroke="#ddd"/>
+<text x="73" y="422.0" text-anchor="end" font-size="11">49.7</text>
+<polyline points="111.6,53.6 114.5,59.8 291.5,343.2 292.9,345.3 495.1,358.5 502.7,373.6 504.9,374.7 519.1,376.2 562.0,379.4 624.5,390.4 637.5,390.6 644.9,395.6 668.6,400.3" fill="none" stroke="#111" stroke-width="2"/>
+<circle cx="668.6" cy="400.3" r="4" fill="#147d64" fill-opacity="0.72"><title>P1 [1005, 1005, 1005, 1005]</title></circle>
+<circle cx="624.5" cy="390.4" r="4" fill="#147d64" fill-opacity="0.72"><title>P1 [1005, 1005, 1005, 1635]</title></circle>
+<circle cx="657.0" cy="394.6" r="4" fill="#147d64" fill-opacity="0.72"><title>P1 [1005, 1005, 1635, 1005]</title></circle>
+<circle cx="644.9" cy="395.6" r="4" fill="#147d64" fill-opacity="0.72"><title>P1 [1005, 1635, 1005, 1005]</title></circle>
+<circle cx="502.7" cy="373.6" r="4" fill="#147d64" fill-opacity="0.72"><title>P1 [1005, 1635, 1635, 1635]</title></circle>
+<circle cx="637.5" cy="390.6" r="4" fill="#147d64" fill-opacity="0.72"><title>P1 [1635, 1005, 1005, 1005]</title></circle>
+<circle cx="504.9" cy="374.7" r="4" fill="#147d64" fill-opacity="0.72"><title>P1 [1635, 1005, 1635, 1635]</title></circle>
+<circle cx="533.9" cy="373.7" r="4" fill="#147d64" fill-opacity="0.72"><title>P1 [1635, 1635, 1005, 1635]</title></circle>
+<circle cx="562.0" cy="379.4" r="4" fill="#147d64" fill-opacity="0.72"><title>P1 [1635, 1635, 1635, 1005]</title></circle>
+<circle cx="291.5" cy="343.2" r="4" fill="#147d64" fill-opacity="0.72"><title>P1 [1635, 1635, 1635, 1635]</title></circle>
+<circle cx="114.5" cy="59.8" r="4" fill="#147d64" fill-opacity="0.72"><title>P1 [2520, 2520, 2520, 2520]</title></circle>
+<circle cx="674.4" cy="397.5" r="4" fill="#d97706" fill-opacity="0.72"><title>P2 [1005, 1005, 1005, 1005]</title></circle>
+<circle cx="640.6" cy="387.1" r="4" fill="#d97706" fill-opacity="0.72"><title>P2 [1005, 1005, 1005, 1635]</title></circle>
+<circle cx="639.9" cy="387.5" r="4" fill="#d97706" fill-opacity="0.72"><title>P2 [1005, 1005, 1635, 1005]</title></circle>
+<circle cx="664.0" cy="387.0" r="4" fill="#d97706" fill-opacity="0.72"><title>P2 [1005, 1635, 1005, 1005]</title></circle>
+<circle cx="512.8" cy="369.0" r="4" fill="#d97706" fill-opacity="0.72"><title>P2 [1005, 1635, 1635, 1635]</title></circle>
+<circle cx="672.3" cy="393.3" r="4" fill="#d97706" fill-opacity="0.72"><title>P2 [1635, 1005, 1005, 1005]</title></circle>
+<circle cx="527.7" cy="374.5" r="4" fill="#d97706" fill-opacity="0.72"><title>P2 [1635, 1005, 1635, 1635]</title></circle>
+<circle cx="519.1" cy="376.2" r="4" fill="#d97706" fill-opacity="0.72"><title>P2 [1635, 1635, 1005, 1635]</title></circle>
+<circle cx="563.2" cy="375.7" r="4" fill="#d97706" fill-opacity="0.72"><title>P2 [1635, 1635, 1635, 1005]</title></circle>
+<circle cx="292.9" cy="345.3" r="4" fill="#d97706" fill-opacity="0.72"><title>P2 [1635, 1635, 1635, 1635]</title></circle>
+<circle cx="111.6" cy="53.6" r="4" fill="#d97706" fill-opacity="0.72"><title>P2 [2520, 2520, 2520, 2520]</title></circle>
+<circle cx="683.1" cy="395.4" r="4" fill="#2563a6" fill-opacity="0.72"><title>P3 [1005, 1005, 1005, 1005]</title></circle>
+<circle cx="644.7" cy="385.1" r="4" fill="#2563a6" fill-opacity="0.72"><title>P3 [1005, 1005, 1005, 1635]</title></circle>
+<circle cx="657.2" cy="384.2" r="4" fill="#2563a6" fill-opacity="0.72"><title>P3 [1005, 1005, 1635, 1005]</title></circle>
+<circle cx="674.3" cy="382.4" r="4" fill="#2563a6" fill-opacity="0.72"><title>P3 [1005, 1635, 1005, 1005]</title></circle>
+<circle cx="495.1" cy="358.5" r="4" fill="#2563a6" fill-opacity="0.72"><title>P3 [1005, 1635, 1635, 1635]</title></circle>
+<circle cx="652.4" cy="391.8" r="4" fill="#2563a6" fill-opacity="0.72"><title>P3 [1635, 1005, 1005, 1005]</title></circle>
+<circle cx="532.7" cy="368.5" r="4" fill="#2563a6" fill-opacity="0.72"><title>P3 [1635, 1005, 1635, 1635]</title></circle>
+<circle cx="537.9" cy="371.7" r="4" fill="#2563a6" fill-opacity="0.72"><title>P3 [1635, 1635, 1005, 1635]</title></circle>
+<circle cx="570.0" cy="377.0" r="4" fill="#2563a6" fill-opacity="0.72"><title>P3 [1635, 1635, 1635, 1005]</title></circle>
+<circle cx="303.4" cy="336.5" r="4" fill="#2563a6" fill-opacity="0.72"><title>P3 [1635, 1635, 1635, 1635]</title></circle>
+<circle cx="120.3" cy="45.7" r="4" fill="#2563a6" fill-opacity="0.72"><title>P3 [2520, 2520, 2520, 2520]</title></circle>
+<circle cx="704.4" cy="391.4" r="4" fill="#b4235a" fill-opacity="0.72"><title>P4 [1005, 1005, 1005, 1005]</title></circle>
+<circle cx="639.1" cy="388.2" r="4" fill="#b4235a" fill-opacity="0.72"><title>P4 [1005, 1005, 1005, 1635]</title></circle>
+<circle cx="669.7" cy="383.8" r="4" fill="#b4235a" fill-opacity="0.72"><title>P4 [1005, 1005, 1635, 1005]</title></circle>
+<circle cx="665.1" cy="384.5" r="4" fill="#b4235a" fill-opacity="0.72"><title>P4 [1005, 1635, 1005, 1005]</title></circle>
+<circle cx="509.6" cy="361.3" r="4" fill="#b4235a" fill-opacity="0.72"><title>P4 [1005, 1635, 1635, 1635]</title></circle>
+<circle cx="669.8" cy="391.4" r="4" fill="#b4235a" fill-opacity="0.72"><title>P4 [1635, 1005, 1005, 1005]</title></circle>
+<circle cx="533.3" cy="371.4" r="4" fill="#b4235a" fill-opacity="0.72"><title>P4 [1635, 1005, 1635, 1635]</title></circle>
+<circle cx="539.2" cy="373.7" r="4" fill="#b4235a" fill-opacity="0.72"><title>P4 [1635, 1635, 1005, 1635]</title></circle>
+<circle cx="559.4" cy="372.9" r="4" fill="#b4235a" fill-opacity="0.72"><title>P4 [1635, 1635, 1635, 1005]</title></circle>
+<circle cx="298.2" cy="336.3" r="4" fill="#b4235a" fill-opacity="0.72"><title>P4 [1635, 1635, 1635, 1635]</title></circle>
+<circle cx="120.6" cy="52.6" r="4" fill="#b4235a" fill-opacity="0.72"><title>P4 [2520, 2520, 2520, 2520]</title></circle>
+<text x="408.0" y="464" text-anchor="middle" font-size="13">Mean of repeated TPOT p99 (ms)</text>
+<text x="18" y="223.0" text-anchor="middle" font-size="13" transform="rotate(-90 18 223.0)">GPU joules / request</text>
+<circle cx="94" cy="38" r="4" fill="#147d64"/>
+<text x="103" y="42" font-size="11">P1</text>
+<circle cx="176" cy="38" r="4" fill="#d97706"/>
+<text x="185" y="42" font-size="11">P2</text>
+<circle cx="258" cy="38" r="4" fill="#2563a6"/>
+<text x="267" y="42" font-size="11">P3</text>
+<circle cx="340" cy="38" r="4" fill="#b4235a"/>
+<text x="349" y="42" font-size="11">P4</text>
+</svg>

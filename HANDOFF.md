@@ -1,86 +1,64 @@
 # Handoff
 
-## Latest status — Milestone I formal repeatability matrix prepared
+## Latest status — Milestone I higher-load repeatability check complete
 
-Branch `milestone-i-higher-load-repeatability` was created from completed
-Milestone H commit `d7f30c5`. Initial P1/HHHH calibration job `255371`
-completed successfully; no P2/P3/P4 higher-load measurement has run yet.
+Branch `milestone-i-higher-load-repeatability` contains the completed final
+motivation check. No service model, scheduler, placement heuristic, or
+expert-load-based selection was used.
 
-### Prepared and validated
+### Calibration and fixed experiment
 
-- Added a fixed 300-request GSM8K base trace with seed `20260901` and hash
-  `90af9ef2c3bc0c3dd99e4f7cddd4c7dfdabe4223f6278016c98526bbc938bd3d`.
-  It contains 300 unique source rows: all 225 available 128–256-token prompts
-  plus 75 deterministically selected 120–127-token prompts. Input-token
-  mean/p50/p90 is 139.49/135/161.
-- The P1/HHHH calibration uses 100 fixed requests at offered rates
-  0.5/1.0/1.5/2.0/2.5/3.0/3.5/4.0 req/s. Seed `20260902` fixes their execution
-  order independently of results.
-- The formal plan generator is fixed to P1–P4, 11 preregistered tuples, three
-  repetitions, and recorded placement/run-order seeds. It cannot run until the
-  P1-only calibration selects the offered load.
-- Added strict run validation, repeat mean/sample-standard-deviation summaries,
-  a measured Pareto frontier, a complete 0.1 ms exploratory TPOT-SLO curve,
-  and the preregistered A/B/C decision gate. No performance model, scheduler,
-  placement heuristic, or expert-load selection is used.
-- Python/shell syntax checks and five new pure-function tests pass. `pytest` is
-  not installed in the current Minerva environments, so no dependency was
-  installed; the tests were imported and executed directly.
-
-### Calibration input
-
-`results/raw/milestone-i-calibration-20260901T082621Z-validated` is the
-immutable calibration directory. The older `...082526Z` directory is a
-superseded, never-submitted plan retained for provenance.
-
-### Initial calibration result and extension
-
-- Job `255371` completed all 8 rates with 100/100 requests, zero failures,
-  positive cumulative NVML energy, target-matching HHHH clocks, final 2520 MHz
-  reset, and vLLM patch state `not applied`.
-- At 4.0 req/s offered load the measured throughput was 3.675 req/s (91.9%
-  efficiency), so the sweep did not bracket saturation under the fixed 90%
-  criterion. It is not valid to treat 3.675 req/s as saturation yet.
-- Before observing any other placement, an extension at 4.5/5.0/5.5/6.0 req/s
-  was fixed with random-order seed `20260905`. Its immutable plan directory is
-  `results/raw/milestone-i-calibration-extension-20260901T084416Z-validated`.
-- Extension job `255372` completed 4/4 rates with zero failures and safe cleanup.
-  Throughput still increased from 4.808 req/s at 5.5 offered to 5.177 req/s at
-  6.0 offered, so a stable plateau was not yet established.
-- Before any P2/P3/P4 run, the final plateau check was fixed at 7/8/9/10 req/s,
-  300 requests per point, order seed `20260906`. Acceptance requires all three
-  highest-rate throughputs within 95% of the peak and highest offered rate at
-  least 1.2x peak throughput. Immutable plan:
-  `results/raw/milestone-i-calibration-plateau-20260901T085110Z-validated`.
-- Plateau job `255374` completed safely, but measured throughput still rose from
-  6.490 req/s at 7 offered to 8.740 req/s at 10 offered. The fixed plateau rule
-  therefore correctly rejected the 10 req/s upper bound.
-- A final wider capacity block uses 12/16/20/24 req/s, 300 requests per point,
-  and seed `20260907`. It was fixed before other placements and avoids a dense
-  additional sweep. Immutable plan:
-  `results/raw/milestone-i-calibration-capacity-20260901T085907Z-validated`.
-- Capacity job `255375` completed safely, but throughput still rose through
-  17.031 req/s at 24 offered. No service model is fit. The final sparse direct
-  probe is 32/48/64 req/s, 300 requests each, order seed `20260908`, under:
-  `results/raw/milestone-i-calibration-final-plateau-20260901T090539Z-validated`.
-- Final probe job `255376` completed safely. Rates >=32 req/s incurred
-  0.54–3.69 s client send-delay p99 and are invalid as formal open-loop loads,
-  while complete-drain throughput provides a conservative measured capacity
-  lower bound of 22.434 req/s. Exact server saturation was not claimed.
-- The 65% target is 14.58 req/s. The closest measured client-valid point is
-  **16 req/s** (71.3% of the lower bound), with 300/300 completions, TTFT p99
-  229.4 ms, and small send delay. This rate is locked before P2/P3/P4 data.
-- Formal plan `results/raw/milestone-i-repeatability-20260901T091212Z-r16-validated`
-  contains 132 unique runs: P1–P4 x 11 fixed tuples x 3 repetitions. Task block
-  order is P3/P1/P2/P4; within-block order is also seeded. Final trace hash is
+- Calibration jobs `255371`, `255372`, `255374`, `255375`, and `255376` used
+  P1/HHHH only. The measured complete-drain capacity lower bound is 22.434
+  req/s; exact server saturation was not claimed because offered rates >=32
+  req/s had invalid client send delay.
+- The fixed 65% target selected 16 req/s, the nearest client-valid measured
+  rate (71.3% of the lower bound). This was locked before P2/P3/P4 data.
+- The final trace contains 300 unique GSM8K prompts, input-token mean/p50/p90
+  139.49/135/161, and hash
   `b7cd1171e53fc36bba602ecd800a2a631e3c7505b7eb7d64c3306b0c0be47453`.
+- Serialized array `255377` completed P3/P1/P2/P4 in seeded block order. All
+  132 runs completed 300/300 requests with zero failures, cumulative NVML
+  energy, target-matching observed clocks, one trace, and 3 repetitions for
+  every one of the 44 placement/tuple configurations.
+- Every controller exited 0 and reverted the vLLM patch; final global patch
+  state is `not applied`. Clock-reset cleanup ran after every task.
+- Five new CPU-safe pure-function tests pass. `pytest` is not installed in the
+  existing Minerva environments, so no dependency was installed.
+
+### Result and decision
+
+- At HHHH, Sequential selects P2: TPOT p99 64.481 ± 0.153 ms, TTFT p99
+  226.010 ± 3.156 ms, energy 21,368.932 ± 75.932 J.
+- The preregistered 12/13/15 ms TPOT SLOs are all infeasible at this offered
+  load and remain explicitly reported.
+- The exploratory 0.1 ms SLO curve has a numerical 24.044% maximum only at
+  70.7 ms. It is a boundary artifact: P1/P2 MMMM TPOT differs by only 0.049 ms
+  while their repeat standard deviations are 0.398/0.496 ms. At 70.8 ms the
+  saving is 0%.
+- Excluding >=5% one-grid boundary effects, the maximum measured saving is
+  3.221% and also occurs only over a narrow SLO interval.
+- Decision: **B — weak opportunity**. Higher load reveals a real interaction,
+  but not a repeatable >=5% benefit over a meaningful SLO interval. This does
+  not justify proceeding directly to algorithm/system design.
+
+### Artifacts
+
+- Report: `docs/milestone_i_higher_load.md`
+- Per-run table: `results/processed/milestone_i_runs.csv`
+- Three-repeat aggregate: `results/processed/milestone_i_aggregate.csv`
+- Pareto points: `results/processed/milestone_i_pareto.csv`
+- Full exploratory curve: `results/processed/milestone_i_oracle_curve.csv`
+- Summary: `results/processed/milestone_i_summary.json`
+- Figure: `results/figures/milestone_i_pareto.svg`
+- Raw study: `results/raw/milestone-i-repeatability-20260901T091212Z-r16-validated`
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-MILESTONE_I_STUDY=results/raw/milestone-i-repeatability-20260901T091212Z-r16-validated \
-  sbatch --array=0-3%1 scripts/milestone_i_repeat.sbatch
+cat docs/milestone_i_higher_load.md
+cat results/processed/milestone_i_summary.json
 ```
 
 ## Milestone H — Ground-truth Placement × DVFS sweep complete

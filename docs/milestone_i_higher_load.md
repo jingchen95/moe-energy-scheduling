@@ -1,75 +1,52 @@
 # Higher-load Placement × DVFS Repeatability Check
 
-## Status
+## Method
 
-Prepared for P1/HHHH offered-load calibration. This document contains no
-Milestone I measurement result yet.
+P1/HHHH calibration measured a conservative capacity lower bound of **22.434 req/s** before client scheduling became invalid. The fixed 65% target selected **16.000 req/s**, the closest client-valid measured rate. The fixed trace contains 300 deterministic GSM8K requests and is identical across all 132 measured runs.
 
-## Research question
+Four preregistered placements (P1-P4), 11 targeted H/M/L tuples, and three independent measurement windows per configuration were measured. Selection uses measured serving behavior only; expert-load diagnostics and performance models are not used.
 
-Did Milestone H's weak 0–0.1% Joint Oracle gap result from a lightly loaded
-0.5 req/s trace and noisy 50-request p99 estimates?
+## HHHH placement selection
 
-This is a final measured motivation check. It does not fit a service model,
-build a scheduler, change a placement, or use expert-load diagnostics for
-selection.
+| placement | TTFT p99 mean ± std (ms) | TPOT p99 mean ± std (ms) | energy mean ± std (J) |
+|---|---:|---:|---:|
+| P2 | 226.010 ± 3.156 | 64.481 ± 0.153 | 21368.932 ± 75.932 |
+| P1 | 227.160 ± 1.063 | 64.579 ± 0.036 | 21258.167 ± 117.971 |
+| P3 | 229.037 ± 3.058 | 64.778 ± 0.109 | 21507.847 ± 110.141 |
+| P4 | 225.546 ± 2.542 | 64.790 ± 0.021 | 21386.568 ± 86.118 |
 
-## Fixed workload
+## Measured Pareto frontier
 
-- Model/runtime: Qwen3-30B-A3B, vLLM 0.15.1, TP=1/DP=4/EP=4.
-- Hardware: one exclusive Uranus node with four L40S GPUs.
-- Trace seed: `20260901`.
-- Requests: 300 unique GSM8K prompts, deterministic greedy generation, 128
-  output tokens.
-- Prompt lengths: all 225 available 128–256-token prompts plus 75 samples from
-  the adjacent 120–127-token range; mean/p50/p90 is 139.49/135/161 tokens.
+| placement | frequencies (MHz) | TTFT p99 mean (ms) | TPOT p99 mean (ms) | energy mean (J) |
+|---|---|---:|---:|---:|
+| P2 | [2520, 2520, 2520, 2520] | 226.010 | 64.481 | 21368.932 |
+| P1 | [2520, 2520, 2520, 2520] | 227.160 | 64.579 | 21258.167 |
+| P1 | [1635, 1635, 1635, 1635] | 256.554 | 70.667 | 16231.013 |
+| P2 | [1635, 1635, 1635, 1635] | 254.884 | 70.716 | 16193.924 |
+| P3 | [1005, 1635, 1635, 1635] | 276.865 | 77.672 | 15959.230 |
+| P1 | [1005, 1635, 1635, 1635] | 277.664 | 77.932 | 15691.369 |
+| P1 | [1635, 1005, 1635, 1635] | 281.041 | 78.006 | 15672.346 |
+| P2 | [1635, 1635, 1005, 1635] | 278.463 | 78.495 | 15645.235 |
+| P1 | [1635, 1635, 1635, 1005] | 288.417 | 79.973 | 15588.443 |
+| P1 | [1005, 1005, 1005, 1635] | 294.515 | 82.120 | 15393.173 |
+| P1 | [1635, 1005, 1005, 1005] | 291.899 | 82.570 | 15390.019 |
+| P1 | [1005, 1635, 1005, 1005] | 291.963 | 82.822 | 15302.021 |
+| P1 | [1005, 1005, 1005, 1005] | 295.185 | 83.637 | 15218.445 |
 
-## Offered-load calibration
+## Preregistered reference SLOs
 
-P1 upstream EPLB at HHHH is measured at the fixed offered-rate set
-0.5/1.0/1.5/2.0/2.5/3.0/3.5/4.0 req/s using 100 requests per rate. Seed
-`20260902` randomizes rate order. Saturation and the approximately 65% target
-are selected before any P2/P3/P4 higher-load result is observed.
+| TPOT SLO | feasible | Sequential | Joint | saving |
+|---:|---|---|---|---:|
+| 12 ms | no | - | - | - |
+| 13 ms | no | - | - | - |
+| 15 ms | no | - | - | - |
 
-The initial sweep reached 3.675 req/s at 4.0 req/s offered load, or 91.9% of
-offered load, so it did not bracket saturation under the preregistered 90%
-criterion. Before observing any P2/P3/P4 result, a fixed extension at
-4.5/5.0/5.5/6.0 req/s was added with order seed `20260905`.
+## Decision
 
-The extension reached 5.177 req/s at 6.0 offered and still had a substantial
-positive throughput slope. A final plateau check therefore uses 300 requests
-at 7/8/9/10 req/s with seed `20260906`. Saturation is accepted only when the
-three highest-rate throughputs are all within 95% of the measured peak and the
-highest offered rate is at least 1.2× that peak. This rule was fixed before any
-P2/P3/P4 result was observed.
+**B_WEAK_OPPORTUNITY**. The numerical maximum is 24.044% at the single exploratory 70.7 ms threshold. It is a boundary artifact, not a broad saving: the Joint point TPOT is 70.667 ± 0.398 ms while the next Sequential DVFS point is 70.716 ± 0.496 ms. Their mean separation is smaller than repeat variability. At 70.8 ms the saving is 0.000%.
 
-The 7/8/9/10 req/s block still increased through 8.740 req/s measured
-throughput at 10 offered. A wider final capacity block at 12/16/20/24 req/s,
-300 requests per point and seed `20260907`, is used to reach the same fixed
-plateau criterion without densely adding more intermediate rates.
+Excluding >=5% one-grid boundary effects, the largest measured saving is 3.221% and also occurs only over a narrow SLO interval. The data therefore support a weak, noise-sensitive interaction, not a strong systems opportunity. Preregistered 12/13/15 ms rows remain visible above and are not replaced by a favorable post-hoc threshold.
 
-That block still increased through 17.031 req/s at 24 offered. Rather than fit
-a service model or add dense intermediate rates, the final direct plateau
-probe uses 32/48/64 req/s, 300 requests per point, and seed `20260908`.
+## Limitations
 
-The direct probe reached 22.434 req/s but did not form a strict plateau, while
-client send-delay p99 exceeded 0.5 s at 32 req/s and several seconds at 48/64.
-Thus 22.434 req/s is recorded conservatively as a measured capacity lower
-bound, not an exact server saturation claim. The fixed 65% target is 14.58
-req/s; the closest client-valid measured offered rate is **16 req/s** (71.3%
-of the lower bound), with 300/300 completions, TTFT p99 229.4 ms, and small
-client scheduling delay. The formal rate is locked before P2/P3/P4 results.
-
-## Fixed measured matrix
-
-After calibration, the exact same 300-request trace is used for P1/P2/P3/P4.
-Each placement measures HHHH, MMMM, LLLL, all four MMML permutations, and all
-four LLLM permutations. Every one of the 44 configurations receives three
-independent measurement windows, for 132 runs total. Placement block order and
-within-block run order use recorded fixed seeds `20260903` and `20260904`.
-
-Analysis reports repeated mean and sample standard deviation, the complete
-measured energy–TPOT Pareto frontier, preregistered 12/13/15 ms references, and
-a 0.1 ms exploratory SLO grid across the measured frontier. TTFT p99 remains a
-500 ms hard guard. The result will be classified A (strong), B (weak), or C
-(not promising) without forcing a positive interpretation.
+The calibration found a 22.434 req/s measured capacity lower bound, not an exact server saturation point: offered rates above 24 req/s became client-scheduling-invalid. One model, one GSM8K trace, one four-L40S node, four fixed placements, 11 targeted tuples, no replication/migration, and a 500 ms TTFT guard. P99 values are summarized across three windows but remain workload- and system-specific.
