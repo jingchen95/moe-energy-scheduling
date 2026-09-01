@@ -28,6 +28,9 @@ milestone_i:
     saturation_acceptance:
       top_three_throughputs_within_fraction_of_peak: 0.95
       highest_offered_over_peak_throughput: 1.20
+    capacity_extension_rates: [12.0, 16.0, 20.0, 24.0]
+    capacity_extension_order_seed: 20260907
+    capacity_extension_requests_per_rate: 300
     target_fraction_of_saturation: 0.65
   experiment:
     placements: [P1, P2, P3, P4]

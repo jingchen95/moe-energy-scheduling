@@ -1,6 +1,6 @@
 # Handoff
 
-## Latest status — Milestone I final plateau calibration prepared
+## Latest status — Milestone I wide capacity calibration prepared
 
 Branch `milestone-i-higher-load-repeatability` was created from completed
 Milestone H commit `d7f30c5`. Initial P1/HHHH calibration job `255371`
@@ -52,12 +52,19 @@ superseded, never-submitted plan retained for provenance.
   highest-rate throughputs within 95% of the peak and highest offered rate at
   least 1.2x peak throughput. Immutable plan:
   `results/raw/milestone-i-calibration-plateau-20260901T085110Z-validated`.
+- Plateau job `255374` completed safely, but measured throughput still rose from
+  6.490 req/s at 7 offered to 8.740 req/s at 10 offered. The fixed plateau rule
+  therefore correctly rejected the 10 req/s upper bound.
+- A final wider capacity block uses 12/16/20/24 req/s, 300 requests per point,
+  and seed `20260907`. It was fixed before other placements and avoids a dense
+  additional sweep. Immutable plan:
+  `results/raw/milestone-i-calibration-capacity-20260901T085907Z-validated`.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-MILESTONE_I_CALIBRATION=results/raw/milestone-i-calibration-plateau-20260901T085110Z-validated \
+MILESTONE_I_CALIBRATION=results/raw/milestone-i-calibration-capacity-20260901T085907Z-validated \
   sbatch scripts/milestone_i_calibrate.sbatch
 ```
 

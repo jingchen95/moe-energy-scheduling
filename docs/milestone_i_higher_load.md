@@ -43,6 +43,11 @@ three highest-rate throughputs are all within 95% of the measured peak and the
 highest offered rate is at least 1.2× that peak. This rule was fixed before any
 P2/P3/P4 result was observed.
 
+The 7/8/9/10 req/s block still increased through 8.740 req/s measured
+throughput at 10 offered. A wider final capacity block at 12/16/20/24 req/s,
+300 requests per point and seed `20260907`, is used to reach the same fixed
+plateau criterion without densely adding more intermediate rates.
+
 ## Fixed measured matrix
 
 After calibration, the exact same 300-request trace is used for P1/P2/P3/P4.
