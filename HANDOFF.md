@@ -1,6 +1,46 @@
 # Handoff
 
-## Latest status — Ground-truth Placement × DVFS sweep complete
+## Latest status — Milestone I higher-load repeatability calibration prepared
+
+Branch `milestone-i-higher-load-repeatability` was created from completed
+Milestone H commit `d7f30c5`. No Milestone I GPU measurement has run yet.
+
+### Prepared and validated
+
+- Added a fixed 300-request GSM8K base trace with seed `20260901` and hash
+  `90af9ef2c3bc0c3dd99e4f7cddd4c7dfdabe4223f6278016c98526bbc938bd3d`.
+  It contains 300 unique source rows: all 225 available 128–256-token prompts
+  plus 75 deterministically selected 120–127-token prompts. Input-token
+  mean/p50/p90 is 139.49/135/161.
+- The P1/HHHH calibration uses 100 fixed requests at offered rates
+  0.5/1.0/1.5/2.0/2.5/3.0/3.5/4.0 req/s. Seed `20260902` fixes their execution
+  order independently of results.
+- The formal plan generator is fixed to P1–P4, 11 preregistered tuples, three
+  repetitions, and recorded placement/run-order seeds. It cannot run until the
+  P1-only calibration selects the offered load.
+- Added strict run validation, repeat mean/sample-standard-deviation summaries,
+  a measured Pareto frontier, a complete 0.1 ms exploratory TPOT-SLO curve,
+  and the preregistered A/B/C decision gate. No performance model, scheduler,
+  placement heuristic, or expert-load selection is used.
+- Python/shell syntax checks and five new pure-function tests pass. `pytest` is
+  not installed in the current Minerva environments, so no dependency was
+  installed; the tests were imported and executed directly.
+
+### Calibration input
+
+`results/raw/milestone-i-calibration-20260901T082621Z-validated` is the
+immutable calibration directory. The older `...082526Z` directory is a
+superseded, never-submitted plan retained for provenance.
+
+### Exact next command
+
+```bash
+cd /data/users/chjing/moe-energy-scheduling
+MILESTONE_I_CALIBRATION=results/raw/milestone-i-calibration-20260901T082621Z-validated \
+  sbatch scripts/milestone_i_calibrate.sbatch
+```
+
+## Milestone H — Ground-truth Placement × DVFS sweep complete
 
 The exhaustive measured five-placement by 81-frequency matrix is complete on
 branch `milestone-h-ground-truth-placement-dvfs`. The study uses measured

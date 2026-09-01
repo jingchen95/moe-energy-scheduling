@@ -23,6 +23,13 @@ results/processed/*
 !results/processed/milestone_h_ground_truth_matrix.csv
 !results/processed/milestone_h_oracle_summary.csv
 !results/processed/milestone_h_summary.json
+!results/processed/milestone_i_calibration.csv
+!results/processed/milestone_i_calibration.json
+!results/processed/milestone_i_runs.csv
+!results/processed/milestone_i_aggregate.csv
+!results/processed/milestone_i_pareto.csv
+!results/processed/milestone_i_oracle_curve.csv
+!results/processed/milestone_i_summary.json
 !results/figures/
 results/figures/*
 !results/figures/.gitkeep
@@ -31,6 +38,7 @@ results/figures/*
 !results/figures/milestone_e_pareto.pdf
 !results/figures/milestone_g_load_vs_dvfs_penalty.pdf
 !results/figures/milestone_g_predicted_vs_actual.pdf
+!results/figures/milestone_i_pareto.pdf
 logs/
 slurm-*.out
 slurm-*.err

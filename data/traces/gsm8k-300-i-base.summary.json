@@ -1,0 +1,18 @@
+{
+  "extension_bucket_available": 151,
+  "extension_bucket_selected": 75,
+  "input_token_max": 231,
+  "input_token_mean": 139.49,
+  "input_token_min": 120,
+  "input_token_p50": 135.0,
+  "input_token_p90": 161.0,
+  "max_output_tokens": 128,
+  "number_of_prompts": 300,
+  "primary_bucket_available": 225,
+  "primary_bucket_selected": 225,
+  "seed": 20260901,
+  "source": "/data/users/chjing/moe-energy-scheduling/data/datasets/gsm8k-train.jsonl",
+  "trace": "/data/users/chjing/moe-energy-scheduling/data/traces/gsm8k-300-i-base.jsonl",
+  "trace_sha256": "90af9ef2c3bc0c3dd99e4f7cddd4c7dfdabe4223f6278016c98526bbc938bd3d",
+  "unique_source_rows": 300
+}

@@ -1,0 +1,32 @@
+milestone_i:
+  objective: higher_load_repeatability_check
+  model_config: configs/model_qwen3_30b_a3b_profile.yaml
+  node: uranus
+  gpu_count: 4
+  parallel: TP=1/DP=4/EP=4
+  workload:
+    source: data/datasets/gsm8k-train.jsonl
+    requests: 300
+    primary_token_bucket: [128, 256]
+    extension_token_bucket: [120, 127]
+    prompt_seed: 20260901
+    max_output_tokens: 128
+    temperature: 0.0
+    decoding_seed: 0
+  calibration:
+    placement: P1_upstream_eplb
+    frequency_tuple_mhz: [2520, 2520, 2520, 2520]
+    requests_per_rate: 100
+    offered_rates: [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+    rate_order_seed: 20260902
+    target_fraction_of_saturation: 0.65
+  experiment:
+    placements: [P1, P2, P3, P4]
+    frequencies_mhz: {H: 2520, M: 1635, L: 1005}
+    repetitions: 3
+    placement_order_seed: 20260903
+    within_placement_order_seed: 20260904
+    ttft_limit_ms: 500.0
+    reference_tpot_slos_ms: [12.0, 13.0, 15.0]
+    exploratory_slo_step_ms: 0.1
+  models: none
