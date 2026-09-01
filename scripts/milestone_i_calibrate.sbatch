@@ -77,7 +77,13 @@ PY
 )
 
 python -m src.gpu_control reset > "${controller}/final-clock-reset.json"
-python - "${controller}/result.json" <<'PY'
+run_count="$(awk -F '\t' '$5 == "complete" {n++} END {print n+0}' "${controller}/runs.tsv")"
+expected_count="$(python -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["runs"]))' "${plan}")"
+[[ "${run_count}" -eq "${expected_count}" ]] || {
+    printf 'expected %s runs, found %s\n' "${expected_count}" "${run_count}" >&2
+    exit 1
+}
+python - "${controller}/result.json" "${run_count}" <<'PY'
 import json, sys
-json.dump({"status": "complete", "runs": 8}, open(sys.argv[1], "w"), indent=2)
+json.dump({"status": "complete", "runs": int(sys.argv[2])}, open(sys.argv[1], "w"), indent=2)
 PY

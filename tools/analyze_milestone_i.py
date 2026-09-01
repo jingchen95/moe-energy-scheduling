@@ -113,11 +113,13 @@ def _validate_common(
     return metrics, config
 
 
-def analyze_calibration(args: argparse.Namespace) -> dict[str, Any]:
-    plan = json.loads((args.plan_dir / "calibration-plan.json").read_text(encoding="utf-8"))
+def _load_calibration_dir(plan_dir: Path) -> tuple[dict[str, Any], Path, list[dict[str, Any]]]:
+    plan = json.loads((plan_dir / "calibration-plan.json").read_text(encoding="utf-8"))
     if plan.get("study") != "higher_load_calibration":
-        raise ValueError("not a Milestone I calibration plan")
-    controller = _complete_controller(args.plan_dir / "measured", "attempt-*", 8)
+        raise ValueError(f"not a Milestone I calibration plan: {plan_dir}")
+    controller = _complete_controller(
+        plan_dir / "measured", "attempt-*", len(plan["runs"]),
+    )
     expected = {float(row["request_rate"]): row for row in plan["runs"]}
     rows = []
     for entry in _read_tsv(controller / "runs.tsv"):
@@ -145,9 +147,24 @@ def analyze_calibration(args: argparse.Namespace) -> dict[str, Any]:
             "run_dir": str(run_dir), "trace_sha256": spec["trace_sha256"],
             "config_sha256": sha256(run_dir / "resolved_config.yaml"),
         })
-    rows.sort(key=lambda row: row["request_rate"])
     if len(rows) != len(expected) or {row["request_rate"] for row in rows} != set(expected):
         raise ValueError("calibration rate sweep is incomplete")
+    return plan, controller, rows
+
+
+def analyze_calibration(args: argparse.Namespace) -> dict[str, Any]:
+    plan_dirs = [args.plan_dir, *(args.additional_plan_dir or [])]
+    loaded = [_load_calibration_dir(path) for path in plan_dirs]
+    plans = [item[0] for item in loaded]
+    controllers = [item[1] for item in loaded]
+    rows = [row for item in loaded for row in item[2]]
+    if len({float(row["request_rate"]) for row in rows}) != len(rows):
+        raise ValueError("combined calibration contains duplicate offered rates")
+    if len({plan["base_trace_sha256"] for plan in plans}) != 1:
+        raise ValueError("combined calibration plans do not share one base trace")
+    if len({plan["placement"]["placement_sha256"] for plan in plans}) != 1:
+        raise ValueError("combined calibration plans do not share P1 placement")
+    rows.sort(key=lambda row: row["request_rate"])
     valid = [row for row in rows if row["failed_requests"] == 0
              and float(row["client_send_delay_p99_ms"]) <= 50.0]
     if not valid:
@@ -163,7 +180,8 @@ def analyze_calibration(args: argparse.Namespace) -> dict[str, Any]:
     queue_visible = (float(recommended["ttft_p99_ms"]) >= 1.10 * float(baseline["ttft_p99_ms"])
                      or float(recommended["tpot_p99_ms"]) >= 1.05 * float(baseline["tpot_p99_ms"]))
     payload = {
-        "study": "higher_load_calibration", "controller": str(controller),
+        "study": "higher_load_calibration", "controllers": [str(row) for row in controllers],
+        "plan_dirs": [str(row) for row in plan_dirs],
         "rows": rows, "saturation_throughput_requests_s": saturation,
         "saturation_bracketed": bracketed, "target_fraction": 0.65,
         "target_offered_load_requests_s": target,
@@ -451,6 +469,7 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
     calibration = sub.add_parser("calibration")
     calibration.add_argument("--plan-dir", type=Path, required=True)
+    calibration.add_argument("--additional-plan-dir", type=Path, action="append")
     calibration.add_argument("--output", type=Path,
                              default=Path("results/processed/milestone_i_calibration.json"))
     calibration.set_defaults(func=analyze_calibration)

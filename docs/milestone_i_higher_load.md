@@ -31,6 +31,11 @@ P1 upstream EPLB at HHHH is measured at the fixed offered-rate set
 `20260902` randomizes rate order. Saturation and the approximately 65% target
 are selected before any P2/P3/P4 higher-load result is observed.
 
+The initial sweep reached 3.675 req/s at 4.0 req/s offered load, or 91.9% of
+offered load, so it did not bracket saturation under the preregistered 90%
+criterion. Before observing any P2/P3/P4 result, a fixed extension at
+4.5/5.0/5.5/6.0 req/s was added with order seed `20260905`.
+
 ## Fixed measured matrix
 
 After calibration, the exact same 300-request trace is used for P1/P2/P3/P4.

@@ -143,8 +143,10 @@ def prepare_calibration(args: argparse.Namespace) -> None:
     h_plan = _load_h_plan(args.h_plan)
     p1 = dict(next(row for row in h_plan["placements"] if row["policy"] == "P1"))
     p1["runtime_placement_name"] = _runtime_placement_name(p1)
-    rates = list(CALIBRATION_RATES)
-    random.Random(CALIBRATION_ORDER_SEED).shuffle(rates)
+    rates = list(args.rates or CALIBRATION_RATES)
+    if any(rate <= 0 for rate in rates) or len(set(rates)) != len(rates):
+        raise ValueError("calibration rates must be unique and positive")
+    random.Random(args.rate_order_seed).shuffle(rates)
     runs = []
     for order, rate in enumerate(rates):
         trace = output / "traces" / f"gsm8k-100-r{rate:g}.jsonl"
@@ -159,8 +161,8 @@ def prepare_calibration(args: argparse.Namespace) -> None:
         "base_trace": str(args.base_trace.resolve()),
         "base_trace_sha256": sha256(args.base_trace),
         "placement": p1, "target_clocks_mhz": [HIGH] * 4,
-        "requests_per_rate": 100, "offered_rates": list(CALIBRATION_RATES),
-        "rate_order_seed": CALIBRATION_ORDER_SEED, "runs": runs,
+        "requests_per_rate": 100, "offered_rates": sorted(rates),
+        "rate_order_seed": args.rate_order_seed, "runs": runs,
         "selection_target_fraction": 0.65,
         "selection_boundary": "P1/HHHH calibration only; no other placement data",
     }
@@ -234,6 +236,8 @@ def main() -> None:
     calibration.add_argument("--base-trace", type=Path, required=True)
     calibration.add_argument("--h-plan", type=Path, required=True)
     calibration.add_argument("--output-dir", type=Path, required=True)
+    calibration.add_argument("--rates", type=float, nargs="+")
+    calibration.add_argument("--rate-order-seed", type=int, default=CALIBRATION_ORDER_SEED)
     calibration.set_defaults(func=prepare_calibration)
     experiment = sub.add_parser("prepare-experiment")
     experiment.add_argument("--base-trace", type=Path, required=True)

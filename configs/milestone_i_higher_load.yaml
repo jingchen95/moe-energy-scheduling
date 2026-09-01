@@ -19,6 +19,9 @@ milestone_i:
     requests_per_rate: 100
     offered_rates: [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
     rate_order_seed: 20260902
+    saturation_extension_rates: [4.5, 5.0, 5.5, 6.0]
+    saturation_extension_order_seed: 20260905
+    saturation_extension_trigger: highest_rate_throughput_at_least_90_percent_of_offered
     target_fraction_of_saturation: 0.65
   experiment:
     placements: [P1, P2, P3, P4]

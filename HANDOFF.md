@@ -1,9 +1,10 @@
 # Handoff
 
-## Latest status — Milestone I higher-load repeatability calibration prepared
+## Latest status — Milestone I saturation calibration extension prepared
 
 Branch `milestone-i-higher-load-repeatability` was created from completed
-Milestone H commit `d7f30c5`. No Milestone I GPU measurement has run yet.
+Milestone H commit `d7f30c5`. Initial P1/HHHH calibration job `255371`
+completed successfully; no P2/P3/P4 higher-load measurement has run yet.
 
 ### Prepared and validated
 
@@ -32,11 +33,23 @@ Milestone H commit `d7f30c5`. No Milestone I GPU measurement has run yet.
 immutable calibration directory. The older `...082526Z` directory is a
 superseded, never-submitted plan retained for provenance.
 
+### Initial calibration result and extension
+
+- Job `255371` completed all 8 rates with 100/100 requests, zero failures,
+  positive cumulative NVML energy, target-matching HHHH clocks, final 2520 MHz
+  reset, and vLLM patch state `not applied`.
+- At 4.0 req/s offered load the measured throughput was 3.675 req/s (91.9%
+  efficiency), so the sweep did not bracket saturation under the fixed 90%
+  criterion. It is not valid to treat 3.675 req/s as saturation yet.
+- Before observing any other placement, an extension at 4.5/5.0/5.5/6.0 req/s
+  was fixed with random-order seed `20260905`. Its immutable plan directory is
+  `results/raw/milestone-i-calibration-extension-20260901T084416Z-validated`.
+
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-MILESTONE_I_CALIBRATION=results/raw/milestone-i-calibration-20260901T082621Z-validated \
+MILESTONE_I_CALIBRATION=results/raw/milestone-i-calibration-extension-20260901T084416Z-validated \
   sbatch scripts/milestone_i_calibrate.sbatch
 ```
 
