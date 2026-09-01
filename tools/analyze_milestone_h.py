@@ -55,6 +55,16 @@ def _load_resolved_config(path: Path) -> dict[str, Any]:
     return value
 
 
+def _runtime_placement_name(spec: dict[str, Any]) -> str:
+    if "runtime_placement_name" in spec:
+        return str(spec["runtime_placement_name"])
+    # Existing preregistered plans use the concise P1 display label while the
+    # accepted Milestone E runs retain their original resolved-config label.
+    if spec.get("policy") == "P1":
+        return "upstream_default_eplb"
+    return str(spec["name"])
+
+
 def _validate_run(
     row: dict[str, Any], spec: dict[str, Any], plan: dict[str, Any],
 ) -> dict[str, Any]:
@@ -70,7 +80,7 @@ def _validate_run(
         raise ValueError(f"trace hash mismatch under {run_dir}")
     if config.get("model") != "qwen3-30b-a3b" or config.get("vllm_version") != "0.15.1":
         raise ValueError(f"runtime model/vLLM mismatch under {run_dir}")
-    if config.get("placement_name") != spec["name"]:
+    if config.get("placement_name") != _runtime_placement_name(spec):
         raise ValueError(f"placement name mismatch under {run_dir}")
     if config.get("placement_sha256") != spec["placement_sha256"]:
         raise ValueError(f"placement hash mismatch under {run_dir}")
@@ -248,6 +258,11 @@ def write_report(
     path: Path, plan: dict[str, Any], rows: list[dict[str, Any]],
     sequential: dict[str, Any], summary: list[dict[str, Any]],
 ) -> None:
+    all_high = sorted(
+        (row for row in rows
+         if tuple(json.loads(row["frequency_tuple"])) == (2520,) * 4),
+        key=lambda row: float(row["tpot_p99_ms"]),
+    )
     lines = [
         "# Ground-truth Placement × DVFS Motivation Sweep",
         "",
@@ -257,7 +272,23 @@ def write_report(
         "",
         "## Method and validation",
         "",
-        "Qwen/Qwen3-30B-A3B, vLLM 0.15.1, TP=1/DP=4/EP=4, four L40S GPUs on Uranus, `allgather_reducescatter`, fixed GSM8K 50-request trace at 0.5 requests/s, and H/M/L = 2520/1635/1005 MHz. The matrix contains five placements × 81 tuples = 405 measured/reused rows. P1 is reused only after exact trace, mapping, runtime, completion, NVML-energy, and clock checks. Selection uses only measured TTFT p99, TPOT p99, and total GPU energy.",
+        "Qwen/Qwen3-30B-A3B, vLLM 0.15.1, TP=1/DP=4/EP=4, four L40S GPUs on Uranus, `allgather_reducescatter`, fixed GSM8K 50-request trace at 0.5 requests/s, and H/M/L = 2520/1635/1005 MHz. P0 is default linear, P1 is the accepted upstream EPLB mapping, and P2-P4 are the preregistered controlled-medium/high/very-high mappings.",
+        "",
+        f"The matrix contains five placements × 81 tuples = {len(rows)} measured/reused rows. The newly measured placements used one shared seeded tuple permutation (seed `{plan.get('frequency_order_seed', '20260831')}`). Every row completed 50/50 requests with zero failures, used one trace hash, exposed cumulative NVML energy, and passed target-versus-actual clock validation. P1 was reused only after the same trace, mapping, runtime, request, energy, and clock checks. Selection uses measured TTFT p99, TPOT p99, and total energy only; no performance model is used.",
+        "",
+        "## All-high placement selection",
+        "",
+        "| placement | TTFT p99 (ms) | TPOT p99 (ms) | total energy (J) |",
+        "|---|---:|---:|---:|",
+    ]
+    for row in all_high:
+        lines.append(
+            f"| {row['placement']} {row['placement_name']} | "
+            f"{float(row['ttft_p99_ms']):.3f} | "
+            f"{float(row['tpot_p99_ms']):.3f} | "
+            f"{float(row['total_gpu_energy_j']):.3f} |"
+        )
+    lines.extend([
         "",
         "## Sequential Oracle",
         "",
@@ -269,7 +300,7 @@ def write_report(
         "",
         "| placement | aggregate GPU loads | prefill GPU loads | decode GPU loads | aggregate max/mean |",
         "|---|---|---|---|---:|",
-    ]
+    ])
     for spec in plan["placements"]:
         diag = spec["diagnostics"]
         lines.append(f"| {spec['policy']} {spec['name']} | {diag['aggregate_expert_load']} | {diag['prefill_expert_load']} | {diag['decode_expert_load']} | {diag['aggregate_max_over_mean']:.3f} |")
@@ -282,11 +313,30 @@ def write_report(
     ])
     for row in summary:
         lines.append(f"| TPOT <= {row['tpot_slo_ms']:g} ms, TTFT <= 500 ms | {row['sequential_placement']} | {row['sequential_frequency_tuple']} | {row['sequential_energy_j']:.3f} | {row['joint_placement']} | {row['joint_frequency_tuple']} | {row['joint_energy_j']:.3f} | {row['energy_saving_pct']:.4f}% |")
+    strict = [row for row in summary if row["joint_strictly_lower_energy"]]
     lines.extend([
+        "",
+        "## Assessment",
+        "",
+    ])
+    for row in strict:
+        delta = row["sequential_energy_j"] - row["joint_energy_j"]
+        lines.append(
+            f"At TPOT <= {row['tpot_slo_ms']:g} ms, the measured Joint Oracle "
+            f"changes from {row['sequential_placement']} to "
+            f"{row['joint_placement']} at tuple `{row['joint_frequency_tuple']}`, "
+            f"reducing energy by {delta:.3f} J "
+            f"({row['energy_saving_pct']:.4f}%)."
+        )
+    lines.extend([
+        "",
+        "At 12 ms and 15 ms the two oracles select exactly the same measured point. The only strict gap is the single-run 13 ms result above. Its 0.1005% magnitude is not repeatability-confirmed and is too small to support a meaningful Joint-energy advantage claim from this matrix alone.",
         "",
         "## Data and limitations",
         "",
-        "The complete normalized measured table is `results/processed/milestone_h_ground_truth_matrix.csv`; the oracle table is `results/processed/milestone_h_oracle_summary.csv`. Every row retains actual clocks, trace/config hashes, energy, throughput, failures, and diagnostic placement loads. Raw run directories are not committed. This isolates placement × DVFS with four active GPUs and exactly 32 experts per rank; it does not optimize active GPU count, replication, migration, or communication.",
+        "The complete normalized measured table is `results/processed/milestone_h_ground_truth_matrix.csv`; the oracle table is `results/processed/milestone_h_oracle_summary.csv`. Every row retains actual clocks, trace/config hashes, energy, throughput, failures, and diagnostic placement loads. Raw run directories are not committed.",
+        "",
+        "This is one model, one 50-request GSM8K trace, one L40S node, one run per newly measured point, four active GPUs, and exactly 32 experts per rank. It does not optimize active-GPU count, replication, migration, or communication. The selected 13 ms P0/P1 points and the closest all-high placement competitors require repeats before any paper-level conclusion.",
     ])
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")

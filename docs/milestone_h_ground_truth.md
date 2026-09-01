@@ -1,66 +1,57 @@
 # Ground-truth Placement × DVFS Motivation Sweep
 
-## Status
+## Research question
 
-This document preregisters the exhaustive measured comparison. It contains no
-results until the five-placement matrix is validated.
+Does exhaustive measured Joint placement plus per-GPU DVFS find a lower-energy SLO-feasible point than the measured Placement→DVFS Sequential Oracle? No performance or service model is fit or used.
 
-## Question and scope
+## Method and validation
 
-The study directly compares a measured Placement→DVFS Sequential Oracle with a
-measured Joint Oracle over the same five static placements and 81 heterogeneous
-frequency tuples. It uses no service/performance model and does not generate a
-placement after observing results.
+Qwen/Qwen3-30B-A3B, vLLM 0.15.1, TP=1/DP=4/EP=4, four L40S GPUs on Uranus, `allgather_reducescatter`, fixed GSM8K 50-request trace at 0.5 requests/s, and H/M/L = 2520/1635/1005 MHz. P0 is default linear, P1 is the accepted upstream EPLB mapping, and P2-P4 are the preregistered controlled-medium/high/very-high mappings.
 
-The scope is intentionally limited to four active L40S GPUs, exactly 32
-logical experts per EP rank per layer, and TP=1/DP=4/EP=4. Active-GPU count,
-replication, migration, and online scheduling are outside this experiment.
+The matrix contains five placements × 81 tuples = 405 measured/reused rows. The newly measured placements used one shared seeded tuple permutation (seed `20260831`). Every row completed 50/50 requests with zero failures, used one trace hash, exposed cumulative NVML energy, and passed target-versus-actual clock validation. P1 was reused only after the same trace, mapping, runtime, request, energy, and clock checks. Selection uses measured TTFT p99, TPOT p99, and total energy only; no performance model is used.
 
-## Fixed setup
+## All-high placement selection
 
-- Model: `Qwen/Qwen3-30B-A3B`, vLLM 0.15.1.
-- Node: one exclusive Uranus allocation; four NVIDIA L40S GPUs.
-- All-to-all: `allgather_reducescatter`.
-- Workload: the accepted 50-request GSM8K trace at 0.5 requests/s, fixed
-  ordering/arrival offsets, temperature 0, seed 0, and 128 output-token limit.
-- Frequency levels: H/M/L = 2520/1635/1005 MHz.
-- Frequency tuples use one shared seeded permutation (seed `20260831`) for all
-  newly measured placements, so tuple position is not coupled to elapsed job
-  time while the complete 81-point set is unchanged.
-- SLOs: TTFT p99 <= 500 ms and TPOT p99 <= 12, 13, or 15 ms.
+| placement | TTFT p99 (ms) | TPOT p99 (ms) | total energy (J) |
+|---|---:|---:|---:|
+| P1 upstream_eplb | 92.620 | 11.183 | 67412.409 |
+| P0 default_linear | 91.924 | 11.460 | 67928.225 |
+| P2 controlled_medium | 85.021 | 11.785 | 68321.784 |
+| P4 controlled_very_high | 85.516 | 12.259 | 68566.325 |
+| P3 controlled_high | 85.462 | 12.300 | 69210.434 |
 
-## Fixed placement set
+## Sequential Oracle
 
-| Policy | Mapping |
-|---|---|
-| P0 | vLLM default linear |
-| P1 | accepted upstream EPLB mapping |
-| P2 | accepted controlled-medium mapping |
-| P3 | accepted controlled-high mapping |
-| P4 | accepted controlled-very-high mapping |
+At `(H,H,H,H)`, the performance-selected placement was **P1 (upstream_eplb)**, using TPOT p99 as the primary metric and TTFT p99 <= 500 ms as a hard constraint.
 
-P2–P4 are diagnostic progressively skewed mappings. Their expert-load
-statistics are recorded only for interpretation, never for point selection.
+## Placement diagnostics
 
-## Matrix and selection
+These loads are recorded for interpretation only and are not used to select points.
 
-The measured matrix is 5 placements × 81 tuples = 405 rows. The complete P1
-81-point Milestone E matrix is reused only after validating exact placement and
-trace hashes, model/vLLM/runtime configuration, request completion, cumulative
-NVML energy, and actual clocks. P0 and P2–P4 are each run across all 81 tuples
-with one server launch per placement and frequency changes only between energy
-windows.
+| placement | aggregate GPU loads | prefill GPU loads | decode GPU loads | aggregate max/mean |
+|---|---|---|---|---:|
+| P0 default_linear | [5486348, 4975237, 4801756, 5101715] | [4828159, 4385263, 4236514, 4476720] | [658189, 589974, 565242, 624995] | 1.078 |
+| P1 upstream_eplb | [5131284, 5031500, 5153294, 5048978] | [4518439, 4423017, 4536607, 4448593] | [612845, 608483, 616687, 600385] | 1.012 |
+| P2 controlled_medium | [10375266, 3199230, 3440164, 3350396] | [9140770, 2808216, 3026761, 2950909] | [1234496, 391014, 413403, 399487] | 2.038 |
+| P3 controlled_high | [12946751, 2476175, 2464676, 2477454] | [11369837, 2183154, 2180712, 2192953] | [1576914, 293021, 283964, 284501] | 2.543 |
+| P4 controlled_very_high | [14002072, 2112491, 2099162, 2151331] | [12276344, 1874548, 1865378, 1910386] | [1725728, 237943, 233784, 240945] | 2.750 |
 
-At all-high frequency, the Sequential Oracle selects the placement with minimum
-TPOT p99 among rows satisfying the TTFT hard limit. That placement is frozen;
-for each TPOT SLO its minimum-energy feasible tuple is selected. The Joint Oracle
-selects the minimum-energy feasible row across all 405 rows. Both p99 TTFT and
-p99 TPOT are reported for every selected point.
+## Sequential versus Joint Oracle
 
-## Required evidence
+| SLO | Sequential placement | Sequential DVFS | Sequential energy (J) | Joint placement | Joint DVFS | Joint energy (J) | Saving |
+|---|---|---|---:|---|---|---:|---:|
+| TPOT <= 12 ms, TTFT <= 500 ms | P1 | [1635, 2520, 2520, 2520] | 63906.976 | P1 | [1635, 2520, 2520, 2520] | 63906.976 | 0.0000% |
+| TPOT <= 13 ms, TTFT <= 500 ms | P1 | [1635, 1635, 1635, 1635] | 52474.447 | P0 | [1635, 1635, 1635, 1635] | 52421.711 | 0.1005% |
+| TPOT <= 15 ms, TTFT <= 500 ms | P1 | [1005, 1005, 1005, 1635] | 48661.697 | P1 | [1005, 1005, 1005, 1635] | 48661.697 | 0.0000% |
 
-Every row retains request-level outputs, p99 TTFT/TPOT/E2E, energy and
-J/request, throughput, failures, target/actual clocks, trace/config/mapping
-hashes, and aggregate/prefill/decode expert-load diagnostics. Raw runs remain
-ignored by Git; only compact normalized tables, summary JSON, and this report
-are committed after validation.
+## Assessment
+
+At TPOT <= 13 ms, the measured Joint Oracle changes from P1 to P0 at tuple `[1635, 1635, 1635, 1635]`, reducing energy by 52.736 J (0.1005%).
+
+At 12 ms and 15 ms the two oracles select exactly the same measured point. The only strict gap is the single-run 13 ms result above. Its 0.1005% magnitude is not repeatability-confirmed and is too small to support a meaningful Joint-energy advantage claim from this matrix alone.
+
+## Data and limitations
+
+The complete normalized measured table is `results/processed/milestone_h_ground_truth_matrix.csv`; the oracle table is `results/processed/milestone_h_oracle_summary.csv`. Every row retains actual clocks, trace/config hashes, energy, throughput, failures, and diagnostic placement loads. Raw run directories are not committed.
+
+This is one model, one 50-request GSM8K trace, one L40S node, one run per newly measured point, four active GPUs, and exactly 32 experts per rank. It does not optimize active-GPU count, replication, migration, or communication. The selected 13 ms P0/P1 points and the closest all-high placement competitors require repeats before any paper-level conclusion.

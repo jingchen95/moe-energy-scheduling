@@ -157,15 +157,15 @@ def ground_truth_plan(args: argparse.Namespace) -> None:
     )
     total, prefill, decode = _load_phase_counts(phase_counts)
     placement_specs = [
-        ("P0", "default_linear", args.p0.resolve(), False, 0),
-        ("P1", "upstream_eplb", args.p1.resolve(), True, None),
-        ("P2", "controlled_medium", args.p2.resolve(), False, 1),
-        ("P3", "controlled_high", args.p3.resolve(), False, 2),
-        ("P4", "controlled_very_high", args.p4.resolve(), False, 3),
+        ("P0", "default_linear", "default_linear", args.p0.resolve(), False, 0),
+        ("P1", "upstream_eplb", "upstream_default_eplb", args.p1.resolve(), True, None),
+        ("P2", "controlled_medium", "controlled_medium", args.p2.resolve(), False, 1),
+        ("P3", "controlled_high", "controlled_high", args.p3.resolve(), False, 2),
+        ("P4", "controlled_very_high", "controlled_very_high", args.p4.resolve(), False, 3),
     ]
     placements: list[dict[str, Any]] = []
     diagnostics: dict[str, Any] = {}
-    for policy, name, path, reused, task_index in placement_specs:
+    for policy, name, runtime_name, path, reused, task_index in placement_specs:
         placement = load_placement(path)
         if placement.num_layers != total.shape[0] or placement.num_experts != total.shape[1]:
             raise ValueError(f"{name} shape does not match phase profile")
@@ -174,6 +174,7 @@ def ground_truth_plan(args: argparse.Namespace) -> None:
         placements.append({
             "policy": policy,
             "name": name,
+            "runtime_placement_name": runtime_name,
             "placement_file": str(path),
             "placement_sha256": sha256(path),
             "reused": reused,

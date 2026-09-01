@@ -1,62 +1,64 @@
 # Handoff
 
-## Latest status — Ground-truth Placement × DVFS sweep (resource-canceled)
+## Latest status — Ground-truth Placement × DVFS sweep complete
 
-The new exhaustive ground-truth sweep is prepared on branch
-`milestone-h-ground-truth-placement-dvfs`, created from the completed
-Milestone G commit. The first pending array was canceled before any task
-started after correcting its tuple ordering. Replacement array `255352` was
-then canceled by Slurm before launch because Uranus resources were unavailable;
-the seeded plan below remains valid and no new measurement data was produced.
+The exhaustive measured five-placement by 81-frequency matrix is complete on
+branch `milestone-h-ground-truth-placement-dvfs`. The study uses measured
+serving results only; no service/performance model or post-hoc placement is
+used.
 
-### Preparation completed
+### Execution and validation
 
-- Added `configs/milestone_h_ground_truth.yaml`,
-  `tools/prepare_milestone_h.py`, `tools/analyze_milestone_h.py`,
-  `scripts/milestone_h_ground_truth.sbatch`, and CPU-safe oracle tests.
-- The fixed matrix is P0 default linear, P1 accepted upstream EPLB, and the
-  accepted P2/P3/P4 controlled-medium/high/very-high mappings, each crossed
-  with all 81 H/M/L frequency tuples.
-- P1 reuse is gated on exact trace/mapping hashes, vLLM/model/runtime settings,
-  50/50 completion, zero failures, NVML cumulative energy, and actual clocks.
-- Selection uses measured p99 TPOT as the Sequential high-frequency placement
-  criterion, a hard p99 TTFT <= 500 ms limit, and measured total energy only.
-  No service model, load proxy, or post-hoc placement generation is used.
-- Frequency tuples for all newly measured placements use one shared seeded
-  permutation (`frequency_order_seed=20260831`). The analyzer accepts only an
-  attempt with `result.json` status `complete` and 81 unique completed tuples;
-  partial/failed retries remain on disk but are ignored.
+- Serialized Slurm array `255356` completed all four new-placement tasks on
+  Uranus: P0/P2/P3/P4 each produced 81/81 configurations, 50/50 requests per
+  configuration, zero failures, and exit status 0. P1 reuses the accepted
+  Milestone E 81-point matrix after strict compatibility checks.
+- The final matrix contains 405 unique rows, 81 per placement, one trace hash
+  (`721638a6250b929de05c2c355c8bc9b20258db7b28fedb94acb5572136571cbc`),
+  cumulative NVML energy, and target-matching actual clocks.
+- All controllers reset all four GPUs to 2520 MHz. The final vLLM patch revert
+  state is `not applied`.
+- P0/P1/P2/P3/P4 aggregate load max/mean is 1.078/1.012/2.038/2.543/2.750.
+  These frozen-profile loads are diagnostics only.
+- The analyzer's P1 display/runtime-label mismatch was fixed without changing
+  the plan, mapping, measurements, or oracle definitions. The complete CPU-safe
+  suite passes: `40 passed, 2 warnings`.
 
-### Canceled before launch
+### Ground-truth result
 
-- Plan `results/raw/milestone-h-plan-20260831T100215Z-seeded` is generated and
-  passed
-  inspection: 81 P1 rows are reusable, the matrix is 5 x 81 = 405 rows, and
-  the trace hash is `721638a6250b929de05c2c355c8bc9b20258db7b28fedb94acb5572136571cbc`.
-- The P0/P1/P2/P3/P4 aggregate max/mean diagnostics are 1.078/1.012/2.038/
-  2.543/2.750 respectively. These values are diagnostics only.
-- Reliability-fix commit `2d45fdb` is pushed to GitHub. The old pending array
-  `255351` was canceled before execution. Replacement array `255352` was
-  recorded by Slurm as `CANCELLED` with reason `Resources` at
-  `2026-08-31T13:53:14` without a node allocation or array-task records. At
-  that time Uranus was occupied by job `255348`; no H sweep task ran and no
-  measured artifacts were created. P1's 81 rows remain reusable, so no P1 GPU
-  rerun is planned.
-- Analyze the validated 405-row matrix and update this handoff with the
-  Sequential-vs-Joint Oracle result.
+- At HHHH, P1 has the lowest measured TPOT p99 (11.183 ms), so the Sequential
+  Oracle correctly freezes P1.
+- At TPOT <= 12 ms and TTFT <= 500 ms, Sequential and Joint both choose P1 at
+  `(1635,2520,2520,2520)`, 63,906.976 J. Saving: 0%.
+- At TPOT <= 13 ms, Sequential chooses P1 MMMM at 52,474.447 J; Joint chooses
+  P0 MMMM at 52,421.711 J. The strict difference is 52.736 J or 0.1005%.
+- At TPOT <= 15 ms, both choose P1 at `(1005,1005,1005,1635)`, 48,661.697 J.
+  Saving: 0%.
 
-### Exact next command (after Uranus is free)
+The measured matrix therefore does **not** establish a meaningful Joint energy
+advantage. The only strict gap is 0.1005% at one SLO and is not
+repeatability-confirmed; it should be treated as measurement-level evidence,
+not a paper claim.
+
+### Artifacts and next step
+
+- Report: `docs/milestone_h_ground_truth.md`
+- Full table: `results/processed/milestone_h_ground_truth_matrix.csv`
+- Oracle table: `results/processed/milestone_h_oracle_summary.csv`
+- Machine-readable summary: `results/processed/milestone_h_summary.json`
+- Raw study: `results/raw/milestone-h-plan-20260831T100215Z-seeded`
+
+Do not build a larger Joint optimizer from this result. If the placement-DVFS
+hypothesis is retained, first repeat the selected P0/P1 MMMM points and the
+closest HHHH placement competitors at least three times.
+
+### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-source /data/users/chjing/miniforge3/bin/activate cuda-env
-squeue -w uranus
-MILESTONE_H_STUDY=results/raw/milestone-h-plan-20260831T100215Z-seeded \
-  sbatch --array=0-3%1 scripts/milestone_h_ground_truth.sbatch
+cat docs/milestone_h_ground_truth.md
+cat results/processed/milestone_h_summary.json
 ```
-
-The seeded plan and its `matrix-plan.json`/`p1-reuse-summary.json` have
-already passed inspection; do not recreate that output directory.
 
 ## Milestone G (completed)
 

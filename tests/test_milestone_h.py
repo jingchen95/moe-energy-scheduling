@@ -3,7 +3,7 @@ import json
 import pytest
 
 from tools import analyze_milestone_h
-from tools.analyze_milestone_h import select_oracles
+from tools.analyze_milestone_h import _runtime_placement_name, select_oracles
 
 
 def _complete_rows():
@@ -21,6 +21,19 @@ def _row(placement, frequency, tpot, energy, ttft=100.0):
         "failed_requests": 0,
         "run_dir": f"/tmp/{placement}-{frequency[0]}",
     }
+
+
+def test_runtime_placement_name_preserves_reused_p1_label():
+    assert _runtime_placement_name({
+        "policy": "P1", "name": "upstream_eplb",
+    }) == "upstream_default_eplb"
+    assert _runtime_placement_name({
+        "policy": "P1", "name": "upstream_eplb",
+        "runtime_placement_name": "recorded_p1_name",
+    }) == "recorded_p1_name"
+    assert _runtime_placement_name({
+        "policy": "P2", "name": "controlled_medium",
+    }) == "controlled_medium"
 
 
 def test_ground_truth_oracles_use_measured_latency_and_energy_only():
