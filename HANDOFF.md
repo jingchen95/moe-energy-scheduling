@@ -1,6 +1,6 @@
 # Handoff
 
-## Latest status — Milestone I sparse final plateau probe prepared
+## Latest status — Milestone I formal repeatability matrix prepared
 
 Branch `milestone-i-higher-load-repeatability` was created from completed
 Milestone H commit `d7f30c5`. Initial P1/HHHH calibration job `255371`
@@ -63,13 +63,24 @@ superseded, never-submitted plan retained for provenance.
   17.031 req/s at 24 offered. No service model is fit. The final sparse direct
   probe is 32/48/64 req/s, 300 requests each, order seed `20260908`, under:
   `results/raw/milestone-i-calibration-final-plateau-20260901T090539Z-validated`.
+- Final probe job `255376` completed safely. Rates >=32 req/s incurred
+  0.54–3.69 s client send-delay p99 and are invalid as formal open-loop loads,
+  while complete-drain throughput provides a conservative measured capacity
+  lower bound of 22.434 req/s. Exact server saturation was not claimed.
+- The 65% target is 14.58 req/s. The closest measured client-valid point is
+  **16 req/s** (71.3% of the lower bound), with 300/300 completions, TTFT p99
+  229.4 ms, and small send delay. This rate is locked before P2/P3/P4 data.
+- Formal plan `results/raw/milestone-i-repeatability-20260901T091212Z-r16-validated`
+  contains 132 unique runs: P1–P4 x 11 fixed tuples x 3 repetitions. Task block
+  order is P3/P1/P2/P4; within-block order is also seeded. Final trace hash is
+  `b7cd1171e53fc36bba602ecd800a2a631e3c7505b7eb7d64c3306b0c0be47453`.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-MILESTONE_I_CALIBRATION=results/raw/milestone-i-calibration-final-plateau-20260901T090539Z-validated \
-  sbatch scripts/milestone_i_calibrate.sbatch
+MILESTONE_I_STUDY=results/raw/milestone-i-repeatability-20260901T091212Z-r16-validated \
+  sbatch --array=0-3%1 scripts/milestone_i_repeat.sbatch
 ```
 
 ## Milestone H — Ground-truth Placement × DVFS sweep complete

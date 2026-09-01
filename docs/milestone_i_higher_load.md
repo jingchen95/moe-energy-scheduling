@@ -52,6 +52,14 @@ That block still increased through 17.031 req/s at 24 offered. Rather than fit
 a service model or add dense intermediate rates, the final direct plateau
 probe uses 32/48/64 req/s, 300 requests per point, and seed `20260908`.
 
+The direct probe reached 22.434 req/s but did not form a strict plateau, while
+client send-delay p99 exceeded 0.5 s at 32 req/s and several seconds at 48/64.
+Thus 22.434 req/s is recorded conservatively as a measured capacity lower
+bound, not an exact server saturation claim. The fixed 65% target is 14.58
+req/s; the closest client-valid measured offered rate is **16 req/s** (71.3%
+of the lower bound), with 300/300 completions, TTFT p99 229.4 ms, and small
+client scheduling delay. The formal rate is locked before P2/P3/P4 results.
+
 ## Fixed measured matrix
 
 After calibration, the exact same 300-request trace is used for P1/P2/P3/P4.

@@ -167,20 +167,22 @@ def analyze_calibration(args: argparse.Namespace) -> dict[str, Any]:
     if len({plan["placement"]["placement_sha256"] for plan in plans}) != 1:
         raise ValueError("combined calibration plans do not share P1 placement")
     rows.sort(key=lambda row: row["request_rate"])
-    valid = [row for row in rows if row["failed_requests"] == 0
-             and float(row["client_send_delay_p99_ms"]) <= 50.0]
-    if not valid:
+    complete = [row for row in rows if row["failed_requests"] == 0]
+    client_valid = [row for row in complete
+                    if float(row["client_send_delay_p99_ms"]) <= 50.0]
+    if not client_valid:
         raise ValueError("no stable calibration point")
-    saturation = max(float(row["throughput_requests_s"]) for row in valid)
+    capacity_lower_bound = max(float(row["throughput_requests_s"]) for row in complete)
+    client_valid_capacity = max(float(row["throughput_requests_s"]) for row in client_valid)
     highest = max(rows, key=lambda row: row["request_rate"])
-    high_load_rows = sorted(valid, key=lambda row: row["request_rate"])[-3:]
+    high_load_rows = sorted(complete, key=lambda row: row["request_rate"])[-3:]
     plateau = (len(high_load_rows) == 3
                and min(float(row["throughput_requests_s"]) for row in high_load_rows)
-               >= 0.95 * saturation)
-    overloaded = float(highest["request_rate"]) >= 1.20 * saturation
+               >= 0.95 * capacity_lower_bound)
+    overloaded = float(highest["request_rate"]) >= 1.20 * capacity_lower_bound
     bracketed = plateau and overloaded
-    target = 0.65 * saturation
-    recommended = min(valid, key=lambda row: (
+    target = 0.65 * capacity_lower_bound
+    recommended = min(client_valid, key=lambda row: (
         abs(float(row["request_rate"]) - target), float(row["request_rate"]),
     ))
     baseline = rows[0]
@@ -189,9 +191,11 @@ def analyze_calibration(args: argparse.Namespace) -> dict[str, Any]:
     payload = {
         "study": "higher_load_calibration", "controllers": [str(row) for row in controllers],
         "plan_dirs": [str(row) for row in plan_dirs],
-        "rows": rows, "saturation_throughput_requests_s": saturation,
+        "rows": rows, "saturation_throughput_requests_s": capacity_lower_bound,
+        "saturation_estimate_is_lower_bound": not bracketed,
+        "client_valid_capacity_throughput_requests_s": client_valid_capacity,
         "saturation_bracketed": bracketed, "plateau_detected": plateau,
-        "highest_rate_over_saturation": float(highest["request_rate"]) / saturation,
+        "highest_rate_over_saturation": float(highest["request_rate"]) / capacity_lower_bound,
         "target_fraction": 0.65,
         "target_offered_load_requests_s": target,
         "recommended_request_rate": float(recommended["request_rate"]),
