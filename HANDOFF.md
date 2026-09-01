@@ -1,6 +1,6 @@
 # Handoff
 
-## Latest status — Milestone I wide capacity calibration prepared
+## Latest status — Milestone I sparse final plateau probe prepared
 
 Branch `milestone-i-higher-load-repeatability` was created from completed
 Milestone H commit `d7f30c5`. Initial P1/HHHH calibration job `255371`
@@ -59,12 +59,16 @@ superseded, never-submitted plan retained for provenance.
   and seed `20260907`. It was fixed before other placements and avoids a dense
   additional sweep. Immutable plan:
   `results/raw/milestone-i-calibration-capacity-20260901T085907Z-validated`.
+- Capacity job `255375` completed safely, but throughput still rose through
+  17.031 req/s at 24 offered. No service model is fit. The final sparse direct
+  probe is 32/48/64 req/s, 300 requests each, order seed `20260908`, under:
+  `results/raw/milestone-i-calibration-final-plateau-20260901T090539Z-validated`.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-MILESTONE_I_CALIBRATION=results/raw/milestone-i-calibration-capacity-20260901T085907Z-validated \
+MILESTONE_I_CALIBRATION=results/raw/milestone-i-calibration-final-plateau-20260901T090539Z-validated \
   sbatch scripts/milestone_i_calibrate.sbatch
 ```
 

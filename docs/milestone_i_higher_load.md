@@ -48,6 +48,10 @@ throughput at 10 offered. A wider final capacity block at 12/16/20/24 req/s,
 300 requests per point and seed `20260907`, is used to reach the same fixed
 plateau criterion without densely adding more intermediate rates.
 
+That block still increased through 17.031 req/s at 24 offered. Rather than fit
+a service model or add dense intermediate rates, the final direct plateau
+probe uses 32/48/64 req/s, 300 requests per point, and seed `20260908`.
+
 ## Fixed measured matrix
 
 After calibration, the exact same 300-request trace is used for P1/P2/P3/P4.

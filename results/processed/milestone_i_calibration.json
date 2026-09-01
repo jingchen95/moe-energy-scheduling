@@ -2,17 +2,19 @@
   "controllers": [
     "results/raw/milestone-i-calibration-20260901T082621Z-validated/measured/attempt-255371",
     "results/raw/milestone-i-calibration-extension-20260901T084416Z-validated/measured/attempt-255372",
-    "results/raw/milestone-i-calibration-plateau-20260901T085110Z-validated/measured/attempt-255374"
+    "results/raw/milestone-i-calibration-plateau-20260901T085110Z-validated/measured/attempt-255374",
+    "results/raw/milestone-i-calibration-capacity-20260901T085907Z-validated/measured/attempt-255375"
   ],
-  "highest_rate_over_saturation": 1.1441917334217577,
+  "highest_rate_over_saturation": 1.4091734547168016,
   "plan_dirs": [
     "results/raw/milestone-i-calibration-20260901T082621Z-validated",
     "results/raw/milestone-i-calibration-extension-20260901T084416Z-validated",
-    "results/raw/milestone-i-calibration-plateau-20260901T085110Z-validated"
+    "results/raw/milestone-i-calibration-plateau-20260901T085110Z-validated",
+    "results/raw/milestone-i-calibration-capacity-20260901T085907Z-validated"
   ],
   "plateau_detected": false,
   "recommended_queueing_visible": true,
-  "recommended_request_rate": 5.5,
+  "recommended_request_rate": 12.0,
   "rows": [
     {
       "client_send_delay_p99_ms": 1.6621733969077468,
@@ -269,12 +271,76 @@
       "trace_sha256": "c876d466ddd68d01999b5ff1698dffa0e784ed59fc389a1cfe005970e3d50d58",
       "ttft_p50_ms": 156.95057902485132,
       "ttft_p99_ms": 186.03613785933703
+    },
+    {
+      "client_send_delay_p99_ms": 5.699767083860934,
+      "completed_requests": 300,
+      "config_sha256": "5836097537191cfe172bac2afe4c2df0c7f0df87b122f1e890827baf8fb883a1",
+      "e2e_p99_ms": 7117.262015948072,
+      "failed_requests": 0,
+      "request_rate": 12.0,
+      "run_dir": "/data/users/chjing/moe-energy-scheduling/results/raw/milestone-i-calibration-capacity-20260901T085907Z-validated/measured/attempt-255375/runs/c-math-20260901T090213.806333Z-41d94075",
+      "throughput_requests_s": 10.193882583775002,
+      "total_gpu_energy_j": 26480.534,
+      "tpot_p50_ms": 54.2455842483818,
+      "tpot_p99_ms": 54.60404679824518,
+      "trace_sha256": "33c6a7d54d04787f94daccf64b7d1675b1d6e3764043b7b8f10bad5bb1b31d9c",
+      "ttft_p50_ms": 164.61733309552073,
+      "ttft_p99_ms": 192.26537751965225
+    },
+    {
+      "client_send_delay_p99_ms": 6.9991383980959645,
+      "completed_requests": 300,
+      "config_sha256": "82a3ca2fe65836581525e1246a04f020269050b40ba837da300ecf0ec6f60d51",
+      "e2e_p99_ms": 8399.15400262922,
+      "failed_requests": 0,
+      "request_rate": 16.0,
+      "run_dir": "/data/users/chjing/moe-energy-scheduling/results/raw/milestone-i-calibration-capacity-20260901T085907Z-validated/measured/attempt-255375/runs/c-math-20260901T090302.210499Z-5513b5c6",
+      "throughput_requests_s": 12.739483359469215,
+      "total_gpu_energy_j": 21550.25,
+      "tpot_p50_ms": 61.7752952508511,
+      "tpot_p99_ms": 64.45182496953139,
+      "trace_sha256": "b7cd1171e53fc36bba602ecd800a2a631e3c7505b7eb7d64c3306b0c0be47453",
+      "ttft_p50_ms": 178.19859948940575,
+      "ttft_p99_ms": 229.3550203880295
+    },
+    {
+      "client_send_delay_p99_ms": 7.428418672643592,
+      "completed_requests": 300,
+      "config_sha256": "acf2b6954c2b0c555de235cb18c23f67448eae8ea056708e406832e3bf573709",
+      "e2e_p99_ms": 8689.236020618118,
+      "failed_requests": 0,
+      "request_rate": 20.0,
+      "run_dir": "/data/users/chjing/moe-energy-scheduling/results/raw/milestone-i-calibration-capacity-20260901T085907Z-validated/measured/attempt-255375/runs/c-math-20260901T090057.808026Z-b7867ae9",
+      "throughput_requests_s": 15.045082540080742,
+      "total_gpu_energy_j": 17797.742,
+      "tpot_p50_ms": 63.54025717619366,
+      "tpot_p99_ms": 66.74461263910258,
+      "trace_sha256": "26c54ba5d1e955dc31862500096a6aac61397f2c0402d46d7a41fa11e209e0e1",
+      "ttft_p50_ms": 192.04451818950474,
+      "ttft_p99_ms": 245.48150158952922
+    },
+    {
+      "client_send_delay_p99_ms": 7.916476731188591,
+      "completed_requests": 300,
+      "config_sha256": "14339bd0eb6a050ad7b6eee0c29a567e496a344460a6f2a8d32e5654c4c98665",
+      "e2e_p99_ms": 8859.099970120005,
+      "failed_requests": 0,
+      "request_rate": 24.0,
+      "run_dir": "/data/users/chjing/moe-energy-scheduling/results/raw/milestone-i-calibration-capacity-20260901T085907Z-validated/measured/attempt-255375/runs/c-math-20260901T090137.177790Z-215b33b8",
+      "throughput_requests_s": 17.031260360225296,
+      "total_gpu_energy_j": 16001.439,
+      "tpot_p50_ms": 61.842707609097786,
+      "tpot_p99_ms": 68.19453405275002,
+      "trace_sha256": "27a93f5df1a4c85c16c7aca6fb4a1fe1114c7ab733900fd2a1316a301a296a9b",
+      "ttft_p50_ms": 197.4956134799868,
+      "ttft_p99_ms": 254.75237156730142
     }
   ],
   "saturation_bracketed": false,
-  "saturation_throughput_requests_s": 8.739793959264626,
+  "saturation_throughput_requests_s": 17.031260360225296,
   "selection_uses_only_p1_hhhh": true,
   "study": "higher_load_calibration",
   "target_fraction": 0.65,
-  "target_offered_load_requests_s": 5.680866073522007
+  "target_offered_load_requests_s": 11.070319234146442
 }
