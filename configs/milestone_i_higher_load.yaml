@@ -22,6 +22,12 @@ milestone_i:
     saturation_extension_rates: [4.5, 5.0, 5.5, 6.0]
     saturation_extension_order_seed: 20260905
     saturation_extension_trigger: highest_rate_throughput_at_least_90_percent_of_offered
+    plateau_extension_rates: [7.0, 8.0, 9.0, 10.0]
+    plateau_extension_order_seed: 20260906
+    plateau_extension_requests_per_rate: 300
+    saturation_acceptance:
+      top_three_throughputs_within_fraction_of_peak: 0.95
+      highest_offered_over_peak_throughput: 1.20
     target_fraction_of_saturation: 0.65
   experiment:
     placements: [P1, P2, P3, P4]

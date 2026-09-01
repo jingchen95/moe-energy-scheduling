@@ -36,6 +36,13 @@ offered load, so it did not bracket saturation under the preregistered 90%
 criterion. Before observing any P2/P3/P4 result, a fixed extension at
 4.5/5.0/5.5/6.0 req/s was added with order seed `20260905`.
 
+The extension reached 5.177 req/s at 6.0 offered and still had a substantial
+positive throughput slope. A final plateau check therefore uses 300 requests
+at 7/8/9/10 req/s with seed `20260906`. Saturation is accepted only when the
+three highest-rate throughputs are all within 95% of the measured peak and the
+highest offered rate is at least 1.2× that peak. This rule was fixed before any
+P2/P3/P4 result was observed.
+
 ## Fixed measured matrix
 
 After calibration, the exact same 300-request trace is used for P1/P2/P3/P4.

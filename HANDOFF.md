@@ -1,6 +1,6 @@
 # Handoff
 
-## Latest status — Milestone I saturation calibration extension prepared
+## Latest status — Milestone I final plateau calibration prepared
 
 Branch `milestone-i-higher-load-repeatability` was created from completed
 Milestone H commit `d7f30c5`. Initial P1/HHHH calibration job `255371`
@@ -44,12 +44,20 @@ superseded, never-submitted plan retained for provenance.
 - Before observing any other placement, an extension at 4.5/5.0/5.5/6.0 req/s
   was fixed with random-order seed `20260905`. Its immutable plan directory is
   `results/raw/milestone-i-calibration-extension-20260901T084416Z-validated`.
+- Extension job `255372` completed 4/4 rates with zero failures and safe cleanup.
+  Throughput still increased from 4.808 req/s at 5.5 offered to 5.177 req/s at
+  6.0 offered, so a stable plateau was not yet established.
+- Before any P2/P3/P4 run, the final plateau check was fixed at 7/8/9/10 req/s,
+  300 requests per point, order seed `20260906`. Acceptance requires all three
+  highest-rate throughputs within 95% of the peak and highest offered rate at
+  least 1.2x peak throughput. Immutable plan:
+  `results/raw/milestone-i-calibration-plateau-20260901T085110Z-validated`.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-MILESTONE_I_CALIBRATION=results/raw/milestone-i-calibration-extension-20260901T084416Z-validated \
+MILESTONE_I_CALIBRATION=results/raw/milestone-i-calibration-plateau-20260901T085110Z-validated \
   sbatch scripts/milestone_i_calibrate.sbatch
 ```
 

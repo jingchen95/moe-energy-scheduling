@@ -1,7 +1,14 @@
 {
-  "controller": "results/raw/milestone-i-calibration-20260901T082621Z-validated/measured/attempt-255371",
+  "controllers": [
+    "results/raw/milestone-i-calibration-20260901T082621Z-validated/measured/attempt-255371",
+    "results/raw/milestone-i-calibration-extension-20260901T084416Z-validated/measured/attempt-255372"
+  ],
+  "plan_dirs": [
+    "results/raw/milestone-i-calibration-20260901T082621Z-validated",
+    "results/raw/milestone-i-calibration-extension-20260901T084416Z-validated"
+  ],
   "recommended_queueing_visible": true,
-  "recommended_request_rate": 2.5,
+  "recommended_request_rate": 3.5,
   "rows": [
     {
       "client_send_delay_p99_ms": 1.6621733969077468,
@@ -130,12 +137,76 @@
       "trace_sha256": "7561260876ec8209aa0ebc8596804744a085be306fd9363c36e17ebfabffec60",
       "ttft_p50_ms": 109.96423894539475,
       "ttft_p99_ms": 129.72096233163035
+    },
+    {
+      "client_send_delay_p99_ms": 2.2121221339330095,
+      "completed_requests": 100,
+      "config_sha256": "c020c6e025ac7a4bd65c777168fb601fc5a98cb0835e1bad3723120858339661",
+      "e2e_p99_ms": 3283.6919845175,
+      "failed_requests": 0,
+      "request_rate": 4.5,
+      "run_dir": "/data/users/chjing/moe-energy-scheduling/results/raw/milestone-i-calibration-extension-20260901T084416Z-validated/measured/attempt-255372/runs/c-math-20260901T084751.470969Z-40f82b57",
+      "throughput_requests_s": 4.102945771364566,
+      "total_gpu_energy_j": 20252.068,
+      "tpot_p50_ms": 24.78924735016593,
+      "tpot_p99_ms": 24.992529886378723,
+      "trace_sha256": "25620c8e9f24aba64992fd5804839eb614bc0d8ec9bc178e79b8c455d25ae61c",
+      "ttft_p50_ms": 102.82017290592194,
+      "ttft_p99_ms": 115.40524296462536
+    },
+    {
+      "client_send_delay_p99_ms": 2.2245456092059612,
+      "completed_requests": 100,
+      "config_sha256": "5eae1c6fd58d164abd22a762a535a853bf464b92b6219af1306cdc73708a2c46",
+      "e2e_p99_ms": 3781.566875022836,
+      "failed_requests": 0,
+      "request_rate": 5.0,
+      "run_dir": "/data/users/chjing/moe-energy-scheduling/results/raw/milestone-i-calibration-extension-20260901T084416Z-validated/measured/attempt-255372/runs/c-math-20260901T084710.390163Z-b864f55e",
+      "throughput_requests_s": 4.455654824648339,
+      "total_gpu_energy_j": 19000.060999999998,
+      "tpot_p50_ms": 28.67438447639698,
+      "tpot_p99_ms": 28.86282501925575,
+      "trace_sha256": "2f7d89bf9d9dd015d9bd17d702dc9889e10c04df12160028a0db5e679615a241",
+      "ttft_p50_ms": 106.69968882575631,
+      "ttft_p99_ms": 121.99389259330928
+    },
+    {
+      "client_send_delay_p99_ms": 1.9876520475372674,
+      "completed_requests": 100,
+      "config_sha256": "ec8d307e24a8dd727086c100419400509caf22064f81002b38227d694f8a41fa",
+      "e2e_p99_ms": 3871.2681370275095,
+      "failed_requests": 0,
+      "request_rate": 5.5,
+      "run_dir": "/data/users/chjing/moe-energy-scheduling/results/raw/milestone-i-calibration-extension-20260901T084416Z-validated/measured/attempt-255372/runs/c-math-20260901T084834.554403Z-8c1773f2",
+      "throughput_requests_s": 4.8076534010508345,
+      "total_gpu_energy_j": 17783.939,
+      "tpot_p50_ms": 29.402378447881834,
+      "tpot_p99_ms": 29.565055051994488,
+      "trace_sha256": "58c2774b478afa6abc127da1f81e9b5c1977b9f365ccccd01cb59cc3cfbd06ae",
+      "ttft_p50_ms": 107.93939139693975,
+      "ttft_p99_ms": 123.85311540681869
+    },
+    {
+      "client_send_delay_p99_ms": 2.0159688824787745,
+      "completed_requests": 100,
+      "config_sha256": "06c5cfaacab12d073ba556e32e6f620760445294147a1a4129ee521aa0f1af58",
+      "e2e_p99_ms": 4160.652304943651,
+      "failed_requests": 0,
+      "request_rate": 6.0,
+      "run_dir": "/data/users/chjing/moe-energy-scheduling/results/raw/milestone-i-calibration-extension-20260901T084416Z-validated/measured/attempt-255372/runs/c-math-20260901T084631.421269Z-b749f32c",
+      "throughput_requests_s": 5.177390287122118,
+      "total_gpu_energy_j": 15989.345000000001,
+      "tpot_p50_ms": 31.06666145494252,
+      "tpot_p99_ms": 31.802556835606286,
+      "trace_sha256": "556b9f59ed56af0e67d9cd44cb36af17c10c7547dc2d0a4abf459309b960ac48",
+      "ttft_p50_ms": 116.22006865218282,
+      "ttft_p99_ms": 133.89626022428277
     }
   ],
-  "saturation_bracketed": false,
-  "saturation_throughput_requests_s": 3.6749209765115443,
+  "saturation_bracketed": true,
+  "saturation_throughput_requests_s": 5.177390287122118,
   "selection_uses_only_p1_hhhh": true,
   "study": "higher_load_calibration",
   "target_fraction": 0.65,
-  "target_offered_load_requests_s": 2.3886986347325037
+  "target_offered_load_requests_s": 3.365303686629377
 }

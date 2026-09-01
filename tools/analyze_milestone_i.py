@@ -129,9 +129,11 @@ def _load_calibration_dir(plan_dir: Path) -> tuple[dict[str, Any], Path, list[di
         run_dir = Path(entry["run_dir"]).resolve()
         spec = expected[rate]
         placement = plan["placement"]
+        expected_requests = int(plan["requests_per_rate"])
         metrics, config = _validate_common(
             run_dir, expected_trace_hash=spec["trace_sha256"], request_rate=rate,
-            expected_requests=100, expected_output_tokens=EXPECTED_OUTPUT_TOKENS_CALIBRATION,
+            expected_requests=expected_requests,
+            expected_output_tokens=expected_requests * 128,
             placement_name=placement["runtime_placement_name"],
             placement_hash=placement["placement_sha256"], clocks=(2520,) * 4,
         )
@@ -171,7 +173,12 @@ def analyze_calibration(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError("no stable calibration point")
     saturation = max(float(row["throughput_requests_s"]) for row in valid)
     highest = max(rows, key=lambda row: row["request_rate"])
-    bracketed = float(highest["throughput_requests_s"]) < 0.9 * float(highest["request_rate"])
+    high_load_rows = sorted(valid, key=lambda row: row["request_rate"])[-3:]
+    plateau = (len(high_load_rows) == 3
+               and min(float(row["throughput_requests_s"]) for row in high_load_rows)
+               >= 0.95 * saturation)
+    overloaded = float(highest["request_rate"]) >= 1.20 * saturation
+    bracketed = plateau and overloaded
     target = 0.65 * saturation
     recommended = min(valid, key=lambda row: (
         abs(float(row["request_rate"]) - target), float(row["request_rate"]),
@@ -183,7 +190,9 @@ def analyze_calibration(args: argparse.Namespace) -> dict[str, Any]:
         "study": "higher_load_calibration", "controllers": [str(row) for row in controllers],
         "plan_dirs": [str(row) for row in plan_dirs],
         "rows": rows, "saturation_throughput_requests_s": saturation,
-        "saturation_bracketed": bracketed, "target_fraction": 0.65,
+        "saturation_bracketed": bracketed, "plateau_detected": plateau,
+        "highest_rate_over_saturation": float(highest["request_rate"]) / saturation,
+        "target_fraction": 0.65,
         "target_offered_load_requests_s": target,
         "recommended_request_rate": float(recommended["request_rate"]),
         "recommended_queueing_visible": queue_visible,

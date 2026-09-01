@@ -150,7 +150,7 @@ def prepare_calibration(args: argparse.Namespace) -> None:
     runs = []
     for order, rate in enumerate(rates):
         trace = output / "traces" / f"gsm8k-100-r{rate:g}.jsonl"
-        write_trace(trace, _rescaled(base[:100], rate))
+        write_trace(trace, _rescaled(base[:args.requests_per_rate], rate))
         runs.append({"order": order, "request_rate": rate, "trace": str(trace),
                      "trace_sha256": sha256(trace)})
     plan = {
@@ -161,7 +161,7 @@ def prepare_calibration(args: argparse.Namespace) -> None:
         "base_trace": str(args.base_trace.resolve()),
         "base_trace_sha256": sha256(args.base_trace),
         "placement": p1, "target_clocks_mhz": [HIGH] * 4,
-        "requests_per_rate": 100, "offered_rates": sorted(rates),
+        "requests_per_rate": args.requests_per_rate, "offered_rates": sorted(rates),
         "rate_order_seed": args.rate_order_seed, "runs": runs,
         "selection_target_fraction": 0.65,
         "selection_boundary": "P1/HHHH calibration only; no other placement data",
@@ -238,6 +238,8 @@ def main() -> None:
     calibration.add_argument("--output-dir", type=Path, required=True)
     calibration.add_argument("--rates", type=float, nargs="+")
     calibration.add_argument("--rate-order-seed", type=int, default=CALIBRATION_ORDER_SEED)
+    calibration.add_argument("--requests-per-rate", type=int, default=100,
+                             choices=(100, 300))
     calibration.set_defaults(func=prepare_calibration)
     experiment = sub.add_parser("prepare-experiment")
     experiment.add_argument("--base-trace", type=Path, required=True)
