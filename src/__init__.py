@@ -1,1 +1,1 @@
-"""MoE placement and GPU DVFS experimental framework."""
+"""Minimal vLLM Mixture-of-Experts timing benchmark."""

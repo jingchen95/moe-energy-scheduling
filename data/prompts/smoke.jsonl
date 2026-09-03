@@ -1,3 +1,0 @@
-{"request_id":"smoke-general-001","workload":"general","arrival_offset_s":0.0,"prompt":"In two concise sentences, explain why reproducible experiments need fixed configurations."}
-{"request_id":"smoke-code-001","workload":"code","arrival_offset_s":0.0,"prompt":"Write a Python function that returns the sum of the even integers in a list. Include one assertion."}
-{"request_id":"smoke-math-001","workload":"math","arrival_offset_s":0.0,"prompt":"Solve 3x + 7 = 25 and briefly verify the result."}

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODEL_CONFIG="${MODEL_CONFIG:-${PROJECT_ROOT}/configs/model_qwen3_30b_a3b.yaml}"
+MODEL_CONFIG="${MODEL_CONFIG:-${PROJECT_ROOT}/configs/model.yaml}"
 
 if [[ "${1:-}" == "--config" ]]; then
     [[ $# -ge 2 ]] || { printf 'missing value for --config\n' >&2; exit 2; }

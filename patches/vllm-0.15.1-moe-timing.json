@@ -1,17 +1,16 @@
 {
-  "patch_version": 1,
+  "patch_version": 2,
   "vllm_version": "0.15.1",
-  "requires": "vllm-0.15.1-phase-profile.json",
   "patch_file": "vllm-0.15.1-moe-timing.patch",
-  "patch_sha256": "c54dcc5215af3701670453cbf0dffceb0b701d87c252eecf5e33b4f23fad8224",
+  "patch_sha256": "1afdeee7c73af2df2ca4dbceaac367a8614bba748411ba63ee03944025673d23",
   "files": {
     "vllm/model_executor/layers/fused_moe/layer.py": {
-      "before_phase_sha256": "987cbef95e0f69fe9437e2cd155c83118ab822697f00463d8c7066883d5b6c5f",
-      "after_timing_sha256": "b48384299ddfbec5c167b54d2acdf07c90b3bb8f5bb87f566ed0bb5ccec0a598"
+      "before_sha256": "3794e47f6bc0beb40f7e7168c3f00569fb560f96a26d74116ba000a8d84357e6",
+      "after_sha256": "c0aa86e3209dbc3c9666c563db4f7c263cbbf927168f26141e8252bfcf2362e0"
     },
     "vllm/v1/worker/gpu_worker.py": {
-      "before_phase_sha256": "c9eb9b3eb72146072961fc3072dc3624251821503f8da4d8acba935c4debf581",
-      "after_timing_sha256": "3df6199860d1f70736ec582211ef0e4f21a3ad051d78cba44316bf38aa86c376"
+      "before_sha256": "9f9d0dbc36d4eae017959213e9f8fafaa023ab4b6a1a220c9dfd0de414e22319",
+      "after_sha256": "265e82115c26b45fa5c16cabc339f041bd90fad429273d56af10e26359966fc2"
     }
   }
 }

@@ -1,86 +1,83 @@
-"""Post-processing for rank-local FusedMoE timing records."""
+"""Aggregate rank-local FusedMoE CUDA-event measurements."""
 
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any, Iterable
-
-
-def _phase_split(record: dict[str, Any]) -> tuple[float, float, float]:
-    elapsed = float(record["elapsed_ms"])
-    token_rows = int(record.get("token_rows", 0) or 0)
-    decode_rows = record.get("decode_rows")
-    phase = record.get("phase")
-    # vLLM 0.15.1 clears forward-context kwargs after routing.  In the
-    # pilot's non-speculative trace, decode invocations have 1-2 rows while
-    # chunked-prefill invocations have >=129 rows; use that explicit fallback
-    # only when the patch could not retain phase metadata.
-    if phase == "unknown" and decode_rows is None:
-        phase = "decode" if token_rows <= 2 else "prefill"
-    if phase == "decode":
-        return 0.0, elapsed, float(decode_rows or token_rows)
-    if phase == "prefill":
-        return elapsed, 0.0, 0.0
-    if phase == "mixed" and token_rows > 0 and decode_rows is not None:
-        fraction = min(1.0, max(0.0, float(decode_rows) / token_rows))
-        return elapsed * (1.0 - fraction), elapsed * fraction, float(decode_rows)
-    return elapsed, 0.0, 0.0
 
 
 def aggregate_timing_records(
     records_by_rank: dict[int, Iterable[dict[str, Any]]],
 ) -> dict[str, Any]:
-    """Aggregate rank-local records without double-counting synchronized ranks.
+    """Sum within each rank and use the slowest rank as the EP critical path."""
+    per_rank: dict[str, dict[str, float | int]] = {}
+    total_records = 0
 
-    The sum is retained for per-rank accounting, while the maximum rank elapsed
-    time is the system-service proxy because EP ranks execute in a synchronized
-    step. Mixed phase intervals are split by their decode-row fraction only for
-    descriptive phase totals.
-    """
-    per_rank: dict[int, dict[str, float]] = {}
-    per_layer_phase: dict[str, dict[str, float]] = {}
-    record_count = 0
-    for rank, records in records_by_rank.items():
-        rank_totals = {"total_ms": 0.0, "prefill_ms": 0.0, "decode_ms": 0.0,
-                       "decode_rows": 0.0, "token_rows": 0.0}
+    for rank, records in sorted(records_by_rank.items()):
+        elapsed_ms = 0.0
+        record_count = 0
         for record in records:
+            value = float(record["elapsed_ms"])
+            if not math.isfinite(value) or value < 0:
+                raise ValueError(f"rank {rank}: invalid elapsed_ms {value!r}")
+            elapsed_ms += value
             record_count += 1
-            prefill_ms, decode_ms, decode_rows = _phase_split(record)
-            total_ms = float(record["elapsed_ms"])
-            rank_totals["total_ms"] += total_ms
-            rank_totals["prefill_ms"] += prefill_ms
-            rank_totals["decode_ms"] += decode_ms
-            rank_totals["decode_rows"] += decode_rows
-            rank_totals["token_rows"] += int(record.get("token_rows", 0) or 0)
-            layer = str(record.get("layer", "unknown"))
-            layer_totals = per_layer_phase.setdefault(
-                layer, {"total_ms": 0.0, "prefill_ms": 0.0, "decode_ms": 0.0}
-            )
-            layer_totals["total_ms"] += total_ms
-            layer_totals["prefill_ms"] += prefill_ms
-            layer_totals["decode_ms"] += decode_ms
-        per_rank[int(rank)] = rank_totals
-    rank_total_values = [value["total_ms"] for value in per_rank.values()]
+        per_rank[str(rank)] = {
+            "record_count": record_count,
+            "total_ms": elapsed_ms,
+        }
+        total_records += record_count
+
+    rank_totals = [float(value["total_ms"]) for value in per_rank.values()]
     return {
-        "record_count": record_count,
-        "per_rank": {str(rank): values for rank, values in sorted(per_rank.items())},
-        "per_layer": per_layer_phase,
-        "max_rank_total_ms": max(rank_total_values, default=0.0),
-        "sum_rank_total_ms": sum(rank_total_values),
-        "max_rank_prefill_ms": max(
-            (value["prefill_ms"] for value in per_rank.values()), default=0.0
-        ),
-        "max_rank_decode_ms": max(
-            (value["decode_ms"] for value in per_rank.values()), default=0.0
-        ),
+        "record_count": total_records,
+        "per_rank": per_rank,
+        "max_rank_total_ms": max(rank_totals, default=0.0),
+        "sum_rank_total_ms": sum(rank_totals),
     }
 
 
-def load_timing_files(paths: Iterable[Path]) -> dict[str, Any]:
-    by_rank: dict[int, list[dict[str, Any]]] = {}
+def load_timing_files(paths: Iterable[Path], expected_ranks: int) -> dict[str, Any]:
+    records_by_rank: dict[int, list[dict[str, Any]]] = {}
     for path in paths:
         value = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict) or value.get("schema_version") != 1:
+            raise ValueError(f"invalid MoE timing document in {path}")
         rank = int(value["rank"])
-        by_rank[rank] = list(value.get("records") or [])
-    return aggregate_timing_records(by_rank)
+        if rank in records_by_rank:
+            raise ValueError(f"duplicate MoE timing rank {rank}")
+        records = value.get("records")
+        if not isinstance(records, list):
+            raise ValueError(f"invalid MoE timing records in {path}")
+        records_by_rank[rank] = records
+
+    expected = set(range(expected_ranks))
+    observed = set(records_by_rank)
+    if observed != expected:
+        raise ValueError(
+            f"expected MoE timing ranks {sorted(expected)}, found {sorted(observed)}"
+        )
+
+    result = aggregate_timing_records(records_by_rank)
+    empty_ranks = [
+        rank
+        for rank, values in result["per_rank"].items()
+        if int(values["record_count"]) == 0
+    ]
+    if empty_ranks:
+        raise ValueError(f"no MoE timing records for ranks {empty_ranks}")
+    return result
+
+
+def fused_moe_time_share_percent(
+    timing: dict[str, Any], active_request_wall_time_ms: float
+) -> float:
+    if active_request_wall_time_ms <= 0:
+        raise ValueError("active request wall time must be positive")
+    return (
+        float(timing["max_rank_total_ms"])
+        / active_request_wall_time_ms
+        * 100.0
+    )

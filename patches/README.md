@@ -1,46 +1,67 @@
-# vLLM Patches
+# vLLM 0.15.1 MoE Timing Patch
 
-`vllm-0.15.1-placement-profile.patch` is Milestone D patch version 1. It adds:
+`vllm-0.15.1-moe-timing.patch` is a standalone, opt-in patch for pristine
+vLLM 0.15.1. It does not require expert placement, EPLB, or phase-profile
+instrumentation.
 
-- `--expert-placement-file` for strict static per-layer mappings;
-- startup weight rearrangement through vLLM's existing EPLB transfer code;
-- collective RPCs that reset and dump vLLM's existing EPLB load counters.
+With `VLLM_MOE_TIMING=1`, the patch records one CUDA-event interval around
+each `FusedMoE.forward_impl` call. The interval covers the FusedMoE
+dispatch/compute/combine region and retains only:
 
-It does not alter routing, fused-MoE kernels, expert FFNs, or all-to-all code.
-Use `scripts/manage_vllm_patch.sh` against the directory containing the `vllm/`
-package. The script verifies exact before/after hashes and is idempotent.
+- layer name;
+- routed token-row count;
+- elapsed GPU milliseconds.
+
+It does not separate prefill from decode, communication from expert compute,
+or measure request end-to-end time. Events remain in rank-local memory during
+the measured trace. The dump performs one local `torch.cuda.synchronize()` per
+worker; no profiling collective is added to the measured forward path.
+
+## Apply and revert
+
+Run the manager against the directory containing the installed `vllm/`
+package. It accepts only the exact pristine or exact patched files recorded in
+`vllm-0.15.1-moe-timing.json`, and verifies the patch-file SHA-256 before every
+action.
 
 ```bash
-scripts/manage_vllm_patch.sh verify --root "$CONDA_PREFIX/lib/python3.10/site-packages"
-scripts/manage_vllm_patch.sh apply  --root "$CONDA_PREFIX/lib/python3.10/site-packages"
-scripts/manage_vllm_patch.sh revert --root "$CONDA_PREFIX/lib/python3.10/site-packages"
+site_root="$CONDA_PREFIX/lib/python3.10/site-packages"
+scripts/manage_moe_timing_patch.sh check  --root "$site_root"
+scripts/manage_moe_timing_patch.sh apply  --root "$site_root"
+scripts/manage_moe_timing_patch.sh revert --root "$site_root"
 ```
 
-## Milestone F phase instrumentation
+## Run a measurement window
 
-`vllm-0.15.1-phase-profile.patch`, `vllm-0.15.1-phase-state.patch`, and
-`vllm-0.15.1-phase-worker.patch` are an incremental, opt-in patch stack on top
-of the Milestone D patch. The stack is managed by
-`scripts/manage_phase_patch.sh`; it adds no behavior unless
-`VLLM_EXPERT_PHASE_PROFILE=1` is exported. It reuses the existing EPLB routed
-token counter, records prefill/decode windows, and validates that their logical
-counts conserve the total profile at dump time. The base patch is applied and
-reverted explicitly by the Milestone F Slurm job, and exact before/after hashes
-are recorded in `vllm-0.15.1-phase-profile.json` and each run directory.
+Start vLLM with:
 
-The DP phase mask uses vLLM's existing per-rank token-count metadata and local
-attention query lengths. Each rank marks only its own contiguous token block,
-so no cross-rank collective or profiling RPC is added to the measured forward
-path. The final profile dump performs the existing out-of-window reduction.
+```bash
+export VLLM_SERVER_DEV_MODE=1
+export VLLM_MOE_TIMING=1
+```
 
-## Milestone G MoE timing instrumentation
+Keep `--enforce-eager`; this instrumentation has not been validated with CUDA
+graph replay. After warmup, call the development-only collective RPC:
 
-`vllm-0.15.1-moe-timing.patch` is an opt-in patch applied after the phase
-stack. With `VLLM_MOE_TIMING=1`, it records one CUDA-event interval around each
-FusedMoE dispatch/compute/combine region and tags it with the local phase mask
-and token-row count. Events are retained in rank-local memory and resolved only
-at the explicit profile dump after a local `torch.cuda.synchronize()`; no
-collective runs in the measured forward. The worker writes
-`moe_timing_rank<N>.json` alongside the phase profile. `reset_expert_profile`
-clears pending events before each measured trace. The timing manager requires the
-Milestone F phase patch to be active and reverts only its own patch.
+```json
+{"method": "reset_moe_timing"}
+```
+
+After all measured requests finish, call:
+
+```json
+{"method": "dump_moe_timing", "args": ["/absolute/unique/run/directory"]}
+```
+
+Each EP rank creates one non-overwriting file:
+
+```text
+moe_timing_rank0.json
+moe_timing_rank1.json
+moe_timing_rank2.json
+moe_timing_rank3.json
+```
+
+The RPC fails rather than returning an empty profile if timing was not enabled
+or no instrumented FusedMoE layer is present. Keep the development endpoint
+bound to a trusted local interface.

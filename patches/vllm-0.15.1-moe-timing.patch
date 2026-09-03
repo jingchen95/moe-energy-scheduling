@@ -1,13 +1,13 @@
 --- a/vllm/model_executor/layers/fused_moe/layer.py
 +++ b/vllm/model_executor/layers/fused_moe/layer.py
-@@ -2,6 +2,7 @@
+@@ -1,6 +1,7 @@
+ # SPDX-License-Identifier: Apache-2.0
  # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
  
- from collections.abc import Callable, Iterable
 +import os
+ from collections.abc import Callable, Iterable
  from contextlib import nullcontext
  from enum import Enum
- from typing import Literal, cast, get_args, overload
 @@ -338,6 +339,12 @@
      ):
          super().__init__()
@@ -21,54 +21,38 @@
          # Allow disabling of the separate shared experts stream for
          # debug purposes.
          # TODO: Remove this after more extensive testings with TP/DP
-@@ -1491,6 +1498,43 @@
-         self.eplb_state.decode_expert_load_view = decode_expert_load_view[
-             moe_layer_idx
-         ]
-+
+@@ -1478,6 +1485,26 @@
+         self.eplb_state.logical_to_physical_map = logical_to_physical_map[moe_layer_idx]
+         self.eplb_state.logical_replica_count = logical_replica_count[moe_layer_idx]
+ 
 +    def reset_moe_timing(self) -> None:
-+        """Release timing events at an explicit profile-window boundary."""
++        """Release pending CUDA events at a measurement-window boundary."""
 +        self._moe_timing_records.clear()
 +
 +    def dump_moe_timing(self) -> list[dict[str, object]]:
-+        """Return rank-local CUDA-event timings after local synchronization."""
-+        if not self._moe_timing_enabled:
-+            return []
-+        torch.cuda.synchronize()
++        """Resolve timing records after the worker synchronizes its device."""
 +        rows: list[dict[str, object]] = []
 +        for record in self._moe_timing_records:
 +            start = record["start"]
 +            end = record["end"]
 +            assert isinstance(start, torch.cuda.Event)
 +            assert isinstance(end, torch.cuda.Event)
-+            phase_mask = record["phase_mask"]
-+            decode_rows = (
-+                int(phase_mask.to(dtype=torch.int32).sum().item())
-+                if isinstance(phase_mask, torch.Tensor) else None
-+            )
-+            token_rows = int(record["token_rows"])
-+            phase = (
-+                "decode" if decode_rows == token_rows
-+                else "prefill" if decode_rows == 0
-+                else "mixed" if decode_rows is not None
-+                else "unknown"
-+            )
 +            rows.append({
 +                "layer": record["layer"],
-+                "phase": phase,
-+                "token_rows": token_rows,
-+                "decode_rows": decode_rows,
++                "token_rows": int(record["token_rows"]),
 +                "elapsed_ms": float(start.elapsed_time(end)),
 +            })
 +        self._moe_timing_records.clear()
 +        return rows
- 
++
      def ensure_moe_quant_config_init(self):
          if self.quant_method.moe_quant_config is None:
-@@ -1774,6 +1818,34 @@
+             # Note: the moe_quant_config can't be constructed until after
+@@ -1759,6 +1786,27 @@
+         self,
          hidden_states: torch.Tensor,
          router_logits: torch.Tensor,
-     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
++    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
 +        if not self._moe_timing_enabled:
 +            return self._forward_impl_untimed(hidden_states, router_logits)
 +
@@ -77,15 +61,8 @@
 +        start.record()
 +        result = self._forward_impl_untimed(hidden_states, router_logits)
 +        end.record()
-+        phase_mask = None
-+        if is_forward_context_available():
-+            context = get_forward_context()
-+            mask = context.additional_kwargs.get("moe_phase_decode_mask")
-+            if isinstance(mask, torch.Tensor) and mask.numel() == router_logits.shape[0]:
-+                phase_mask = mask
 +        self._moe_timing_records.append({
 +            "layer": self.layer_name,
-+            "phase_mask": phase_mask,
 +            "token_rows": int(router_logits.shape[0]),
 +            "start": start,
 +            "end": end,
@@ -96,52 +73,72 @@
 +        self,
 +        hidden_states: torch.Tensor,
 +        router_logits: torch.Tensor,
-+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
+     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
          assert self.quant_method is not None
  
-         self.ensure_moe_quant_config_init()
 --- a/vllm/v1/worker/gpu_worker.py
 +++ b/vllm/v1/worker/gpu_worker.py
-@@ -703,6 +703,11 @@
-             if model_state.decode_expert_load_window is not None:
-                 model_state.decode_expert_load_window.zero_()
-         state.expert_load_window_step = 0
-+        for model_state in state.model_states.values():
-+            for module in model_state.model.modules():
-+                reset_timing = getattr(module, "reset_moe_timing", None)
-+                if reset_timing is not None:
-+                    reset_timing()
-         return {"rank": self.rank, "models": len(state.model_states)}
+@@ -685,6 +685,63 @@
+         # worker will always be healthy as long as it's running.
+         return
  
-     def dump_expert_profile(self, output_directory: str) -> dict[str, str | int]:
-@@ -721,12 +726,25 @@
-         global_loads = state.rearrange(execute_shuffle=False)
-         if global_loads is None or len(global_loads) != 1:
-             raise RuntimeError("expected one profiled MoE model")
--        phase_loads = state.phase_profile()
-         ep_group = get_ep_group().device_group
--        result: dict[str, str | int] = {"rank": ep_group.rank()}
++    def _moe_timing_modules(self) -> list[nn.Module]:
++        modules = [
++            module
++            for module in self.get_model().modules()
++            if callable(getattr(module, "reset_moe_timing", None))
++            and callable(getattr(module, "dump_moe_timing", None))
++        ]
++        if not modules:
++            raise RuntimeError("no instrumented FusedMoE modules found")
++        if any(not getattr(module, "_moe_timing_enabled", False) for module in modules):
++            raise RuntimeError(
++                "MoE timing is disabled; start vLLM with VLLM_MOE_TIMING=1"
++            )
++        return modules
++
++    def reset_moe_timing(self) -> dict[str, int]:
++        """Reset rank-local FusedMoE CUDA events at an idle boundary."""
++        from vllm.distributed.parallel_state import get_ep_group
++
++        torch.cuda.synchronize()
++        modules = self._moe_timing_modules()
++        for module in modules:
++            module.reset_moe_timing()
++        ep_rank = get_ep_group().rank
++        return {"rank": ep_rank, "moe_layers": len(modules)}
++
++    def dump_moe_timing(self, output_directory: str) -> dict[str, str | int]:
++        """Resolve and dump rank-local FusedMoE CUDA-event timings."""
++        import json
++        from pathlib import Path
++
++        from vllm.distributed.parallel_state import get_ep_group
++
++        torch.cuda.synchronize()
++        modules = self._moe_timing_modules()
++        rows = []
++        for module in modules:
++            rows.extend(module.dump_moe_timing())
++
++        ep_rank = get_ep_group().rank
 +        directory = Path(output_directory)
 +        directory.mkdir(parents=True, exist_ok=True)
-+        timing_rows = []
-+        for model_state in state.model_states.values():
-+            for module in model_state.model.modules():
-+                dump_timing = getattr(module, "dump_moe_timing", None)
-+                if dump_timing is not None:
-+                    timing_rows.extend(dump_timing())
-+        timing_path = directory / f"moe_timing_rank{ep_group.rank()}.json"
-+        timing_path.write_text(json.dumps({
-+            "schema_version": 1,
-+            "rank": ep_group.rank(),
-+            "records": timing_rows,
-+        }, sort_keys=True) + "\n", encoding="utf-8")
-+        phase_loads = state.phase_profile()
-+        result: dict[str, str | int] = {"rank": ep_group.rank(),
-+                                         "moe_timing": str(timing_path)}
-         if ep_group.rank() == 0:
--            directory = Path(output_directory)
--            directory.mkdir(parents=True, exist_ok=True)
-             counts_path = directory / "expert_counts.npz"
-             mapping_path = directory / "expert_mapping.json"
-             counts = global_loads[0].to(torch.int64).cpu().numpy()
-
++        timing_path = directory / f"moe_timing_rank{ep_rank}.json"
++        with timing_path.open("x", encoding="utf-8") as stream:
++            json.dump({
++                "schema_version": 1,
++                "rank": ep_rank,
++                "records": rows,
++            }, stream, sort_keys=True)
++            stream.write("\n")
++        return {
++            "rank": ep_rank,
++            "moe_layers": len(modules),
++            "records": len(rows),
++            "moe_timing": str(timing_path),
++        }
++
+     def _eplb_before_scale_down(self, old_ep_size: int, new_ep_size: int) -> None:
+         from vllm.distributed.parallel_state import get_ep_group
+ 
