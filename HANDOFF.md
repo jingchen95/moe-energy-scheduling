@@ -1,88 +1,102 @@
 # Handoff
 
-## Latest status — minimal MoE timing baseline prepared
+## Latest status — direct-launch minimal MoE timing baseline
 
 Status: **`prepared_not_gpu_verified`**.
 
-The active repository has been reduced to one baseline for
-`Qwen/Qwen3-30B-A3B`: TP=1, DP=4, EP enabled across four ranks, linear expert
-placement, and `allgather_reducescatter`. Power, DVFS, placement search, EPLB
-profiling, phase classification, and service-model code are no longer in the
-active execution path.
+The active path now has no model YAML, Python configuration builder, or server
+wrapper. The complete launch chain is:
+
+```text
+sbatch scripts/moe_time_baseline.sbatch
+  -> python -m vllm.entrypoints.openai.api_server
+  -> python -m src.benchmark <unique-output-directory>
+```
+
+The Slurm script directly hardcodes `Qwen/Qwen3-30B-A3B`, TP=1, DP=4, expert
+parallelism, the MP data-parallel backend, linear expert placement,
+`allgather_reducescatter`, disabled prefix caching, and eager execution. The
+benchmark directly hardcodes the trace, localhost endpoint, served model name,
+four expected ranks, eight warmups, five settle seconds, and request timeout.
+Its only command-line argument is the output directory.
+
+The patch manager remains separate because site-packages edits must be
+hash-checked and reversible. The stop helper remains separate because cleanup
+must target only the process group created by this job. Neither helper carries
+model or benchmark configuration.
 
 ### Measurement contract
 
-- Input is the committed 50-request GSM8K trace at 0.5 request/s. Its offsets
-  are exactly `0, 2, ..., 98` seconds and its SHA-256 is
+- Input is the committed 50-request GSM8K trace at 0.5 request/s. Offsets are
+  exactly `0, 2, ..., 98` seconds and SHA-256 is
   `721638a6250b929de05c2c355c8bc9b20258db7b28fedb94acb5572136571cbc`.
-- The server receives 8 warmup requests, settles for 5 seconds, resets all
-  rank-local timers, replays the fixed trace open-loop, and dumps timers only
-  after every measured response finishes.
-- The numerator is the maximum across EP ranks of each rank's summed CUDA-event
-  time around `FusedMoE.forward_impl`. This boundary includes FusedMoE
-  dispatch, expert selection/compute, and combine; it is not pure expert GEMM.
-- The denominator is the union of successful client-observed send-to-complete
-  intervals, so idle gaps are excluded and overlapping requests are not counted
-  twice.
+- The server receives eight warmup requests, settles for five seconds, resets
+  all rank-local timers, replays the fixed trace open-loop, then dumps timing
+  only after all measured responses finish.
+- The numerator is the maximum across the four EP ranks of rank-local summed
+  CUDA-event time around `FusedMoE.forward_impl`. It includes dispatch,
+  expert selection/compute, and combine; it is not pure expert GEMM.
+- The denominator is the union of successful client send-to-complete intervals.
+  Idle gaps are excluded and overlaps are counted once.
 - The primary field is
-  `fused_moe_over_active_request_wall_time_percent`. The sum across ranks is
-  retained only as a diagnostic and is not used as elapsed service time.
-- The job does not set GPU clocks and does not read power. It records actual
-  graphics/SM clocks once per second using read-only `nvidia-smi` queries.
-- The server is deliberately started with `--enforce-eager`; results therefore
-  describe the eager timing baseline, not default CUDA Graph execution.
+  `fused_moe_over_active_request_wall_time_percent`. Rank sum is diagnostic only.
+- The job neither reads power nor controls clocks. It records read-only clock
+  snapshots before and after the benchmark.
+- `--enforce-eager` is intentional; this is an eager timing baseline.
 
 ### Patch lifecycle and artifacts
 
-`scripts/moe_time_baseline.sbatch` requires pristine vLLM 0.15.1 files. It
-checks exact hashes, applies the standalone patch immediately before starting
-the server, and reverts it after stopping the process group created by this
-job. Cleanup is registered before the patch is applied, and Slurm sends the
-batch shell `TERM` 180 seconds before its time limit so cleanup has time to run.
+The Slurm job requires pristine vLLM 0.15.1 files, checks exact hashes, applies
+the standalone patch before service startup, and reverts it after stopping the
+owned process group. Cleanup is registered before patch application. Slurm
+sends `TERM` 180 seconds before the time limit to leave time for cleanup.
 
 Every submission creates a non-overwriting directory below `results/raw/` and
-stores the resolved vLLM command, model config, trace, source revision/diff,
-Slurm allocation, vLLM/PyTorch versions, topology, clock samples, server and
-client logs, raw request records, four rank-local timing files, and final
-metrics together.
+stores the exact vLLM command, trace, source revision/status, allocation,
+versions, topology, before/after clocks, raw server/client logs, request rows,
+four rank-local timing files, and final metrics together.
 
 ### Offline verification completed
 
-- Standard-library suite: 4/4 tests pass.
-- All six active Python modules compile with `python3 -m py_compile`.
-- All four shell/Slurm scripts pass `bash -n`.
-- The resolved command contains TP=1, DP=4, EP enabled, linear placement,
-  `allgather_reducescatter`, and `--enforce-eager`; it contains no EPLB flag.
-- The committed trace has 50 unique request IDs, the exact 2-second schedule,
-  and the expected SHA-256.
-- The patch manifest SHA matches. Against copies of the official pristine
-  vLLM 0.15.1 files, `check -> apply -> py_compile -> revert -> check` passes
-  and returns both files to their exact original SHA-256.
+- 3/3 standard-library unit tests pass.
+- All five active Python modules compile.
+- All three shell/Slurm scripts pass `bash -n`.
+- The hardcoded server command contains TP=1, DP=4, EP, linear placement,
+  `allgather_reducescatter`, disabled prefix caching, and eager execution.
+- The trace has 50 unique IDs, exact 2-second offsets, and the expected hash.
+- The current patch SHA matches its manifest. The patch payload is unchanged
+  from commit `326399e`, where its pristine vLLM 0.15.1
+  `check -> apply -> py_compile -> revert -> check` round trip passed.
+- No references remain to the removed YAML/config/server-wrapper path or old
+  phase-profile environment variable.
+- An independent final review found no high- or medium-severity issue in the
+  direct startup, signal cleanup, process-group cleanup, or patch-revert gate.
+- Temporary-process tests cover normal TERM, forced KILL, an exited leader with
+  a live child, rejection of a non-vLLM leader, and isolation from a sentinel
+  process outside the target group.
 - `git diff --check` passes.
 
-No GPU or live vLLM service was available for this cleanup. In particular,
-there is no new measured percentage yet, and the CUDA timing perturbation has
-not been rechecked on hardware.
+No GPU or live vLLM service is available on the cleanup machine. There is no
+new measured percentage yet, and CUDA timing overhead has not been checked on
+hardware. Its base Python also lacks `aiohttp`; the target `cuda-env` must
+provide the single dependency from `requirements.txt`.
 
 ### Preserved historical result
 
 Historical reports and processed figures remain under `docs/` and `results/`.
 The earlier five-placement by 81-frequency study did **not** establish a
 meaningful Joint placement/DVFS energy advantage: its only strict 13 ms gap was
-0.1005% and was not repeatability-confirmed. This negative result is preserved,
-not reinterpreted by the new baseline. Removed legacy execution code is
-recoverable from commit `d7f30c5`.
+0.1005% and was not repeatability-confirmed. This negative result is preserved.
+Removed legacy execution code remains recoverable from commit `d7f30c5`.
 
 ### Exact next command
-
-From the Minerva checkout with the existing `cuda-env`:
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
 sbatch scripts/moe_time_baseline.sbatch
 ```
 
-After completion, inspect:
+After completion:
 
 ```bash
 run_dir=$(find results/raw -maxdepth 1 -type d -name 'moe-time-*' | sort | tail -1)

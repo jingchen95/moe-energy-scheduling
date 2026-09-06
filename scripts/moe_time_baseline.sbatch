@@ -37,7 +37,7 @@ mkdir "${run_dir}"
 exec > >(tee -a "${run_dir}/job.log") 2>&1
 
 server_pid=""
-clock_monitor_pid=""
+benchmark_pid=""
 timing_patch_applied=0
 
 record_clocks() {
@@ -47,27 +47,33 @@ record_clocks() {
         --format=csv > "${destination}"
 }
 
-stop_clock_monitor() {
-    if [[ -n "${clock_monitor_pid}" ]]; then
-        kill -TERM "${clock_monitor_pid}" 2>/dev/null || true
-        wait "${clock_monitor_pid}" 2>/dev/null || true
-        clock_monitor_pid=""
-    fi
-}
-
 cleanup() {
     local status=$?
     local cleanup_failed=0
+    local server_stopped=1
     trap - EXIT INT TERM
 
-    stop_clock_monitor
+    if [[ -n "${benchmark_pid}" ]] && kill -0 "${benchmark_pid}" 2>/dev/null; then
+        kill -TERM "${benchmark_pid}" 2>/dev/null || true
+        for _ in {1..10}; do
+            kill -0 "${benchmark_pid}" 2>/dev/null || break
+            sleep 1
+        done
+        kill -KILL "${benchmark_pid}" 2>/dev/null || true
+    fi
     if [[ -n "${server_pid}" ]]; then
-        scripts/stop_vllm.sh "${pid_file}" || cleanup_failed=1
+        if ! scripts/stop_vllm.sh "${pid_file}"; then
+            cleanup_failed=1
+            server_stopped=0
+        fi
     fi
     record_clocks "${run_dir}/clocks-after.csv" || cleanup_failed=1
-    if [[ "${timing_patch_applied}" -eq 1 ]]; then
+    if [[ "${timing_patch_applied}" -eq 1 && "${server_stopped}" -eq 1 ]]; then
         scripts/manage_moe_timing_patch.sh revert --root "${site_root}" \
             > "${run_dir}/timing-patch-revert.log" 2>&1 || cleanup_failed=1
+    elif [[ "${timing_patch_applied}" -eq 1 ]]; then
+        printf 'patch not reverted because the vLLM process group is still running\n' \
+            > "${run_dir}/timing-patch-revert.log"
     fi
 
     if [[ "${status}" -eq 0 && "${cleanup_failed}" -ne 0 ]]; then
@@ -93,11 +99,10 @@ actual_trace_sha="$(sha256sum "${trace}" | awk '{print $1}')"
     exit 1
 }
 
-cp configs/model.yaml "${run_dir}/model.yaml"
 cp "${trace}" "${run_dir}/trace.jsonl"
 cp patches/vllm-0.15.1-moe-timing.patch "${run_dir}/moe-timing.patch"
 cp patches/vllm-0.15.1-moe-timing.json "${run_dir}/moe-timing-manifest.json"
-sha256sum configs/model.yaml "${trace}" patches/vllm-0.15.1-moe-timing.* \
+sha256sum "${trace}" patches/vllm-0.15.1-moe-timing.* \
     > "${run_dir}/input-sha256.txt"
 git rev-parse HEAD > "${run_dir}/git-commit.txt"
 git status --short > "${run_dir}/git-status.txt"
@@ -120,6 +125,12 @@ print("vllm", vllm.__version__)
 PY
 nvidia-smi topo -m > "${run_dir}/gpu-topology.txt"
 record_clocks "${run_dir}/clocks-before.csv"
+
+if curl --fail --silent --max-time 2 http://127.0.0.1:8000/health \
+    >/dev/null 2>&1; then
+    printf 'refusing to reuse an existing service on 127.0.0.1:8000\n' >&2
+    exit 1
+fi
 
 site_root="$(python - <<'PY'
 import inspect
@@ -146,11 +157,30 @@ scripts/manage_moe_timing_patch.sh verify --root "${site_root}" \
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 export VLLM_SERVER_DEV_MODE=1
 export VLLM_MOE_TIMING=1
-unset VLLM_EXPERT_PHASE_PROFILE
 
-python -m src.config configs/model.yaml -- --enforce-eager \
-    > "${run_dir}/vllm-command.txt"
-setsid scripts/serve_vllm.sh --config configs/model.yaml -- --enforce-eager \
+# vLLM 的模型与并行配置只在这里写一次。
+vllm_command=(
+    python -m vllm.entrypoints.openai.api_server
+    --model Qwen/Qwen3-30B-A3B
+    --served-model-name qwen3-30b-a3b
+    --host 127.0.0.1
+    --port 8000
+    --dtype auto
+    --max-model-len 4096
+    --gpu-memory-utilization 0.9
+    --seed 0
+    --tensor-parallel-size 1
+    --data-parallel-size 4
+    --data-parallel-backend mp
+    --enable-expert-parallel
+    --expert-placement-strategy linear
+    --all2all-backend allgather_reducescatter
+    --no-enable-prefix-caching
+    --enforce-eager
+)
+printf '%q ' "${vllm_command[@]}" > "${run_dir}/vllm-command.txt"
+printf '\n' >> "${run_dir}/vllm-command.txt"
+setsid "${vllm_command[@]}" \
     > "${run_dir}/vllm.log" 2>&1 &
 server_pid=$!
 printf '%s\n' "${server_pid}" > "${pid_file}"
@@ -162,7 +192,8 @@ for _ in $(seq 1 360); do
         tail -n 120 "${run_dir}/vllm.log" >&2 || true
         exit 1
     fi
-    if curl --fail --silent --show-error http://127.0.0.1:8000/health \
+    if curl --fail --silent --show-error --max-time 2 \
+        http://127.0.0.1:8000/health \
         >/dev/null 2>&1; then
         ready=1
         break
@@ -174,28 +205,15 @@ done
     exit 1
 }
 
-nvidia-smi \
-    --query-gpu=timestamp,index,uuid,pstate,clocks.current.graphics,clocks.current.sm \
-    --format=csv,noheader,nounits --loop=1 \
-    > "${run_dir}/clock-samples.csv" 2>&1 &
-clock_monitor_pid=$!
-printf '%s\n' "${clock_monitor_pid}" > "${run_dir}/clock-monitor.pid"
+python -m src.benchmark "${benchmark_dir}" \
+    > "${run_dir}/benchmark.log" 2>&1 &
+benchmark_pid=$!
+printf '%s\n' "${benchmark_pid}" > "${run_dir}/benchmark.pid"
+benchmark_status=0
+wait "${benchmark_pid}" || benchmark_status=$?
+benchmark_pid=""
+if [[ "${benchmark_status}" -ne 0 ]]; then
+    exit "${benchmark_status}"
+fi
 
-python -m src.benchmark \
-    --trace "${trace}" \
-    --base-url http://127.0.0.1:8000 \
-    --model qwen3-30b-a3b \
-    --output-dir "${benchmark_dir}" \
-    --expected-ranks 4 \
-    --warmup-requests 8 \
-    --settle-seconds 5 \
-    --max-concurrency 256 \
-    --request-timeout-seconds 900 \
-    2>&1 | tee "${run_dir}/benchmark.log"
-
-stop_clock_monitor
-[[ -s "${run_dir}/clock-samples.csv" ]] || {
-    printf 'clock monitor produced no samples\n' >&2
-    exit 1
-}
 record_clocks "${run_dir}/clocks-after-benchmark.csv"

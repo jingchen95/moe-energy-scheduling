@@ -1,44 +1,33 @@
+import hashlib
 import json
 from pathlib import Path
 import tempfile
 import unittest
 
-from src.config import build_vllm_command, load_yaml
 from src.metrics import active_request_time_ms, latency_metrics
 from src.moe_timing import fused_moe_time_share_percent, load_timing_files
-from src.workload import TraceRequest, scheduled_monotonic_times
+from src.workload import load_trace, scheduled_monotonic_times
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 class MinimalBenchmarkTests(unittest.TestCase):
-    def test_vllm_command_uses_tp1_dp4_ep(self) -> None:
-        config = load_yaml(REPOSITORY_ROOT / "configs/model.yaml")
-        command = build_vllm_command(config, ["--enforce-eager"])
-
-        self.assertEqual(command[command.index("--tensor-parallel-size") + 1], "1")
-        self.assertEqual(command[command.index("--data-parallel-size") + 1], "4")
+    def test_fixed_trace(self) -> None:
+        trace = REPOSITORY_ROOT / "data/traces/gsm8k-50-r0.5.jsonl"
         self.assertEqual(
-            command[command.index("--all2all-backend") + 1],
-            "allgather_reducescatter",
+            hashlib.sha256(trace.read_bytes()).hexdigest(),
+            "721638a6250b929de05c2c355c8bc9b20258db7b28fedb94acb5572136571cbc",
         )
-        self.assertIn("--enable-expert-parallel", command)
-        self.assertNotIn("--enable-eplb", command)
+        requests = load_trace(trace)
+        self.assertEqual(len(requests), 50)
         self.assertEqual(
-            command[command.index("--expert-placement-strategy") + 1], "linear"
+            [request.arrival_offset_s for request in requests],
+            [float(2 * index) for index in range(50)],
         )
-        self.assertEqual(command[-1], "--enforce-eager")
-
-    def test_trace_schedule_uses_one_fixed_epoch(self) -> None:
-        requests = [
-            TraceRequest("a", "math", "a", 1, 1, 0.0),
-            TraceRequest("b", "math", "b", 1, 1, 0.125),
-            TraceRequest("c", "math", "c", 1, 1, 2.0),
-        ]
         self.assertEqual(
             scheduled_monotonic_times(requests, 10.0),
-            [10.0, 10.125, 12.0],
+            [10.0 + 2.0 * index for index in range(50)],
         )
 
     def test_active_request_time_is_interval_union(self) -> None:
