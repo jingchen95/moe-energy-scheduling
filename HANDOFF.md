@@ -1,5 +1,38 @@
 # Handoff
 
+## Latest status — automated Apptainer MoE test
+
+Status: **`prepared_not_executed`**.
+
+`scripts/apptainer_moe_test.sh` automates the full fixed-trace test from inside
+an existing four-GPU Slurm allocation. It validates the local model, creates a
+unique run directory and node-local EXT3 overlay/cache, applies the timing
+patch, launches the pinned SIF, waits for health, runs `src.benchmark`, stops
+only its recorded process group, reverts the patch, and prints/writes a compact
+`summary.json` containing the primary MoE share and per-rank timing totals.
+
+Run it from the repository root after obtaining the allocation:
+
+```bash
+scripts/apptainer_moe_test.sh
+```
+
+An alternate complete local model directory may be passed as its sole
+argument. The pinned SIF remains at the fixed path under `containers/`.
+
+The script accepts the already validated Vera A40 environment only as
+`environment-smoke-only-not-comparable`. It records that scope in the summary
+and prints a warning. Only runs on Uranus or Neptune are labelled
+`approved-study-node` under the repository's research contract.
+
+The stop helper now recognizes the exact Apptainer runtime-parent title emitted
+by the pinned `vllm-openai-v0.15.1-amd64.sif`. Ownership and exact process-group
+checks remain in place; no broad process matching was added.
+
+Offline verification covers shell syntax, the existing unit suite, diff
+whitespace, and a disposable process-group stop test for the Apptainer parent
+title. A live automated run has not yet been executed.
+
 ## Latest status — immutable Apptainer base image
 
 Status: **`offline_verified_gpu_verification_blocked`**.

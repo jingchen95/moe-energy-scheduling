@@ -39,7 +39,9 @@ done
 
 if kill -0 "${pid}" 2>/dev/null; then
     command="$(ps -o command= -p "${pid}" 2>/dev/null || true)"
-    if [[ -n "${command}" && "${command}" != *vllm.entrypoints.openai.api_server* ]]; then
+    if [[ -n "${command}" \
+        && "${command}" != *vllm.entrypoints.openai.api_server* \
+        && "${command}" != "Apptainer runtime parent: vllm-openai-v0.15.1-amd64.sif"* ]]; then
         printf 'refusing to stop unrecognized process %s: %s\n' "${pid}" "${command}" >&2
         exit 1
     fi
