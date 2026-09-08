@@ -2,7 +2,7 @@
 
 ## Latest status — automated Apptainer MoE test
 
-Status: **`prepared_not_executed`**.
+Status: **`prepared_after_failed_live_attempt`**.
 
 `scripts/apptainer_moe_test.sh` automates the full fixed-trace test from inside
 an existing four-GPU Slurm allocation. It validates the local model, creates a
@@ -31,7 +31,13 @@ checks remain in place; no broad process matching was added.
 
 Offline verification covers shell syntax, the existing unit suite, diff
 whitespace, and a disposable process-group stop test for the Apptainer parent
-title. A live automated run has not yet been executed.
+title. Live attempt `apptainer-moe-test-10252822-20260908T185121Z` reached a
+healthy four-rank server, then failed before benchmark traffic because the
+client-side `apptainer exec` tried to acquire a second writable lock on the
+server's active EXT3 overlay. Cleanup stopped the server and restored the
+pristine patch state. The client does not import vLLM or need the patch, so its
+container invocation no longer attaches the server overlay. This correction
+has not yet received a complete live run.
 
 ## Latest status — immutable Apptainer base image
 

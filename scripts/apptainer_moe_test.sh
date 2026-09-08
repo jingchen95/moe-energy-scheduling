@@ -237,7 +237,6 @@ done
 
 apptainer exec \
     --cleanenv \
-    --overlay "${overlay}" \
     --bind "${project_root}:/workspace" \
     --pwd /workspace \
     "${image}" \
