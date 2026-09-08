@@ -40,8 +40,7 @@ model or benchmark configuration.
   Idle gaps are excluded and overlaps are counted once.
 - The primary field is
   `fused_moe_over_active_request_wall_time_percent`. Rank sum is diagnostic only.
-- The job neither reads power nor controls clocks. It records read-only clock
-  snapshots before and after the benchmark.
+- The job neither reads power nor records or controls GPU clocks.
 - `--enforce-eager` is intentional; this is an eager timing baseline.
 
 ### Patch lifecycle and artifacts
@@ -53,8 +52,8 @@ sends `TERM` 180 seconds before the time limit to leave time for cleanup.
 
 Every submission creates a non-overwriting directory below `results/raw/` and
 stores the exact vLLM command, trace, source revision/status, allocation,
-versions, topology, before/after clocks, raw server/client logs, request rows,
-four rank-local timing files, and final metrics together.
+versions, topology, raw server/client logs, request rows, four rank-local timing
+files, and final metrics together.
 
 ### Offline verification completed
 

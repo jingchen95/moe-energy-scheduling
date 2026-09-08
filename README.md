@@ -6,7 +6,7 @@
 - 并行：TP=1、DP=4、开启 EP（因此 4 个 DP rank 同时也是 4 个 EP rank）
 - 输入：50 个固定 GSM8K prompt，每 2 秒发送 1 个
 - 输出：`FusedMoE` GPU 时间占活跃请求端到端时间的百分比
-- 不测功耗，不设置 GPU 频率
+- 不测功耗，也不记录或设置 GPU 频率
 
 ## vLLM 在哪里启动
 
@@ -86,8 +86,6 @@ benchmark/metrics.json
 benchmark/requests.jsonl
 vllm.log
 vllm-command.txt
-clocks-before.csv
-clocks-after-benchmark.csv
 ```
 
 `benchmark/metrics.json` 中的主结果是：
@@ -107,8 +105,8 @@ fused_moe_over_active_request_wall_time_percent
 等于纯 expert GEMM。分母是客户端看到的端到端时间，并排除完全没有请求在途
 的间隔。这个数适合粗略比较，不是高精度 profiler 结果。
 
-脚本只在 benchmark 前后读取实际 GPU 时钟，不锁频、不改频。服务使用
-`--enforce-eager`，因此结果属于 eager 基线。
+脚本不读取、不锁定也不修改 GPU 时钟。服务使用 `--enforce-eager`，因此结果
+属于 eager 基线。
 
 ## 为什么还需要补丁脚本
 
