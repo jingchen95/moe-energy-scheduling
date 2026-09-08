@@ -1,5 +1,58 @@
 # Handoff
 
+## Latest status — immutable Apptainer base image
+
+Status: **`offline_verified_gpu_verification_blocked`**.
+
+The official amd64 `vllm/vllm-openai:v0.15.1` OCI image was resolved and
+converted into one immutable Apptainer SIF. The build pins the architecture
+manifest rather than the mutable tag:
+
+```text
+docker://vllm/vllm-openai@sha256:06f9f0d5c7cb079504615c51dab70cd18abbf609d1358b940172181ac0a92efa
+```
+
+`scripts/build_vllm_apptainer.sh` disables the persistent OCI cache and uses
+`/tmp` (or an explicit second argument) for layer expansion, so the shared
+filesystem receives only the final SIF. Sandbox images are deliberately not
+used because they would recreate the many-small-file problem. The local SIF is
+ignored by Git and has:
+
+```text
+path: containers/vllm-openai-v0.15.1-amd64.sif
+size: 8,416,972,800 bytes (7.9 GiB reported by ls)
+sha256: 9eef28a71be2c24668f3bf744e3f38f9cbb4f2be5c3467c07d4502b42b55b96e
+```
+
+Offline container execution verified:
+
+- Python 3.12.12 at `/usr/bin/python3` (there is no `python` command);
+- PyTorch 2.9.1+cu129 with CUDA user-space version 12.9;
+- vLLM 0.15.1;
+- aiohttp 3.13.3;
+- GNU patch at `/usr/bin/patch`;
+- vLLM site root `/usr/local/lib/python3.12/dist-packages`;
+- exact pristine hashes accepted by the MoE timing patch manager.
+
+This official image is not byte-for-byte equivalent to the earlier Conda
+environment, which used Python 3.10.17 and PyTorch 2.9.1+cu128. Treat the
+Apptainer environment as a new execution baseline; do not compare its measured
+results directly with runs from the old environment without an explicit
+environment-control study.
+
+GPU passthrough is not yet verified. The current Slurm endpoint exposes only
+`vera-*` nodes and no node named `uranus` or `neptune`. Two submission attempts
+were rejected before queueing (first for a missing account, then for the
+unknown `uranus` node), so no GPU allocation ran. Repository safety forbids
+substituting a Vera GPU. `scripts/verify_vllm_apptainer.sbatch` is ready for
+submission from the Minerva endpoint with an explicit valid account. It writes
+a unique evidence directory and verifies `--nv`, CUDA availability, device
+identity, versions, the SIF hash, and pristine patch state without starting a
+server.
+
+Do not start the writable-overlay milestone until this GPU verification passes
+on `uranus` or `neptune`.
+
 ## Latest status — direct-launch minimal MoE timing baseline
 
 Status: **`prepared_not_gpu_verified`**.

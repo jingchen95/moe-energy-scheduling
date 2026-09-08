@@ -26,3 +26,9 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# Apptainer runtime artifacts are large single-file binaries. Keep recipes and
+# documentation, but never add images or writable overlays to Git.
+containers/*.sif
+containers/*.img
+containers/*.ext3
