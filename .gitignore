@@ -32,3 +32,5 @@ venv/
 containers/*.sif
 containers/*.img
 containers/*.ext3
+
+containers
