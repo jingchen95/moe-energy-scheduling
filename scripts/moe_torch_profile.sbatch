@@ -59,11 +59,12 @@ shard_count="$(find "${model_dir}" -maxdepth 1 -type f -name 'model-*.safetensor
 
 run_id="moe-torch-${job_id}-$(date -u +%Y%m%dT%H%M%SZ)"
 run_dir="${project_root}/results/raw/${run_id}"
-temporary_root="${SLURM_TMPDIR:-/tmp}"
-runtime_cache="${temporary_root}/vllm-torch-cache-${run_id}"
+# Compute-node /tmp may be only 1 GiB. Keep all large caches and export
+# temporaries on the same spacious filesystem as this unique result directory.
+runtime_cache="${run_dir}/runtime-cache"
 mkdir -p "${project_root}/results/raw"
 mkdir "${run_dir}"
-mkdir "${run_dir}/profile" "${runtime_cache}"
+mkdir "${run_dir}/profile" "${run_dir}/tmp" "${runtime_cache}"
 exec > >(tee -a "${run_dir}/job.log") 2>&1
 
 server_pid=""
@@ -71,6 +72,10 @@ benchmark_pid=""
 record_clocks() {
     nvidia-smi --query-gpu=index,uuid,driver_version,pstate,clocks.current.graphics,clocks.current.memory,memory.used \
         --format=csv
+}
+record_storage() {
+    df -h "${run_dir}/profile" "${runtime_cache}" "${run_dir}/tmp" /tmp
+    df -i "${run_dir}/profile" "${runtime_cache}" "${run_dir}/tmp" /tmp
 }
 cleanup() {
     local status=$?
@@ -91,6 +96,7 @@ cleanup() {
         fi
     fi
     record_clocks > "${run_dir}/clocks-end.csv" 2>&1 || true
+    record_storage > "${run_dir}/storage-end.txt" 2>&1 || true
     if [[ "${status}" -eq 0 && "${cleanup_failed}" -ne 0 ]]; then status=1; fi
     printf '%s\n' "${status}" > "${run_dir}/exit-status.txt"
     if [[ "${status}" -eq 0 ]]; then
@@ -108,6 +114,8 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 printf 'run scope: %s\nrun directory: %s\n' "${run_scope}" "${run_dir}"
+printf 'Cache/temp files: %s/{runtime-cache,tmp}; trace compression disabled.\n' "${run_dir}"
+record_storage > "${run_dir}/storage-start.txt" 2>&1
 printf '%s\n' "${run_scope}" > "${run_dir}/run-scope.txt"
 if [[ "${run_scope}" == environment-smoke-* ]]; then
     printf 'WARNING: Vera results are smoke-only; do not compare with Uranus/Neptune study data.\n'
@@ -160,8 +168,16 @@ container_command=(
     --env XDG_CACHE_HOME=/runtime-cache
     --env TRITON_CACHE_DIR=/runtime-cache/triton
     --env TORCHINDUCTOR_CACHE_DIR=/runtime-cache/torchinductor
+    --env TMPDIR=/run-output/tmp
+    --env TMP=/run-output/tmp
+    --env TEMP=/run-output/tmp
     "${image}" env -u BASH_ENV
 )
+printf 'Checking container cache/temp/trace storage (at least 5 GiB free)...\n'
+"${container_command[@]}" python3 -m src.torch_profile --check-storage \
+    > "${run_dir}/storage-preflight.json" 2> "${run_dir}/storage-preflight.log" || {
+        tail -n 25 "${run_dir}/storage-preflight.log" >&2; exit 1
+    }
 # Verify profiler configuration/support using the actual container before loading weights.
 "${container_command[@]}" python3 - "${profiler_config}" <<'PY' > "${run_dir}/versions.txt" 2>&1
 import json
@@ -220,6 +236,7 @@ done
 printf 'Model ready. Warming up, then profiling three requests...\n'
 setsid apptainer exec --cleanenv \
     --bind "${project_root}:/workspace:ro" --bind "${run_dir}:/run-output" \
+    --env TMPDIR=/run-output/tmp --env TMP=/run-output/tmp --env TEMP=/run-output/tmp \
     --pwd /workspace "${image}" \
     env -u BASH_ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     MOE_PROFILE_RUN_SCOPE="${run_scope}" \
@@ -242,8 +259,8 @@ printf '%s\n' "${benchmark_status}" > "${run_dir}/benchmark-exit-status.txt"
 [[ "${benchmark_status}" -eq 0 ]] || exit "${benchmark_status}"
 
 # stop_profile returns after in-worker trace export. Never stop the model before it.
-if grep -Eq 'Failed to (start|stop) profiler' "${run_dir}/vllm.log"; then
-    printf 'vLLM reported a profiler failure despite HTTP status; preserving raw output\n' >&2
+if grep -Eq 'Failed to (start|stop) profiler|Failed to (open|write to) log file' "${run_dir}/vllm.log"; then
+    printf 'Profiler start/stop/export failed despite HTTP status; inspect vllm.log and storage-*.txt. Raw output retained.\n' >&2
     exit 1
 fi
 scripts/stop_vllm.sh "${run_dir}/vllm.pid"

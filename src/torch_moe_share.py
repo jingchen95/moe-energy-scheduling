@@ -19,8 +19,16 @@ from src.nsys_moe_share import estimate_moe_share
 
 def load_gpu_trace(path: Path) -> dict[str, Any]:
     opener = gzip.open if path.suffix == ".gz" else open
-    with opener(path, "rt", encoding="utf-8") as stream:
-        document = json.load(stream)
+    try:
+        with opener(path, "rt", encoding="utf-8") as stream:
+            document = json.load(stream)
+    except (OSError, EOFError, ValueError) as error:
+        raise ValueError(
+            f"empty, incomplete, or unreadable profiler trace: {path}; "
+            "check vllm.log and storage-*.txt for export/disk failures"
+        ) from error
+    if not isinstance(document, dict):
+        raise ValueError(f"expected a Chrome trace object: {path}")
     events = document.get("traceEvents")
     if not isinstance(events, list):
         raise ValueError(f"missing traceEvents list: {path}")

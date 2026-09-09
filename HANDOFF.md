@@ -1,6 +1,79 @@
 # Handoff
 
-## Latest status — Torch Profiler CUDA Graph diagnostic
+## Latest status — Torch Profiler export storage repair
+
+Status: **`container_storage_and_export_tests_passed_full_model_rerun_pending`**.
+
+The first full-model Torch run,
+`results/raw/moe-torch-10256329-20260909T180319Z` (source `97c0d72`), completed
+all three measured requests, each with 128 output tokens. Both profiler control
+endpoints returned HTTP 200, but all four workers logged
+`Failed to write to log file!` at 20:12:32–33 local time. Each final gzip file
+was 81 bytes and decompressed to zero bytes. The run correctly ended FAIL;
+there is no usable MoE kernel-time percentage. These failed artifacts remain
+unchanged.
+
+Read-only checks in the user's existing allocation `10256329`, on
+`vera-m11-20`, identified the export failure: node `/tmp` was a 974 MiB
+filesystem, 100% used, with only 52 KiB available. The run's compile cache
+occupied 669 MiB and four incomplete Kineto `.json.tmp` files, timestamped at
+the export failure, occupied about 237 MiB. The shared result filesystem had
+ample space. The pinned PyTorch gzip path stages a full uncompressed trace
+through Python's temporary directory before compressing it into the requested
+output path; the previous script did not relocate that temporary directory.
+No files in node `/tmp` were deleted or modified during diagnosis/repair.
+
+This run used four A100-SXM4-40GB GPUs with NV4 links, not the previous A40
+node. It remains Vera environment smoke, not comparative study data. Mean
+profiled TTFT/TPOT/E2E were 46.96 ms / 9.89 ms / 1.303 s. Rank 3 also emitted
+CUDA `out of memory (function destroyEvent)` warnings during warmup, before
+the explicit start-profile call; their cause remains unresolved. Successful
+requests do not establish an unaffected latency baseline.
+
+The repaired launcher now:
+
+- keeps `runtime-cache/` and `tmp/` inside each unique result directory instead
+  of falling back to small node `/tmp`;
+- sets container `TMPDIR`, `TMP`, and `TEMP` to `/run-output/tmp` for server
+  and client, while preserving the existing `/runtime-cache` cache settings;
+- disables gzip and exports `profile/*.pt.trace.json` directly (Kineto's
+  adjacent temporary output is also on the result filesystem);
+- checks the actual container temporary-directory resolution, at least 5 GiB
+  of free space, and successful file write/flush before loading the model;
+  this is a guard, not a guarantee against later quota or space exhaustion;
+- records storage availability/inodes at start and cleanup, and rejects native
+  log-open/log-write errors even if the HTTP controls return 200;
+- reports empty/truncated trace filenames with an export/storage diagnostic,
+  while retaining support for valid historical gzip traces.
+
+The vLLM command block and frozen workload are unchanged: no eager mode,
+CUDA Graph/compile change, per-layer instrumentation, synchronization, package
+upgrade, or site-packages edit. Moving caches to shared storage may change
+cold-start time; warmup still precedes the measured requests. No full model
+was launched as part of this repair, and no existing benchmark was overwritten.
+
+Verification: 25/25 tests passed inside the pinned SIF, including actual
+uncompressed CPU trace export without Python tempfile staging, unchanged
+`ProfilerConfig` graph hash, four-worker uncompressed parsing, empty/truncated
+gzip rejection, and storage failure cases. The actual container storage
+preflight also passed with the new mounts/environment. Evidence is under
+`results/raw/torch-storage-check-fzUqmJ/`. Shell/Python syntax, unchanged model
+command comparison, `git diff --check`, and recognition of all four native
+errors in the failed run's log passed. Full-model GPU validation of this
+repair is still pending. Unrelated staged files/document deletions were left
+untouched and are excluded from this milestone.
+
+Rerun inside the user's existing four-GPU allocation:
+
+```bash
+bash scripts/moe_torch_profile.sbatch
+```
+
+There is no need to clear old `/tmp` files for the relocated cache/export
+paths. Success still requires `status.txt` = PASS and a validated
+`moe-kernel-share.json`; the presence of a trace file or HTTP 200 is insufficient.
+
+## Previous milestone — Torch Profiler CUDA Graph diagnostic
 
 Status: **`container_offline_verified_full_model_gpu_run_pending`**.
 

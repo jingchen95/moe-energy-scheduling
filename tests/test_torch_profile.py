@@ -4,10 +4,10 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from src.torch_moe_share import analyze_run, load_gpu_trace, summarize_traces
-from src.torch_profile import PROFILER_CONFIG
+from src.torch_profile import PROFILER_CONFIG, check_storage
 
 
 def trace_document(device):
@@ -29,14 +29,23 @@ def trace_document(device):
     return {"displayTimeUnit": "ms", "traceEvents": events}
 
 
-def write_trace(directory, device, document=None):
-    path = directory / f"worker-{device}.pt.trace.json.gz"
-    with gzip.open(path, "wt", encoding="utf-8") as stream:
+def write_trace(directory, device, document=None, compressed=True):
+    path = directory / f"worker-{device}.pt.trace.json{'.gz' if compressed else ''}"
+    opener = gzip.open if compressed else open
+    with opener(path, "wt", encoding="utf-8") as stream:
         json.dump(trace_document(device) if document is None else document, stream)
     return path
 
 
 class TorchTraceTests(unittest.TestCase):
+    def test_four_uncompressed_worker_traces(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths = [write_trace(Path(directory), device, compressed=False)
+                     for device in range(4)]
+            result = summarize_traces(paths)
+        self.assertEqual(result["total_cuda_kernel_time"], 400)
+        self.assertAlmostEqual(result["conservative_moe_cuda_kernel_time_share_percent"], 55)
+
     def test_gpu_only_weighted_fraction_and_microseconds(self):
         with tempfile.TemporaryDirectory() as directory:
             paths = [write_trace(Path(directory), device) for device in range(4)]
@@ -88,7 +97,18 @@ class TorchTraceTests(unittest.TestCase):
                         load_gpu_trace(write_trace(Path(directory), 0, doc))
             path = Path(directory) / "broken.pt.trace.json"
             path.write_text('{"traceEvents": [')
-            with self.assertRaises(json.JSONDecodeError):
+            with self.assertRaisesRegex(ValueError, "incomplete.*broken.pt.trace.json"):
+                load_gpu_trace(path)
+
+    def test_empty_and_truncated_gzip_exports_explain_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "empty.pt.trace.json.gz"
+            with gzip.open(path, "wt"):
+                pass
+            with self.assertRaisesRegex(ValueError, "empty.*empty.pt.trace.json.gz"):
+                load_gpu_trace(path)
+            path.write_bytes(gzip.compress(b'{"traceEvents": []}')[:12])
+            with self.assertRaisesRegex(ValueError, "incomplete.*empty.pt.trace.json.gz"):
                 load_gpu_trace(path)
 
     def test_no_recognizable_moe_compute_is_not_reported_as_zero(self):
@@ -135,8 +155,45 @@ class TorchTraceTests(unittest.TestCase):
         self.assertTrue(PROFILER_CONFIG["ignore_frontend"])
         for key in ("torch_profiler_with_stack", "torch_profiler_record_shapes",
                     "torch_profiler_with_memory", "torch_profiler_with_flops",
-                    "torch_profiler_dump_cuda_time_total"):
+                    "torch_profiler_dump_cuda_time_total", "torch_profiler_use_gzip"):
             self.assertFalse(PROFILER_CONFIG[key])
+
+
+class StoragePreflightTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.cache = self.root / "runtime-cache"
+        for name in ("profile", "runtime-cache", "tmp"):
+            (self.root / name).mkdir()
+        self.temp_patch = patch("src.torch_profile.tempfile.gettempdir",
+                                return_value=str(self.root / "tmp"))
+        self.temp_patch.start()
+        self.addCleanup(self.temp_patch.stop)
+
+    def test_real_storage_probe_leaves_no_files(self):
+        result = check_storage(self.root, self.cache, min_free_bytes=0)
+        self.assertEqual(result["tempfile_directory"], str((self.root / "tmp").resolve()))
+        self.assertEqual(len(result["directories"]), 3)
+        for name in ("profile", "runtime-cache", "tmp"):
+            self.assertEqual(list((self.root / name).iterdir()), [])
+
+    def test_wrong_temp_directory_is_rejected(self):
+        with patch("src.torch_profile.tempfile.gettempdir", return_value="/tmp"):
+            with self.assertRaisesRegex(RuntimeError, "temporary directory.*expected"):
+                check_storage(self.root, self.cache)
+
+    def test_full_filesystem_is_rejected_before_model_start(self):
+        with patch("src.torch_profile.shutil.disk_usage", return_value=Mock(free=52 * 1024)):
+            with self.assertRaisesRegex(RuntimeError, "insufficient free space"):
+                check_storage(self.root, self.cache)
+
+    def test_write_or_quota_error_is_not_ignored(self):
+        with patch("src.torch_profile.tempfile.NamedTemporaryFile",
+                   side_effect=PermissionError("storage not writable")):
+            with self.assertRaisesRegex(PermissionError, "storage not writable"):
+                check_storage(self.root, self.cache, min_free_bytes=0)
 
 
 @unittest.skipUnless(importlib.util.find_spec("aiohttp"), "run client tests in pinned SIF")
@@ -202,11 +259,14 @@ class PinnedRuntimeTests(unittest.TestCase):
         import torch
 
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "cpu.pt.trace.json"
+            suffix = ".gz" if PROFILER_CONFIG["torch_profiler_use_gzip"] else ""
+            path = Path(directory) / f"cpu.pt.trace.json{suffix}"
             with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as profiler:
                 x = torch.ones(16)
                 x = x + 1
-            profiler.export_chrome_trace(str(path))
+            with patch("torch.profiler.profiler.tempfile.NamedTemporaryFile",
+                       side_effect=AssertionError("export must not stage JSON via tempfile")):
+                profiler.export_chrome_trace(str(path))
             self.assertGreater(path.stat().st_size, 0)
             with self.assertRaisesRegex(ValueError, "expected one GPU"):
                 load_gpu_trace(path)
