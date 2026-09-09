@@ -1,6 +1,74 @@
 # Handoff
 
-## Latest status — offline Torch Profiler visualizations
+## Latest status — one-layer Attention / MoE distribution
+
+Status: **`rendered_verified_order_inferred_not_module_labelled`**.
+
+At the user's request, `src/torch_layer_plot.py` now draws a single Transformer
+layer example from the existing successful Torch trace. No model was started,
+no profiler or optimization settings were changed, and original raw reports
+were not modified. Outputs are in
+`results/raw/torch-layer-o8rZUA/charts/`: `layer-distribution.png`, the hoverable
+`layer-timeline.svg`, self-contained `report.html`, exact `layer-data.json`,
+and per-kernel `layer-kernels.csv`.
+
+The selected example is GPU 0, inferred layer index 23 (the 24th of 48), in
+full decode-shaped graph replay index 32 (the 33rd eligible replay). Layer
+identity is explicitly **inferred from order**, not a native profiler module
+label. GPU 0's raw trace has no named `model.layers.*` events. Instead, graph
+launch correlation separates complete replays; each selected replay must have
+48 ReduceScatter endpoints and 48 FlashAttention split-KV combine kernels.
+Every layer sequence is validated for input/post-attention RMSNorm boundaries,
+two Attention projections, KV cache update, attention/combine, router
+projection, top-k, two expert kernels, activation, AllGather and ReduceScatter.
+The final model RMSNorm is excluded. Layer 0 is deliberately unavailable as a
+clean layer example because its first kernel fuses embedding and normalization.
+
+Mapping was cross-checked against the SIF's actual vLLM 0.15.1
+`Qwen3MoeAttention`, `Qwen3MoeSparseMoeBlock`, and `Qwen3MoeDecoderLayer`
+forward methods, plus the saved rank-0 compiled graph (including
+`model.layers.23.self_attn.attn` and its projection/gate weights). Hashes of
+the plotting source, pinned model source, and compiled graph are in the
+derived JSON. Generic GEMMs are attributed by their position around the
+validated post-attention RMSNorm, not by globally assuming all GEMMs are MoE.
+Fused residual/RMSNorm work is a separate category because it can straddle
+logical layer ownership.
+
+This trace contains 446 structurally eligible full decode-shaped graph calls;
+that count must not be interpreted as the number of generated tokens or served
+requests. Additional read-only inspection confirmed the selected call
+(correlation 12207, CPU timestamp 6010407486230.201 us) lies inside the recorded
+`execute_context_0(0)_generation_1(1)` annotation. The graph index is not a
+token index.
+
+The selected layer has 24 GPU kernels, summed duration 190.912 us and
+first-to-last-kernel span 197.503 us:
+
+- Attention-related kernels: 66.849 us (35.016%);
+- MoE compute/router/token organization: 65.246 us (34.176%);
+- MoE EP AllGather/ReduceScatter: 53.408 us (27.975%);
+- fused RMSNorm/residual: 5.409 us (2.833%).
+
+Attention includes QKV/O projections, QK norm/RoPE, KV work, and attention
+kernels. MoE includes router projection, top-k, token organization, expert
+GEMMs, activation, and combine. These are component-related GPU kernels, not
+pure FLOP counts. Communication is not labelled compute; kernel sums exclude
+CPU intervals and gaps and are not E2E percentages. This single decode example
+is not representative of every layer/token/prefill/batch size. Its broader
+order-based attribution differs from the earlier whole-run name-only estimate.
+The underlying run's warmup OOM warnings remain unresolved.
+
+Verification: 40/40 tests passed inside the pinned SIF, including seven new
+layer tests for partitioning, missing/ambiguous boundaries, missing projections
+and expert kernels, partial graph rejection, CPU exclusion, no-overwrite, PNG
+rendering and SVG event titles. The real graph passed all 48-layer sequence
+checks. The final PNG was visually inspected, derived durations and source
+hashes were checked, and Python syntax / `git diff --check` passed. Test and
+render logs remain under `results/raw/torch-layer-o8rZUA/`. Only this derived
+visualization code/tests/notes belong to the milestone; unrelated user changes
+are preserved.
+
+## Previous milestone — offline Torch Profiler visualizations
 
 Status: **`rendered_and_visually_verified`**.
 
