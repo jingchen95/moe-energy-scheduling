@@ -1,5 +1,49 @@
 # Handoff
 
+## Latest status — CUDA Graph MoE Nsight diagnostic
+
+Status: **`offline_verified_not_gpu_verified`**.
+
+`scripts/moe_nsys_profile.sbatch` is the complete low-interference diagnostic
+requested after the eager baseline. It keeps the frozen TP=1/DP=4/EP=4,
+linear placement, `allgather_reducescatter`, disabled prefix caching, model,
+and prompt order. It does not pass `--enforce-eager` or apply the site-packages
+CUDA-event patch. Instead, it pins vLLM to `FULL_AND_PIECEWISE`, starts the
+built-in CUDA profiler behind Nsight Systems, warms up normally, and captures
+only the first three requests of the frozen trace at their original 0/2/4 s
+offsets.
+
+The script writes a unique raw directory and runs `nsys stats` after stopping
+its owned process group. `src/nsys_moe_share.py` conservatively classifies
+explicit FusedMoE/routing/grouped-GEMM kernels plus AllGather and
+ReduceScatter. The latter attribution is valid only for this fixed TP=1 AgRs
+configuration. The reported percentage is aggregate CUDA kernel time, not E2E
+wall time; generic unmatched kernels are intentionally retained in the JSON
+for audit rather than guessed as MoE. Profiler-run latency is diagnostic only.
+
+Offline verification completed:
+
+- the Python unit suite passes (4/4), including synthetic Nsight CSV parsing;
+- both new Python modules compile;
+- the Slurm script passes `bash -n`;
+- `git diff --check` passes;
+- the script restricts execution to Uranus/Neptune, checks the frozen trace
+  hash, records source/runtime/topology data, and uses the existing owned-PGID
+  cleanup helper;
+- unrelated worktree changes do not block a run, but any uncommitted file that
+  affects this diagnostic does.
+
+No compute-node GPU or `nsys` session was available for live verification.
+The exact next command is:
+
+```bash
+sbatch scripts/moe_nsys_profile.sbatch
+```
+
+The primary output will be
+`results/raw/moe-nsys-<job>-<UTC>/moe-kernel-share.json`; inspect its
+`largest_unmatched_kernels` before interpreting the conservative percentage.
+
 ## Latest status — automated Apptainer MoE test
 
 Status: **`prepared_after_failed_live_attempt`**.

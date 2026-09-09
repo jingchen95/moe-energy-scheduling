@@ -6,6 +6,7 @@ import unittest
 
 from src.metrics import active_request_time_ms, latency_metrics
 from src.moe_timing import fused_moe_time_share_percent, load_timing_files
+from src.nsys_moe_share import estimate_moe_share, load_kernel_summary
 from src.workload import load_trace, scheduled_monotonic_times
 
 
@@ -63,6 +64,28 @@ class MinimalBenchmarkTests(unittest.TestCase):
         self.assertEqual(timing["max_rank_total_ms"], 6.0)
         self.assertEqual(timing["sum_rank_total_ms"], 11.0)
         self.assertAlmostEqual(fused_moe_time_share_percent(timing, 20.0), 30.0)
+
+    def test_nsys_moe_share_is_conservative_kernel_fraction(self) -> None:
+        csv_text = """notice before CSV
+\"Time (%)\",\"Total Time (ns)\",\"Instances\",\"Name\"
+40.0,400,2,\"fused_moe_kernel\"
+10.0,100,2,\"ncclDevKernel_AllGather\"
+5.0,50,2,\"ncclDevKernel_ReduceScatter\"
+45.0,450,2,\"flash_attention_kernel\"
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "kernels.csv"
+            path.write_text(csv_text, encoding="utf-8")
+            rows = load_kernel_summary(path)
+        result = estimate_moe_share([rows])
+        self.assertEqual(result["total_cuda_kernel_time"], 1000.0)
+        self.assertEqual(result["moe_compute_kernel_time"], 400.0)
+        self.assertEqual(
+            result["moe_allgather_reducescatter_kernel_time"], 150.0
+        )
+        self.assertAlmostEqual(
+            result["conservative_moe_cuda_kernel_time_share_percent"], 55.0
+        )
 
 
 if __name__ == "__main__":

@@ -120,3 +120,23 @@ fused_moe_over_active_request_wall_time_percent
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
 ```
+
+## CUDA Graph 下的低干扰诊断
+
+如需保留 vLLM 的 CUDA Graph 优化并粗略观察 MoE GPU kernel 时间占比，运行：
+
+```bash
+sbatch scripts/moe_nsys_profile.sbatch
+```
+
+这个独立作业不使用 `--enforce-eager`，不应用 CUDA Event 计时补丁。它用
+Nsight Systems 的 CUDA profiler 动态区间，只采集 warmup 后固定 trace 的前三
+个请求，并将保守估计写入：
+
+```text
+results/raw/moe-nsys-<job-id>-<UTC-time>/moe-kernel-share.json
+```
+
+这个值是 MoE compute 加 AllGather/ReduceScatter 的粗略 CUDA kernel-time
+占比，不是 E2E 墙钟占比。详细定义、限制和结果检查方法见
+`docs/moe_cudagraph_nsys.md`。
