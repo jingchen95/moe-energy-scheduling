@@ -2,7 +2,30 @@
 
 ## Latest status — Torch Profiler export storage repair
 
-Status: **`container_storage_and_export_tests_passed_full_model_rerun_pending`**.
+Status: **`full_model_trace_export_verified_vera_smoke`**.
+
+The user's rerun `results/raw/moe-torch-10256329-20260909T182003Z`, source
+`956945f`, passed on the same four-A100 allocation. All three measured
+requests completed and four valid uncompressed traces (about 425–439 MB
+each) were exported despite node `/tmp` still being full. Independent
+read-only revalidation of all four raw traces reproduced the saved kernel
+counts and totals, with CUDA Graph kernels on every device. This verifies
+the storage/export repair; it does not establish negligible profiling overhead.
+
+The saved heuristic share is 48.3462% (24.2304% recognized MoE compute/token
+organization plus 24.1158% AllGather/ReduceScatter). Inspection found the
+explicit `vllm::moe::topkGating` kernel in the unmatched list, contributing
+another 2.8300 percentage points; including it gives 51.1762%. This is a
+separate derived estimate, not an edit to the saved report or a complete
+layer attribution. Generic/activation kernels remain unassigned. Both
+percentages use summed GPU kernel durations, not E2E wall time. Mean
+profiled TTFT/TPOT/E2E were 46.87 ms / 9.93 ms / 1.309 s. Rank 2 still logged
+129 `destroyEvent` out-of-memory warnings during warmup, before profiling;
+their cause remains unresolved. This is a three-request, low-concurrency
+Vera smoke diagnostic, not a high-load performance comparison.
+
+The following records the original failure and the repair verification before
+that successful full-model rerun.
 
 The first full-model Torch run,
 `results/raw/moe-torch-10256329-20260909T180319Z` (source `97c0d72`), completed
