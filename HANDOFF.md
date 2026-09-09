@@ -2,7 +2,47 @@
 
 ## Latest status — CUDA Graph MoE Nsight diagnostic
 
-Status: **`offline_verified_not_gpu_verified`**.
+Status: **`four_gpu_capture_verified_full_model_rerun_pending`**.
+
+The September 9 attempt
+`results/raw/moe-nsys-10256217-20260909T172201Z` loaded the model, compiled and
+captured CUDA Graphs, and completed all three measured requests. Both profiler
+control endpoints returned HTTP 200, but Nsight ended with `No reports were
+generated`. Its logs and successful client response rows are preserved; no
+MoE kernel-time percentage can be recovered from this attempt. The Vera scope
+warning was informational, not the cause of this failure.
+
+The original launch put host `nsys` outside `apptainer exec --cleanenv`, which
+does not reliably preserve profiler injection into the container. The repaired
+launch bind-mounts the existing host Nsight Systems 2025.1.3 installation
+read-only at `/opt/moe-nsys` and runs its executable **inside** the container.
+No container image, CUDA, PyTorch, vLLM, or site-packages was modified. This
+matches the container profiling arrangement in the
+[NVIDIA Nsight Systems guide](https://docs.nvidia.com/nsight-systems/UserGuide/index.html).
+
+`src/nsys_target.py` starts the model in a separately recorded process group.
+After requests finish, the driver stops only that model group and waits up to
+180 seconds for Nsight to exit/export, rather than terminating the profiler
+with the model. A four-process CUDA Graph probe now runs before model loading;
+both its report and the real model report must contain kernel records from all
+four GPUs. Probe reports are excluded from MoE statistics. CUDA event-completion
+tracing is disabled; CUDA Graph node tracing remains enabled because the kernel
+breakdown needs it and is not overhead-free. Startup progress is printed every
+minute, and server, profiler, probe, and benchmark logs are separate. Client
+response rows are saved before profiler shutdown so a shutdown failure cannot
+discard those completed requests.
+
+Live verification used only the user's existing job `10256217` on
+`vera-m07-03`, with the same pinned SIF; it is environment smoke, not study
+data. `results/raw/nsys-repair-u1iAEn/probe.nsys-rep` exported successfully to
+SQLite. Its `CUPTI_ACTIVITY_KIND_KERNEL` table contains exactly five graph
+kernel executions on each device 0, 1, 2, and 3 (20 total), and
+`nsys stats --report cuda_gpu_kern_sum --format csv` succeeds. The repaired
+four-worker capture/export path is therefore GPU-verified. The separate model
+process-group shutdown is covered by a local subprocess test, but has not yet
+been retested with the full vLLM service under Nsight. Before a full-model
+rerun could start, Slurm marked the existing allocation `COMPLETING` and
+rejected a further step as expired. No new allocation or second node was used.
 
 `scripts/moe_nsys_profile.sbatch` is the complete low-interference diagnostic
 requested after the eager baseline. It keeps the frozen TP=1/DP=4/EP=4,
@@ -27,7 +67,8 @@ labelled `environment-smoke-only-not-comparable` in the run directory, client
 metrics, and MoE-share JSON.
 
 The script writes a unique raw directory and runs `nsys stats` after stopping
-its owned process group. `src/nsys_moe_share.py` conservatively classifies
+its owned model process group and waiting for Nsight export.
+`src/nsys_moe_share.py` conservatively classifies
 explicit FusedMoE/routing/grouped-GEMM kernels plus AllGather and
 ReduceScatter. The latter attribution is valid only for this fixed TP=1 AgRs
 configuration. The reported percentage is aggregate CUDA kernel time, not E2E
@@ -36,8 +77,9 @@ for audit rather than guessed as MoE. Profiler-run latency is diagnostic only.
 
 Offline verification completed:
 
-- the Python unit suite passes (4/4), including synthetic Nsight CSV parsing;
-- both new Python modules compile;
+- the Python unit suite passes (6/6), including synthetic Nsight CSV parsing,
+  refusal to overwrite PID/log files, and independent model-group shutdown;
+- all Nsight Python modules compile;
 - the Slurm script passes `bash -n`;
 - `git diff --check` passes;
 - the script restricts study data to Uranus/Neptune, admits Vera only as
@@ -47,14 +89,12 @@ Offline verification completed:
 - unrelated worktree changes do not block a run, but any uncommitted file that
   affects this diagnostic does.
 
-Offline inspection confirmed that the pinned SIF exposes `python3` and vLLM
-0.15.1, and that the cluster `CUDA/12.9.1` module exposes Nsight Systems
-2025.1.3. No compute-node GPU profiling session was available for live
-verification.
-The exact next command is:
+The pinned SIF exposes `python3` and vLLM 0.15.1; the cluster `CUDA/12.9.1`
+module exposes Nsight Systems 2025.1.3. Full-model verification remains the
+next check. Once inside an existing four-GPU Slurm allocation, run:
 
 ```bash
-sbatch scripts/moe_nsys_profile.sbatch
+bash scripts/moe_nsys_profile.sbatch
 ```
 
 The primary output will be

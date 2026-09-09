@@ -46,6 +46,12 @@ command -v apptainer >/dev/null || {
     printf 'apptainer is not available\n' >&2
     exit 1
 }
+# Run nsys inside the clean container so injection reaches the CUDA workers.
+nsys_install="${EBROOTCUDA}/nsight-systems-2025.1.3"
+[[ -x "${nsys_install}/target-linux-x64/nsys" ]] || {
+    printf 'missing Nsight installation: %s\n' "${nsys_install}" >&2
+    exit 1
+}
 
 image="${project_root}/containers/vllm-openai-v0.15.1-amd64.sif"
 expected_image_sha="9eef28a71be2c24668f3bf744e3f38f9cbb4f2be5c3467c07d4502b42b55b96e"
@@ -80,10 +86,8 @@ shard_count="$(find "${model_dir}" -maxdepth 1 -type f \
 output_root="${project_root}/results/raw"
 run_id="moe-nsys-${job_id}-$(date -u +%Y%m%dT%H%M%SZ)"
 run_dir="${output_root}/${run_id}"
-benchmark_dir="${run_dir}/benchmark"
 container_benchmark_dir="/workspace/results/raw/${run_id}/benchmark"
 profile_dir="${run_dir}/profile"
-profile_prefix="${profile_dir}/moe-cudagraph"
 pid_file="${run_dir}/vllm.pid"
 temporary_root="${SLURM_TMPDIR:-/tmp}"
 runtime_cache="${temporary_root}/vllm-nsys-cache-${job_id}-${run_id}"
@@ -95,6 +99,7 @@ mkdir "${runtime_cache}"
 exec > >(tee -a "${run_dir}/job.log") 2>&1
 
 server_pid=""
+profiler_pid=""
 benchmark_pid=""
 
 cleanup() {
@@ -112,6 +117,9 @@ cleanup() {
     fi
     if [[ -n "${server_pid}" ]]; then
         scripts/stop_vllm.sh "${pid_file}" || cleanup_failed=1
+    fi
+    if [[ -n "${profiler_pid}" ]]; then
+        scripts/stop_vllm.sh "${run_dir}/nsys.pid" || cleanup_failed=1
     fi
     if [[ "${status}" -eq 0 && "${cleanup_failed}" -ne 0 ]]; then
         status=1
@@ -152,6 +160,8 @@ reproducibility_paths=(
     scripts/stop_vllm.sh
     src/nsys_profile.py
     src/nsys_moe_share.py
+    src/nsys_target.py
+    src/nsys_probe.py
     src/benchmark.py
     src/metrics.py
     src/workload.py
@@ -192,13 +202,15 @@ if curl --fail --silent --max-time 2 http://127.0.0.1:8000/health \
     exit 1
 fi
 
-vllm_command=(
+container_command=(
     apptainer exec
     --cleanenv
     --nv
     --bind "${project_root}:/workspace:ro"
     --bind "${model_dir}:/model:ro"
     --bind "${runtime_cache}:/runtime-cache"
+    --bind "${run_dir}:/run-output"
+    --bind "${nsys_install}:/opt/moe-nsys:ro"
     --pwd /workspace
     --env CUDA_VISIBLE_DEVICES=0,1,2,3
     --env VLLM_SERVER_DEV_MODE=1
@@ -211,6 +223,10 @@ vllm_command=(
     --env TRITON_CACHE_DIR=/runtime-cache/triton
     --env TORCHINDUCTOR_CACHE_DIR=/runtime-cache/torchinductor
     "${image}"
+    env -u BASH_ENV
+)
+
+vllm_command=(
     python3 -m vllm.entrypoints.openai.api_server
     --model /model
     --served-model-name qwen3-30b-a3b
@@ -232,32 +248,81 @@ vllm_command=(
 )
 
 nsys_command=(
-    nsys profile
+    /opt/moe-nsys/target-linux-x64/nsys profile
     --trace=cuda,nvtx
     --sample=none
     --cpuctxsw=none
     --trace-fork-before-exec=true
     --cuda-graph-trace=node
+    --cuda-event-trace=false
     --capture-range=cudaProfilerApi
-    --capture-range-end=repeat
+    --capture-range-end=stop
+    --kill=none
+    --wait=all
     --force-overwrite=false
-    --output="${profile_prefix}"
 )
 
 printf '%q ' "${vllm_command[@]}" > "${run_dir}/vllm-command.txt"
 printf '\n' >> "${run_dir}/vllm-command.txt"
 printf '%q ' "${nsys_command[@]}" > "${run_dir}/nsys-command.txt"
 printf '\n' >> "${run_dir}/nsys-command.txt"
+printf '%q ' "${container_command[@]}" > "${run_dir}/container-command.txt"
+printf '\n' >> "${run_dir}/container-command.txt"
+printf '%q ' "${container_command[@]}" "${nsys_command[@]}" \
+    --output=/run-output/profile/moe-cudagraph \
+    python3 -m src.nsys_target /run-output/vllm.pid /run-output/vllm.log \
+    "${vllm_command[@]}" > "${run_dir}/launch-command.txt"
+printf '\n' >> "${run_dir}/launch-command.txt"
 
-setsid "${nsys_command[@]}" "${vllm_command[@]}" \
-    > "${run_dir}/vllm.log" 2>&1 &
-server_pid=$!
-printf '%s\n' "${server_pid}" > "${pid_file}"
+# Fail before loading weights if CUDA Graph tracing/export is unavailable.
+printf 'Checking Nsight capture with four small CUDA Graph workers...\n'
+setsid "${container_command[@]}" "${nsys_command[@]}" \
+    --output=/run-output/profile/probe python3 -m src.nsys_probe \
+    > "${run_dir}/nsys-probe.log" 2>&1 &
+profiler_pid=$!
+printf '%s\n' "${profiler_pid}" > "${run_dir}/nsys.pid"
+probe_status=0
+wait "${profiler_pid}" || probe_status=$?
+profiler_pid=""
+if [[ "${probe_status}" -ne 0 || ! -s "${profile_dir}/probe.nsys-rep" ]]; then
+    tail -n 50 "${run_dir}/nsys-probe.log" >&2
+    printf 'Nsight probe failed before loading model weights\n' >&2
+    exit 1
+fi
+nsys export --type sqlite --output "${profile_dir}/probe.sqlite" \
+    "${profile_dir}/probe.nsys-rep" > "${run_dir}/nsys-probe-export.log" 2>&1
+
+verify_devices() {
+    python3 - "$1" <<'PY'
+import sqlite3
+import sys
+from pathlib import Path
+
+with sqlite3.connect(Path(sys.argv[1]).resolve().as_uri() + "?mode=ro", uri=True) as db:
+    rows = db.execute(
+        "SELECT deviceId, count(*) FROM CUPTI_ACTIVITY_KIND_KERNEL GROUP BY deviceId"
+    ).fetchall()
+if len(rows) != 4:
+    raise SystemExit(f"expected CUDA kernels from 4 GPUs, observed {rows}")
+print(f"CUDA kernel capture verified: {rows}")
+PY
+}
+verify_devices "${profile_dir}/probe.sqlite"
+
+printf 'Starting model; progress is in %s/vllm.log\n' "${run_dir}"
+setsid "${container_command[@]}" "${nsys_command[@]}" \
+    --output=/run-output/profile/moe-cudagraph \
+    python3 -m src.nsys_target /run-output/vllm.pid /run-output/vllm.log \
+    "${vllm_command[@]}" > "${run_dir}/nsys.log" 2>&1 &
+profiler_pid=$!
+printf '%s\n' "${profiler_pid}" > "${run_dir}/nsys.pid"
+server_pid="pending"
 
 ready=0
-for _ in $(seq 1 360); do
-    if ! kill -0 "${server_pid}" 2>/dev/null; then
+for attempt in $(seq 1 360); do
+    if ! kill -0 "${profiler_pid}" 2>/dev/null; then
         printf 'profiled vLLM exited before becoming ready\n' >&2
+        tail -n 50 "${run_dir}/nsys.log" >&2 || true
         tail -n 120 "${run_dir}/vllm.log" >&2 || true
         exit 1
     fi
@@ -265,6 +330,10 @@ for _ in $(seq 1 360); do
         http://127.0.0.1:8000/health >/dev/null 2>&1; then
         ready=1
         break
+    fi
+    if (( attempt % 6 == 0 )); then
+        printf 'Waiting for model startup (%s seconds)...\n' "$((attempt * 10))"
+        tail -n 2 "${run_dir}/vllm.log" || true
     fi
     sleep 10
 done
@@ -289,15 +358,33 @@ wait "${benchmark_pid}" || benchmark_status=$?
 benchmark_pid=""
 [[ "${benchmark_status}" -eq 0 ]] || exit "${benchmark_status}"
 
-# Stopping the nsys-wrapped server finalizes the dynamically captured report.
+# Stop only the model group. Nsight survives to finish exporting the report.
 scripts/stop_vllm.sh "${pid_file}"
 server_pid=""
+printf 'Requests complete; waiting for Nsight report export...\n'
+for attempt in $(seq 1 180); do
+    kill -0 "${profiler_pid}" 2>/dev/null || break
+    sleep 1
+done
+if kill -0 "${profiler_pid}" 2>/dev/null; then
+    printf 'Nsight export timed out; inspect %s/nsys.log\n' "${run_dir}" >&2
+    exit 1
+fi
+profiler_status=0
+wait "${profiler_pid}" || profiler_status=$?
+profiler_pid=""
+printf '%s\n' "${profiler_status}" > "${run_dir}/nsys-exit-status.txt"
+[[ "${profiler_status}" -eq 0 ]] || {
+    tail -n 50 "${run_dir}/nsys.log" >&2
+    exit "${profiler_status}"
+}
 
 mapfile -t reports < <(
-    find "${profile_dir}" -maxdepth 1 -type f -name '*.nsys-rep' -print | sort
+    find "${profile_dir}" -maxdepth 1 -type f -name 'moe-cudagraph*.nsys-rep' -print | sort
 )
 [[ "${#reports[@]}" -gt 0 ]] || {
     printf 'nsys produced no .nsys-rep file\n' >&2
+    tail -n 50 "${run_dir}/nsys.log" >&2
     exit 1
 }
 
@@ -308,6 +395,7 @@ for report in "${reports[@]}"; do
     nsys stats --report cuda_gpu_kern_sum --format csv "${report}" \
         > "${stats_path}" \
         2> "${profile_dir}/${report_name}-stats.stderr"
+    verify_devices "${profile_dir}/${report_name}.sqlite"
     stats_files+=("${stats_path}")
 done
 

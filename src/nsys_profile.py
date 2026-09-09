@@ -102,21 +102,24 @@ async def run_profile(output_dir: Path) -> Path:
         },
     )
 
+    print("Warming up eight requests...", flush=True)
     await warm_up(all_requests)
     await asyncio.sleep(SETTLE_SECONDS)
 
     start_result = await _profile_control("start")
+    _write_json(output_dir / "profile_control.json", {"start": start_result})
+    print("Profiling three fixed requests...", flush=True)
     measurement_started_at = _utc_now()
     replay_epoch_s = time.monotonic()
     try:
         rows = await replay_trace(requests, replay_epoch_s=replay_epoch_s)
+        # Preserve responses even if profiler shutdown/export subsequently fails.
+        with (output_dir / "requests.jsonl").open("x", encoding="utf-8") as stream:
+            for row in rows:
+                stream.write(json.dumps(row, sort_keys=True) + "\n")
     finally:
         stop_result = await _profile_control("stop")
     measurement_completed_at = _utc_now()
-
-    with (output_dir / "requests.jsonl").open("x", encoding="utf-8") as stream:
-        for row in rows:
-            stream.write(json.dumps(row, sort_keys=True) + "\n")
 
     _write_json(
         output_dir / "profile_control.json",
