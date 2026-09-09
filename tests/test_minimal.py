@@ -78,6 +78,7 @@ class MinimalBenchmarkTests(unittest.TestCase):
             path.write_text(csv_text, encoding="utf-8")
             rows = load_kernel_summary(path)
         result = estimate_moe_share([rows])
+        self.assertIn("run_scope", result)
         self.assertEqual(result["total_cuda_kernel_time"], 1000.0)
         self.assertEqual(result["moe_compute_kernel_time"], 400.0)
         self.assertEqual(

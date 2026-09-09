@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import shutil
 import sys
 import time
@@ -96,6 +97,7 @@ async def run_profile(output_dir: Path) -> Path:
             "settle_seconds": SETTLE_SECONDS,
             "request_timeout_seconds": REQUEST_TIMEOUT_SECONDS,
             "purpose": "diagnostic CUDA Graph kernel-time attribution",
+            "run_scope": os.environ.get("MOE_PROFILE_RUN_SCOPE", "unknown"),
             "not_for_primary_latency": True,
         },
     )
@@ -128,6 +130,7 @@ async def run_profile(output_dir: Path) -> Path:
         "submitted_requests": len(rows),
         "completed_requests": len(rows) - failed_count,
         "failed_requests": failed_count,
+        "run_scope": os.environ.get("MOE_PROFILE_RUN_SCOPE", "unknown"),
         "active_request_wall_time_ms_diagnostic": active_request_time_ms(rows),
         "warning": (
             "Profiler-run latency is diagnostic only; obtain primary E2E, TTFT, "

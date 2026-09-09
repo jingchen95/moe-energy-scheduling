@@ -18,13 +18,22 @@
 
 set -euo pipefail
 
-project_root="${SLURM_SUBMIT_DIR:?submit from the repository root}"
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${project_root}"
 
-case "$(hostname -s)" in
-    uranus*|neptune*) ;;
-    *) printf 'refusing to run outside uranus/neptune\n' >&2; exit 1 ;;
+job_id="${SLURM_JOB_ID:?run this script inside a four-GPU Slurm allocation}"
+host="$(hostname -s)"
+case "${host}" in
+    uranus*|neptune*) run_scope="approved-study-node" ;;
+    vera-*) run_scope="environment-smoke-only-not-comparable" ;;
+    *) printf 'refusing to run on unsupported host: %s\n' "${host}" >&2; exit 1 ;;
 esac
+
+gpu_count="$(nvidia-smi -L | wc -l)"
+[[ "${gpu_count}" -eq 4 ]] || {
+    printf 'expected exactly four visible GPUs, found %s\n' "${gpu_count}" >&2
+    exit 1
+}
 
 # CUDA is loaded only to provide the host-side nsys executable. The model
 # runtime, CUDA user-space libraries, PyTorch, and vLLM all come from the SIF.
@@ -69,7 +78,7 @@ shard_count="$(find "${model_dir}" -maxdepth 1 -type f \
 }
 
 output_root="${project_root}/results/raw"
-run_id="moe-nsys-${SLURM_JOB_ID}-$(date -u +%Y%m%dT%H%M%SZ)"
+run_id="moe-nsys-${job_id}-$(date -u +%Y%m%dT%H%M%SZ)"
 run_dir="${output_root}/${run_id}"
 benchmark_dir="${run_dir}/benchmark"
 container_benchmark_dir="/workspace/results/raw/${run_id}/benchmark"
@@ -77,7 +86,7 @@ profile_dir="${run_dir}/profile"
 profile_prefix="${profile_dir}/moe-cudagraph"
 pid_file="${run_dir}/vllm.pid"
 temporary_root="${SLURM_TMPDIR:-/tmp}"
-runtime_cache="${temporary_root}/vllm-nsys-cache-${SLURM_JOB_ID}-${run_id}"
+runtime_cache="${temporary_root}/vllm-nsys-cache-${job_id}-${run_id}"
 mkdir -p "${output_root}"
 mkdir "${run_dir}"
 mkdir "${profile_dir}"
@@ -120,6 +129,13 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+printf 'run scope: %s\n' "${run_scope}"
+printf 'run directory: %s\n' "${run_dir}"
+printf '%s\n' "${run_scope}" > "${run_dir}/run-scope.txt"
+if [[ "${run_scope}" == environment-smoke-* ]]; then
+    printf 'WARNING: Vera results are smoke-only and must not be compared with Uranus/Neptune study data.\n'
+fi
+
 trace="data/traces/gsm8k-50-r0.5.jsonl"
 expected_trace_sha="721638a6250b929de05c2c355c8bc9b20258db7b28fedb94acb5572136571cbc"
 actual_trace_sha="$(sha256sum "${trace}" | awk '{print $1}')"
@@ -149,7 +165,7 @@ git status --short -- "${reproducibility_paths[@]}" \
 }
 git diff --no-ext-diff HEAD -- "${reproducibility_paths[@]}" \
     > "${run_dir}/source-diff.patch"
-scontrol show job "${SLURM_JOB_ID}" > "${run_dir}/slurm-job.txt"
+scontrol show job "${job_id}" > "${run_dir}/slurm-job.txt"
 nvidia-smi -L > "${run_dir}/gpus.txt"
 nvidia-smi topo -m > "${run_dir}/gpu-topology.txt"
 nsys --version > "${run_dir}/nsys-version.txt"
@@ -263,6 +279,7 @@ apptainer exec \
     --pwd /workspace \
     "${image}" \
     env -u BASH_ENV PYTHONDONTWRITEBYTECODE=1 \
+    MOE_PROFILE_RUN_SCOPE="${run_scope}" \
     python3 -m src.nsys_profile "${container_benchmark_dir}" \
     > "${run_dir}/benchmark.log" 2>&1 &
 benchmark_pid=$!
@@ -294,7 +311,7 @@ for report in "${reports[@]}"; do
     stats_files+=("${stats_path}")
 done
 
-python3 -m src.nsys_moe_share \
+MOE_PROFILE_RUN_SCOPE="${run_scope}" python3 -m src.nsys_moe_share \
     "${run_dir}/moe-kernel-share.json" "${stats_files[@]}" \
     > "${run_dir}/moe-kernel-share.log"
 

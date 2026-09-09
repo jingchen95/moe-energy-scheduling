@@ -129,6 +129,12 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
 sbatch scripts/moe_nsys_profile.sbatch
 ```
 
+如果已经通过 `srun` 进入四 GPU allocation，也可以直接运行：
+
+```bash
+bash scripts/moe_nsys_profile.sbatch
+```
+
 这个独立作业不使用 `--enforce-eager`，不应用 CUDA Event 计时补丁。它用
 Nsight Systems 的 CUDA profiler 动态区间，只采集 warmup 后固定 trace 的前三
 个请求，并将保守估计写入：
@@ -141,3 +147,6 @@ results/raw/moe-nsys-<job-id>-<UTC-time>/moe-kernel-share.json
 占比，不是 E2E 墙钟占比。脚本直接使用固定的
 `containers/vllm-openai-v0.15.1-amd64.sif` 和容器内 `python3`，不依赖 Conda；
 宿主机只加载 CUDA 12.9.1 module 来提供 `nsys`。
+
+Uranus/Neptune 结果标记为 `approved-study-node`；Vera 上只允许做环境 smoke，
+结果强制标记为 `environment-smoke-only-not-comparable`，不能与正式研究数据比较。

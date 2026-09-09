@@ -20,6 +20,12 @@ The host loads `CUDA/12.9.1` only to obtain `nsys`; vLLM, PyTorch, and CUDA
 user-space runtime remain supplied by the clean-environment SIF. Compilation
 caches are isolated in a unique node-local directory.
 
+Like `scripts/apptainer_moe_test.sh`, this script supports direct execution
+inside an existing four-GPU Slurm allocation. Uranus/Neptune runs are labelled
+`approved-study-node`; Vera is accepted only for environment smoke and is
+labelled `environment-smoke-only-not-comparable` in the run directory, client
+metrics, and MoE-share JSON.
+
 The script writes a unique raw directory and runs `nsys stats` after stopping
 its owned process group. `src/nsys_moe_share.py` conservatively classifies
 explicit FusedMoE/routing/grouped-GEMM kernels plus AllGather and
@@ -34,9 +40,10 @@ Offline verification completed:
 - both new Python modules compile;
 - the Slurm script passes `bash -n`;
 - `git diff --check` passes;
-- the script restricts execution to Uranus/Neptune, checks the frozen trace
-  hash, records source/runtime/topology data, and uses the existing owned-PGID
-  cleanup helper;
+- the script restricts study data to Uranus/Neptune, admits Vera only as
+  non-comparable environment smoke, checks the frozen trace hash, records
+  source/runtime/topology data, and uses the existing owned-PGID cleanup
+  helper;
 - unrelated worktree changes do not block a run, but any uncommitted file that
   affects this diagnostic does.
 

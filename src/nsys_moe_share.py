@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import math
+import os
 import re
 import sys
 from pathlib import Path
@@ -102,6 +103,7 @@ def estimate_moe_share(
     return {
         "schema_version": 1,
         "metric": "conservative_moe_cuda_kernel_time_share_percent",
+        "run_scope": os.environ.get("MOE_PROFILE_RUN_SCOPE", "unknown"),
         "scope": "aggregate kernel time across all captured ranks/devices",
         "total_cuda_kernel_time": total,
         "moe_compute_kernel_time": compute,
