@@ -138,5 +138,6 @@ results/raw/moe-nsys-<job-id>-<UTC-time>/moe-kernel-share.json
 ```
 
 这个值是 MoE compute 加 AllGather/ReduceScatter 的粗略 CUDA kernel-time
-占比，不是 E2E 墙钟占比。详细定义、限制和结果检查方法见
-`docs/moe_cudagraph_nsys.md`。
+占比，不是 E2E 墙钟占比。脚本直接使用固定的
+`containers/vllm-openai-v0.15.1-amd64.sif` 和容器内 `python3`，不依赖 Conda；
+宿主机只加载 CUDA 12.9.1 module 来提供 `nsys`。

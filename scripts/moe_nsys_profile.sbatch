@@ -21,16 +21,50 @@ set -euo pipefail
 project_root="${SLURM_SUBMIT_DIR:?submit from the repository root}"
 cd "${project_root}"
 
-source "${HOME}/miniforge3/etc/profile.d/conda.sh"
-conda activate cuda-env
-
 case "$(hostname -s)" in
     uranus*|neptune*) ;;
     *) printf 'refusing to run outside uranus/neptune\n' >&2; exit 1 ;;
 esac
 
+# CUDA is loaded only to provide the host-side nsys executable. The model
+# runtime, CUDA user-space libraries, PyTorch, and vLLM all come from the SIF.
+module load CUDA/12.9.1
 command -v nsys >/dev/null || {
-    printf 'nsys is not available in the existing environment\n' >&2
+    printf 'nsys is unavailable after loading CUDA/12.9.1\n' >&2
+    exit 1
+}
+command -v apptainer >/dev/null || {
+    printf 'apptainer is not available\n' >&2
+    exit 1
+}
+
+image="${project_root}/containers/vllm-openai-v0.15.1-amd64.sif"
+expected_image_sha="9eef28a71be2c24668f3bf744e3f38f9cbb4f2be5c3467c07d4502b42b55b96e"
+model_dir_input="${1:-${project_root}/containers/models/Qwen3-30B-A3B}"
+[[ -f "${image}" ]] || {
+    printf 'missing Apptainer image: %s\n' "${image}" >&2
+    exit 1
+}
+actual_image_sha="$(sha256sum "${image}" | awk '{print $1}')"
+[[ "${actual_image_sha}" == "${expected_image_sha}" ]] || {
+    printf 'unexpected Apptainer image SHA-256: %s\n' "${actual_image_sha}" >&2
+    exit 1
+}
+[[ -d "${model_dir_input}" ]] || {
+    printf 'missing model directory: %s\n' "${model_dir_input}" >&2
+    exit 1
+}
+model_dir="$(cd "${model_dir_input}" && pwd)"
+for required in config.json tokenizer.json model.safetensors.index.json; do
+    [[ -s "${model_dir}/${required}" ]] || {
+        printf 'missing model file: %s\n' "${model_dir}/${required}" >&2
+        exit 1
+    }
+done
+shard_count="$(find "${model_dir}" -maxdepth 1 -type f \
+    -name 'model-*.safetensors' | wc -l)"
+[[ "${shard_count}" -eq 16 ]] || {
+    printf 'expected 16 model shards, found %s\n' "${shard_count}" >&2
     exit 1
 }
 
@@ -38,12 +72,16 @@ output_root="${project_root}/results/raw"
 run_id="moe-nsys-${SLURM_JOB_ID}-$(date -u +%Y%m%dT%H%M%SZ)"
 run_dir="${output_root}/${run_id}"
 benchmark_dir="${run_dir}/benchmark"
+container_benchmark_dir="/workspace/results/raw/${run_id}/benchmark"
 profile_dir="${run_dir}/profile"
 profile_prefix="${profile_dir}/moe-cudagraph"
 pid_file="${run_dir}/vllm.pid"
+temporary_root="${SLURM_TMPDIR:-/tmp}"
+runtime_cache="${temporary_root}/vllm-nsys-cache-${SLURM_JOB_ID}-${run_id}"
 mkdir -p "${output_root}"
 mkdir "${run_dir}"
 mkdir "${profile_dir}"
+mkdir "${runtime_cache}"
 
 exec > >(tee -a "${run_dir}/job.log") 2>&1
 
@@ -115,7 +153,13 @@ scontrol show job "${SLURM_JOB_ID}" > "${run_dir}/slurm-job.txt"
 nvidia-smi -L > "${run_dir}/gpus.txt"
 nvidia-smi topo -m > "${run_dir}/gpu-topology.txt"
 nsys --version > "${run_dir}/nsys-version.txt"
-python - <<'PY' > "${run_dir}/versions.txt"
+apptainer --version > "${run_dir}/apptainer-version.txt"
+sha256sum "${image}" > "${run_dir}/image-sha256.txt"
+module -t list > "${run_dir}/modules.txt" 2>&1
+apptainer exec \
+    --cleanenv \
+    "${image}" \
+    python3 - <<'PY' > "${run_dir}/versions.txt"
 import platform
 import torch
 import vllm
@@ -132,13 +176,27 @@ if curl --fail --silent --max-time 2 http://127.0.0.1:8000/health \
     exit 1
 fi
 
-export CUDA_VISIBLE_DEVICES=0,1,2,3
-export VLLM_SERVER_DEV_MODE=1
-export VLLM_WORKER_MULTIPROC_METHOD=spawn
-
 vllm_command=(
-    python -m vllm.entrypoints.openai.api_server
-    --model Qwen/Qwen3-30B-A3B
+    apptainer exec
+    --cleanenv
+    --nv
+    --bind "${project_root}:/workspace:ro"
+    --bind "${model_dir}:/model:ro"
+    --bind "${runtime_cache}:/runtime-cache"
+    --pwd /workspace
+    --env CUDA_VISIBLE_DEVICES=0,1,2,3
+    --env VLLM_SERVER_DEV_MODE=1
+    --env VLLM_WORKER_MULTIPROC_METHOD=spawn
+    --env PYTHONUNBUFFERED=1
+    --env PYTHONDONTWRITEBYTECODE=1
+    --env HF_HUB_OFFLINE=1
+    --env TRANSFORMERS_OFFLINE=1
+    --env XDG_CACHE_HOME=/runtime-cache
+    --env TRITON_CACHE_DIR=/runtime-cache/triton
+    --env TORCHINDUCTOR_CACHE_DIR=/runtime-cache/torchinductor
+    "${image}"
+    python3 -m vllm.entrypoints.openai.api_server
+    --model /model
     --served-model-name qwen3-30b-a3b
     --host 127.0.0.1
     --port 8000
@@ -199,7 +257,13 @@ done
     exit 1
 }
 
-python -m src.nsys_profile "${benchmark_dir}" \
+apptainer exec \
+    --cleanenv \
+    --bind "${project_root}:/workspace" \
+    --pwd /workspace \
+    "${image}" \
+    env -u BASH_ENV PYTHONDONTWRITEBYTECODE=1 \
+    python3 -m src.nsys_profile "${container_benchmark_dir}" \
     > "${run_dir}/benchmark.log" 2>&1 &
 benchmark_pid=$!
 printf '%s\n' "${benchmark_pid}" > "${run_dir}/benchmark.pid"
@@ -230,12 +294,12 @@ for report in "${reports[@]}"; do
     stats_files+=("${stats_path}")
 done
 
-python -m src.nsys_moe_share \
+python3 -m src.nsys_moe_share \
     "${run_dir}/moe-kernel-share.json" "${stats_files[@]}" \
     > "${run_dir}/moe-kernel-share.log"
 
 printf '\n=== CONSERVATIVE MOE CUDA KERNEL-TIME SHARE ===\n'
-python - "${run_dir}/moe-kernel-share.json" <<'PY'
+python3 - "${run_dir}/moe-kernel-share.json" <<'PY'
 import json
 import sys
 

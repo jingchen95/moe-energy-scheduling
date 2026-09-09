@@ -13,6 +13,13 @@ built-in CUDA profiler behind Nsight Systems, warms up normally, and captures
 only the first three requests of the frozen trace at their original 0/2/4 s
 offsets.
 
+The workflow has no Conda dependency. It verifies and runs the pinned
+`containers/vllm-openai-v0.15.1-amd64.sif`, bind-mounts the existing model
+read-only, and executes both server and client with container `python3`.
+The host loads `CUDA/12.9.1` only to obtain `nsys`; vLLM, PyTorch, and CUDA
+user-space runtime remain supplied by the clean-environment SIF. Compilation
+caches are isolated in a unique node-local directory.
+
 The script writes a unique raw directory and runs `nsys stats` after stopping
 its owned process group. `src/nsys_moe_share.py` conservatively classifies
 explicit FusedMoE/routing/grouped-GEMM kernels plus AllGather and
@@ -33,7 +40,10 @@ Offline verification completed:
 - unrelated worktree changes do not block a run, but any uncommitted file that
   affects this diagnostic does.
 
-No compute-node GPU or `nsys` session was available for live verification.
+Offline inspection confirmed that the pinned SIF exposes `python3` and vLLM
+0.15.1, and that the cluster `CUDA/12.9.1` module exposes Nsight Systems
+2025.1.3. No compute-node GPU profiling session was available for live
+verification.
 The exact next command is:
 
 ```bash
