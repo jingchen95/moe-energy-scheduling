@@ -1,6 +1,61 @@
 # Handoff
 
-## Latest status — Torch Profiler export storage repair
+## Latest status — offline Torch Profiler visualizations
+
+Status: **`rendered_and_visually_verified`**.
+
+At the user's request, `src/torch_profile_plots.py` renders the successful
+`moe-torch-10256329-20260909T182003Z` run without starting a model, using GPUs,
+changing profiling settings, or modifying any original run files. The renderer
+uses Pillow already present in the pinned SIF and host DejaVu fonts mounted
+read-only at `/plot-fonts`; nothing was installed. Labels use English for
+portable font rendering.
+
+Outputs are in `results/raw/torch-figures-aWWLwk/charts-v3/`:
+
+- `overview.png`: four-category aggregate GPU kernel-duration shares and the
+  actual three-request client timeline with raw TTFT/TPOT/E2E labels;
+- `kernel-timeline.png` and `.svg`: a shared 2 ms excerpt beginning at GPU 0's
+  first observed CUDA Graph kernel, with 120 real kernel intervals across
+  eight GPU/stream rows; SVG hover titles expose names, starts, and durations;
+- `report.html`: self-contained PNG + inline SVG report, with no JavaScript,
+  external CDN, network request, or trace upload required;
+- `plot-data.json`: exact category sums, request values, excerpt intervals,
+  source-run revision, host revision, and plotting/classification source hashes.
+
+The original 48.3462% report is retained unchanged. Plots explicitly separate
+the additional 2.8300% `vllm::moe::topkGating` attribution, giving 51.1762%
+identified MoE kernel time. Other/unassigned work is not relabelled as MoE.
+The chart warns that this is not E2E share, durations can overlap, profiled
+latency is diagnostic, and the server log contains 129 CUDA OOM warnings.
+The 2 ms timeline is an excerpt, not a representative whole-run breakdown.
+
+Verification: all 33 unit tests pass inside the actual container. These include
+rendering/PNG validation, SVG hover metadata, self-contained HTML, source
+hashes, no-overwrite behavior, relocated input paths, clock-base mismatch
+rejection, category arithmetic, and both graph-node metadata and graph-launch
+correlation formats. Reading all four real traces reproduced the saved
+kernel counts/totals. Both final PNGs were visually inspected; source hashes
+match the rendered artifacts. Python syntax and `git diff --check` passed.
+
+The initial plotting attempts exposed absent graph-node fields (the real
+capture uses launch correlations) and the lack of Git inside the SIF. Both
+were corrected with regression tests; the old attempt logs/empty output
+directories remain in the same unique visualization directory. No failed
+benchmark artifact was changed or deleted.
+
+Inside the SIF with Pillow and readable fonts, the reusable command is:
+
+```bash
+python3 -m src.torch_profile_plots RUN_DIR NEW_OUTPUT_DIR --font-dir /plot-fonts
+```
+
+`NEW_OUTPUT_DIR` must not exist. `--window-ms` defaults to 2; an optional
+`--source-revision` accepts the host Git revision. Source-content hashes are
+always recorded, so Git is not needed inside the container. Unrelated staged
+allocation scripts and document deletions remain untouched.
+
+## Previous milestone — Torch Profiler export storage repair
 
 Status: **`full_model_trace_export_verified_vera_smoke`**.
 
