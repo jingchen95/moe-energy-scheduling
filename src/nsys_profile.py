@@ -1,4 +1,4 @@
-"""Capture a short, fixed vLLM Nsight Systems profiling window."""
+"""Shared fixed-window client for vLLM's Torch and CUDA/Nsight profilers."""
 
 from __future__ import annotations
 
@@ -97,39 +97,66 @@ async def run_profile(output_dir: Path) -> Path:
             "settle_seconds": SETTLE_SECONDS,
             "request_timeout_seconds": REQUEST_TIMEOUT_SECONDS,
             "purpose": "diagnostic CUDA Graph kernel-time attribution",
+            "profiler": os.environ.get("MOE_PROFILE_BACKEND", "cuda"),
             "run_scope": os.environ.get("MOE_PROFILE_RUN_SCOPE", "unknown"),
             "not_for_primary_latency": True,
         },
     )
 
-    print("Warming up eight requests...", flush=True)
-    await warm_up(all_requests)
-    await asyncio.sleep(SETTLE_SECONDS)
+    controls: dict[str, Any] = {}
+    errors: list[str] = []
+    rows: list[dict[str, Any]] = []
+    measurement_started_at = None
+    measurement_completed_at = None
+    start_attempted = False
 
-    start_result = await _profile_control("start")
-    _write_json(output_dir / "profile_control.json", {"start": start_result})
-    print("Profiling three fixed requests...", flush=True)
-    measurement_started_at = _utc_now()
-    replay_epoch_s = time.monotonic()
+    async def control(action: str) -> None:
+        try:
+            controls[action] = await _profile_control(action)
+        except Exception as exc:
+            controls[action] = {"error": repr(exc)}
+            raise
+        finally:
+            _write_json(output_dir / "profile_control.json", controls)
+
     try:
+        print(f"Warming up {WARMUP_REQUESTS} requests...", flush=True)
+        await warm_up(all_requests)
+        await asyncio.sleep(SETTLE_SECONDS)
+        # Attempt stop even if start partially succeeds on the distributed ranks.
+        start_attempted = True
+        await control("start")
+        print(f"Profiling {PROFILE_REQUESTS} fixed requests...", flush=True)
+        measurement_started_at = _utc_now()
+        replay_epoch_s = time.monotonic()
         rows = await replay_trace(requests, replay_epoch_s=replay_epoch_s)
+        measurement_completed_at = _utc_now()
         # Preserve responses even if profiler shutdown/export subsequently fails.
         with (output_dir / "requests.jsonl").open("x", encoding="utf-8") as stream:
             for row in rows:
                 stream.write(json.dumps(row, sort_keys=True) + "\n")
+    except Exception as exc:
+        errors.append(repr(exc))
     finally:
-        stop_result = await _profile_control("stop")
-    measurement_completed_at = _utc_now()
+        if start_attempted:
+            print("Stopping profiler and waiting for trace export...", flush=True)
+            try:
+                await control("stop")
+            except Exception as exc:
+                errors.append(repr(exc))
+        _write_json(output_dir / "profile_control.json", controls)
 
-    _write_json(
-        output_dir / "profile_control.json",
-        {"start": start_result, "stop": stop_result},
-    )
     failed_count = sum(row["status"] != "ok" for row in rows)
+    if len(rows) != PROFILE_REQUESTS:
+        errors.append(f"expected {PROFILE_REQUESTS} response rows, got {len(rows)}")
+    valid = not errors and failed_count == 0
     metrics = {
-        "status": "ok" if failed_count == 0 else "invalid_failed_requests",
+        "status": "ok" if valid else "invalid_profile",
+        "errors": errors,
         "measurement_started_at": measurement_started_at,
         "measurement_completed_at": measurement_completed_at,
+        "profiler_control_completed_at": _utc_now(),
+        "expected_requests": PROFILE_REQUESTS,
         "submitted_requests": len(rows),
         "completed_requests": len(rows) - failed_count,
         "failed_requests": failed_count,
@@ -143,8 +170,10 @@ async def run_profile(output_dir: Path) -> Path:
     _write_json(output_dir / "metrics.json", metrics)
     print(json.dumps({"output_dir": str(output_dir), "metrics": metrics}))
 
-    if failed_count:
-        raise RuntimeError(f"{failed_count} profiled requests failed")
+    if not valid:
+        raise RuntimeError(
+            f"invalid profile: {failed_count} failed requests; errors={errors}"
+        )
     return output_dir
 
 

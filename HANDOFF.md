@@ -1,8 +1,101 @@
 # Handoff
 
+## Latest status — Torch Profiler CUDA Graph diagnostic
+
+Status: **`container_offline_verified_full_model_gpu_run_pending`**.
+
+At the user's request, the active profiling entry point is now
+`scripts/moe_torch_profile.sbatch`. The historical Nsight launcher and all raw
+failed runs remain intact. The new launcher executes the pinned vLLM 0.15.1
+SIF directly, with the built-in Torch Profiler; there is no external Nsight
+process, Nsight installation requirement, Conda dependency, or host CUDA module
+load. No packages, container image, or site-packages were modified.
+
+The model command still fixes TP=1, DP=4, MP, EP, linear placement,
+`allgather_reducescatter`, disabled prefix caching, and `FULL_AND_PIECEWISE`
+CUDA Graph mode. It does not enable eager execution or add per-layer timers,
+synchronization, or hooks. `src/torch_profile.py` holds the resolved profiler
+settings: disable stack/shape/memory/FLOPS tracing, disable the frontend CPU
+profiler, and disable nested operator summary tables. Worker CPU+CUDA traces
+are exported as `profile/*.pt.trace.json.gz` in a fresh run directory.
+The server logs enable Python faulthandler for additional crash evidence;
+this cannot guarantee a diagnostic for SIGKILL or every native failure.
+
+The Torch client reuses the historical `src/nsys_profile.py` workload helper
+(the filename does not imply an Nsight dependency). It preserves the frozen
+trace hash, eight warmups, five settle seconds, and three measured requests
+at offsets 0/2/4 seconds. The helper now records start/stop errors, attempts
+stop after a partially failed start, saves completed response rows before
+stopping, and writes invalid metrics even if profiler control fails. Raw
+TTFT/TPOT fields remain in the response rows. Export time is not included in
+the client measurement-completed timestamp. The driver waits for stop/export
+before stopping the owned server group; failures retain any traces already
+written and do not attempt to repair or relabel them as successful.
+
+`src/torch_moe_share.py` reads only Chrome trace `cat=kernel, ph=X` events.
+Durations are microseconds, regardless of `displayTimeUnit`. CPU operator
+totals, CUDA runtime API durations, graph aggregate records, memcpy and memset
+are not summed with kernel time. The aggregation requires four distinct
+worker traces, one device per trace, covering CUDA devices 0/1/2/3, plus
+evidence of graph replay kernels from launch correlation IDs or graph/node
+metadata on each GPU. Missing graph attribution is an explicit failure
+requiring inspection of raw traces, not permission to report a prefill-only
+fraction. The parser also requires three successful responses and successful
+start/stop controls; the driver checks vLLM's internal profiler-failure logs
+because the pinned worker wrapper may swallow exceptions and still return
+HTTP 200. No percentage is written for a failed validation.
+
+The output `moe-kernel-share.json` contains a kernel-name-based **approximate**
+MoE compute-plus-AgRs share, microsecond totals, converted GPU-millisecond
+totals, per-device capture counts, and largest unmatched kernels. This is
+neither E2E wall-time share nor a mathematically guaranteed lower bound; it
+retains the old `conservative_moe_cuda_kernel_time_share_percent` field name
+for compatibility. Primary latency still requires an otherwise identical
+unprofiled run. Profiling overhead has not been measured.
+
+Verification on September 9:
+
+- 19/19 unit tests pass inside the actual pinned SIF, including real CPU trace
+  export/rejection, gzip parsing, graph metadata/correlation, missing and
+  duplicate devices, invalid durations, missing MoE kernels, failed benchmark
+  gates, and start/stop HTTP failures with preserved responses;
+- the container's actual `ProfilerConfig` accepts all settings and has the
+  same computation-graph hash as the default config; Kineto is available;
+- both profiling shell scripts pass `bash -n`, Python syntax checks pass, and
+  `git diff --check` passes;
+- no active user Slurm allocation was available; no allocation was created,
+  and no new full-model GPU run or percentage is claimed.
+
+Inside a four-GPU Slurm allocation, run from the repository root:
+
+```bash
+bash scripts/moe_torch_profile.sbatch
+```
+
+The launcher prints its unique `results/raw/moe-torch-<job>-<UTC>` directory,
+startup/client progress, and a summary only on successful validation. Inspect
+`status.txt`, `benchmark/metrics.json`, `benchmark/profile_control.json`,
+`vllm.log`, `benchmark.log`, and the raw `profile/` directory if it fails.
+Vera remains environment-smoke-only-not-comparable; actual clocks are read
+at start/end but never changed. Unrelated staged files and document deletions
+were preserved and are not part of this milestone.
+
 ## Latest status — CUDA Graph MoE Nsight diagnostic
 
-Status: **`four_gpu_capture_verified_full_model_rerun_pending`**.
+Status: **`four_gpu_probe_passed_full_model_capture_failed_preserved`**.
+
+Subsequent full-model run
+`results/raw/moe-nsys-10256224-20260909T174110Z` used commit `1528b7b` and
+passed the four-GPU probe, model startup, CUDA Graph capture and eight warmups.
+At 19:44:10 local time profiling began; at 19:44:14 EngineCore_DP1 exited
+unexpectedly. All three measured requests failed and stop_profile returned
+HTTP 500. No native failure stack or worker exit signal was logged, so the
+underlying cause is unresolved; the default A40 MoE tuning warning is not a
+fatal exception. The old launcher still terminates Nsight on its client-error
+path, bypassing the successful-path export wait. Its log ends at generating
+a temporary qdstrm, and only the probe report exists. These unsuccessful raw
+artifacts are retained. The following describes the historical Nsight path;
+use the Torch entry point above for the user's current requested workflow.
 
 The September 9 attempt
 `results/raw/moe-nsys-10256217-20260909T172201Z` loaded the model, compiled and
