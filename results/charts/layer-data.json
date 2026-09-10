@@ -1,0 +1,212 @@
+{
+  "layer_index_zero_based_inferred": 23,
+  "n_layers": 48,
+  "decode_graph_index_zero_based": 32,
+  "decode_graph_candidates": 446,
+  "graph_correlation": 12207,
+  "graph_launch_trace_us": 6010407486230.201,
+  "layer_origin_trace_us": 6010407498916.165,
+  "baseTimeNanoseconds": 1782967788000000000,
+  "classification": "order_inferred_not_module_labelled",
+  "kernel_time_us": {
+    "attention": 66.84899999999999,
+    "moe": 65.24600000000001,
+    "communication": 53.408,
+    "norm": 5.409
+  },
+  "kernel_share_percent": {
+    "attention": 35.01560928595373,
+    "moe": 34.17595541401274,
+    "communication": 27.97519275896748,
+    "norm": 2.8332425410660407
+  },
+  "total_kernel_us": 190.912,
+  "elapsed_us": 197.5029296875,
+  "events": [
+    {
+      "stage": "norm",
+      "start_us": 0.0,
+      "duration_us": 2.784,
+      "stream": 13422,
+      "name": "triton_red_fused__to_copy_add_mean_mul_pow_rsqrt_1"
+    },
+    {
+      "stage": "attention",
+      "start_us": 2.84765625,
+      "duration_us": 19.808,
+      "stream": 13422,
+      "name": "ampere_bf16_s16816gemm_bf16_64x64_sliced1x2_ldg8_f2f_stages_64x6_tn"
+    },
+    {
+      "stage": "attention",
+      "start_us": 22.7197265625,
+      "duration_us": 1.92,
+      "stream": 13422,
+      "name": "triton_red_fused_2"
+    },
+    {
+      "stage": "attention",
+      "start_us": 24.7041015625,
+      "duration_us": 2.496,
+      "stream": 13422,
+      "name": "triton_poi_fused_3"
+    },
+    {
+      "stage": "attention",
+      "start_us": 27.263671875,
+      "duration_us": 3.104,
+      "stream": 13422,
+      "name": "void vllm::reshape_and_cache_flash_kernel<__nv_bfloat16, __nv_bfloat16, (vllm::Fp8KVCacheDataType)0>(__nv_bfloat16 const*, __nv_bfloat16 const*, __nv_bfloat16*, __nv_bfloat16*, long const*, long, long, long, long, long, int, int, int, float const*, float const*, int)"
+    },
+    {
+      "stage": "attention",
+      "start_us": 30.431640625,
+      "duration_us": 8.192,
+      "stream": 13422,
+      "name": "void flash::flash_fwd_splitkv_kernel<Flash_fwd_kernel_traits<128, 64, 128, 4, false, false, cutlass::bfloat16_t, Flash_kernel_traits<128, 64, 128, 4, cutlass::bfloat16_t> >, false, false, false, false, true, false, true, false>(flash::Flash_fwd_params)"
+    },
+    {
+      "stage": "attention",
+      "start_us": 39.16796875,
+      "duration_us": 11.04,
+      "stream": 13422,
+      "name": "void flash::flash_fwd_splitkv_combine_kernel<Flash_fwd_kernel_traits<128, 64, 128, 4, false, false, cutlass::bfloat16_t, Flash_kernel_traits<128, 64, 128, 4, cutlass::bfloat16_t> >, 4, 5, true>(flash::Flash_fwd_params)"
+    },
+    {
+      "stage": "attention",
+      "start_us": 50.2705078125,
+      "duration_us": 1.409,
+      "stream": 13422,
+      "name": "memcpy32_post"
+    },
+    {
+      "stage": "attention",
+      "start_us": 51.744140625,
+      "duration_us": 18.88,
+      "stream": 13422,
+      "name": "std::enable_if<!(false), void>::type internal::gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16, __nv_bfloat16, float, false, true, true, false, 7, false, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<__nv_bfloat16 const>, cublasGemvTensorStridedBatched<__nv_bfloat16 const>, cublasGemvTensorStridedBatched<__nv_bfloat16>, float> >(cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<__nv_bfloat16 const>, cublasGemvTensorStridedBatched<__nv_bfloat16 const>, cublasGemvTensorStridedBatched<__nv_bfloat16>, float>)"
+    },
+    {
+      "stage": "norm",
+      "start_us": 70.6865234375,
+      "duration_us": 2.625,
+      "stream": 13422,
+      "name": "triton_red_fused__to_copy_add_mean_mul_pow_rsqrt_0"
+    },
+    {
+      "stage": "moe",
+      "start_us": 73.3759765625,
+      "duration_us": 3.871,
+      "stream": 13422,
+      "name": "std::enable_if<!(false), void>::type internal::gemvx::kernel<int, int, __nv_bfloat16, __nv_bfloat16, __nv_bfloat16, float, false, true, true, false, 7, false, cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<__nv_bfloat16 const>, cublasGemvTensorStridedBatched<__nv_bfloat16 const>, cublasGemvTensorStridedBatched<__nv_bfloat16>, float> >(cublasGemvParamsEx<int, cublasGemvTensorStridedBatched<__nv_bfloat16 const>, cublasGemvTensorStridedBatched<__nv_bfloat16 const>, cublasGemvTensorStridedBatched<__nv_bfloat16>, float>)"
+    },
+    {
+      "stage": "communication",
+      "start_us": 79.5517578125,
+      "duration_us": 17.792,
+      "stream": 19,
+      "name": "ncclDevKernel_AllGather_RING_LL(ncclDevKernelArgsStorage<4096ul>)"
+    },
+    {
+      "stage": "moe",
+      "start_us": 97.630859375,
+      "duration_us": 5.408,
+      "stream": 19,
+      "name": "void vllm::moe::topkGating<8, 128, 4, 16, 32, int, __nv_bfloat16, (vllm::moe::ScoringFunc)0>(__nv_bfloat16 const*, bool const*, float*, int, int*, int*, int, int, int, bool, float const*)"
+    },
+    {
+      "stage": "moe",
+      "start_us": 103.103515625,
+      "duration_us": 1.28,
+      "stream": 19,
+      "name": "void at::native::vectorized_elementwise_kernel<4, at::native::FillFunctor<c10::BFloat16>, std::array<char*, 1ul> >(int, at::native::FillFunctor<c10::BFloat16>, std::array<char*, 1ul>)"
+    },
+    {
+      "stage": "moe",
+      "start_us": 104.447265625,
+      "duration_us": 4.193,
+      "stream": 19,
+      "name": "void vllm::moe::moe_align_block_size_kernel<int>(int const*, int*, int*, int*, int*, int, int, int, int, unsigned long, int*, int, int, bool)"
+    },
+    {
+      "stage": "moe",
+      "start_us": 108.703125,
+      "duration_us": 1.568,
+      "stream": 19,
+      "name": "void vllm::moe::count_and_sort_expert_tokens_kernel<int>(int const*, int*, int*, int*, unsigned long, int, int, int, bool)"
+    },
+    {
+      "stage": "moe",
+      "start_us": 110.3359375,
+      "duration_us": 1.823,
+      "stream": 19,
+      "name": "void at::native::unrolled_elementwise_kernel<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#4}::operator()() const::{lambda(long)#1}, std::array<char*, 2ul>, 4, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1> >(int, at::native::direct_copy_kernel_cuda(at::TensorIteratorBase&)::{lambda()#3}::operator()() const::{lambda()#4}::operator()() const::{lambda(long)#1}, std::array<char*, 2ul>, TrivialOffsetCalculator<1, unsigned int>, TrivialOffsetCalculator<1, unsigned int>, at::native::memory::LoadWithCast<1>, at::native::memory::StoreWithCast<1>)"
+    },
+    {
+      "stage": "moe",
+      "start_us": 112.1591796875,
+      "duration_us": 2.624,
+      "stream": 19,
+      "name": "void at::native::index_elementwise_kernel<128, 4, at::native::gpu_index_kernel<at::native::index_kernel_impl<at::native::OpaqueType<4> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1}>(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>, at::native::index_kernel_impl<at::native::OpaqueType<4> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1} const&, bool)::{lambda(int)#1}>(long, at::native::gpu_index_kernel<at::native::index_kernel_impl<at::native::OpaqueType<4> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1}>(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>, at::native::index_kernel_impl<at::native::OpaqueType<4> >(at::TensorIteratorBase&, c10::ArrayRef<long>, c10::ArrayRef<long>)::{lambda(char*, char const*, long)#1} const&, bool)::{lambda(int)#1})"
+    },
+    {
+      "stage": "moe",
+      "start_us": 114.81640625,
+      "duration_us": 21.279,
+      "stream": 19,
+      "name": "fused_moe_kernel"
+    },
+    {
+      "stage": "moe",
+      "start_us": 136.126953125,
+      "duration_us": 4.0,
+      "stream": 19,
+      "name": "void vllm::act_and_mul_kernel<c10::BFloat16, &(c10::BFloat16 vllm::silu_kernel<c10::BFloat16>(c10::BFloat16 const&)), true>(c10::BFloat16*, c10::BFloat16 const*, int)"
+    },
+    {
+      "stage": "moe",
+      "start_us": 140.1591796875,
+      "duration_us": 12.032,
+      "stream": 19,
+      "name": "fused_moe_kernel"
+    },
+    {
+      "stage": "moe",
+      "start_us": 152.22265625,
+      "duration_us": 5.536,
+      "stream": 19,
+      "name": "void at::native::reduce_kernel<128, 4, at::native::ReduceOp<c10::BFloat16, at::native::func_wrapper_t<c10::BFloat16, at::native::sum_functor<c10::BFloat16, float, c10::BFloat16>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, c10::BFloat16, 4, 4> >(at::native::ReduceOp<c10::BFloat16, at::native::func_wrapper_t<c10::BFloat16, at::native::sum_functor<c10::BFloat16, float, c10::BFloat16>::operator()(at::TensorIterator&)::{lambda(float, float)#1}>, unsigned int, c10::BFloat16, 4, 4>)"
+    },
+    {
+      "stage": "moe",
+      "start_us": 157.791015625,
+      "duration_us": 1.632,
+      "stream": 19,
+      "name": "memcpy32_post"
+    },
+    {
+      "stage": "communication",
+      "start_us": 161.88671875,
+      "duration_us": 35.616,
+      "stream": 13422,
+      "name": "ncclDevKernel_ReduceScatter_Sum_bf16_RING_LL(ncclDevKernelArgsStorage<4096ul>)"
+    }
+  ],
+  "limitations": [
+    "One GPU, one inferred layer, one decode graph replay; not a whole-model average.",
+    "Layer identity follows 48 ordered, validated layer patterns, not trace module labels.",
+    "Attention includes QKV/O projection, QK normalization, RoPE, KV write and attention kernels.",
+    "MoE includes router projection, top-k, token preparation, expert GEMMs, activation and combine kernels.",
+    "Fused residual/RMSNorm is separate; adjacent-layer residual work cannot be split within a fused kernel.",
+    "NCCL duration includes communication/synchronization; it is not pure transfer time or pure compute.",
+    "Kernel-duration sums exclude CPU, memcpy/memset activity records and gaps; overlaps may be summed."
+  ],
+  "source_run": "moe-torch-10256329-20260909T182003Z",
+  "source_trace": "1788978051708872931-rank-0.1788978205899396496.pt.trace.json",
+  "source_revision": "956945f73367ea3145f35aea04759c97e51ef4c4",
+  "plot_source_sha256": "31e282430ed68d66cfa5dffaedc8ddf43bdd09ff21c2b286439210490254267a",
+  "mapping_source_sha256": {
+    "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_moe.py": "764c5de782eaa8b6481b9973a7b56234f1c835119feba8024647a65bca6ccd6f",
+    "/workspace/results/raw/moe-torch-10256329-20260909T182003Z/runtime-cache/vllm/torch_compile_cache/1f71c7a688/rank_0_0/backbone/computation_graph.py": "ccb03b3639b71a47f68b3147d479b107a75f69ff869ae1d0af99afb7ae8cd27c"
+  }
+}
