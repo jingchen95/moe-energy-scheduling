@@ -1,6 +1,6 @@
 # Handoff
 
-## Latest status — Milestone L prepared for real-GPU validation
+## Latest status — Milestone L real-GPU validation submitted
 
 Branch `milestone-l-real-gpu-alignment-validation` prepares the preregistered
 21-run real-GPU comparison of original P1 versus intact-group-aligned P1 at
@@ -19,16 +19,19 @@ identical HHHH, MHHH, and MMHH frequency tuples.
   Uranus. Each task owns and terminates only its server and resets GPU clocks
   on success, failure, or signal.
 
-The measured report, processed CSVs, and decision remain pending until the
-submitted array completes.
+Preparation commit `c63b9f3` is pushed. Immutable study directory
+`results/raw/milestone-l-alignment-20260923T141055Z` records configuration
+order `C4,C6,C1,C5,C7,C2,C3`, 21 expected runs, and all frozen hashes. The
+exclusive serialized array was submitted as Slurm job `267080_[0-6%1]`.
+
+The measured report, processed CSVs, and decision remain pending until this
+array completes. Do not submit another copy while job 267080 is active.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-study="results/raw/milestone-l-alignment-$(date -u +%Y%m%dT%H%M%SZ)"
-python3 tools/prepare_milestone_l.py --output-dir "${study}"
-MILESTONE_L_STUDY="${study}" sbatch --array=0-6%1 scripts/milestone_l_validation.sbatch
+squeue -j 267080
 ```
 
 ## Latest status — Milestone K placement-DVFS alignment complete

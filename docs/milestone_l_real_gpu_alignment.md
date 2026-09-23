@@ -2,8 +2,9 @@
 
 ## Status
 
-Prepared for submission. This document will be updated with measured results
-after the serialized Slurm array completes.
+Submitted as serialized Slurm array `267080_[0-6%1]`. The immutable study is
+`results/raw/milestone-l-alignment-20260923T141055Z`. This document will be
+updated with measured results after the array completes.
 
 ## Registered question
 
@@ -42,13 +43,12 @@ is not established. Enabling it would contaminate the primary Milestone I
 runtime comparison. A separate diagnostic pass may be considered only after
 the primary results are valid.
 
-## Submission
+## Submission record
 
-Prepare a unique study directory after committing this branch, then submit the
-seven tasks as a serialized array:
+The study was generated from preparation commit
+`c63b9f3a176d4d6656a010f504563c55d5398a72`. The recorded configuration order
+is `C4, C6, C1, C5, C7, C2, C3`; array concurrency is limited to one task.
 
 ```bash
-python3 tools/prepare_milestone_l.py --output-dir <study-dir>
-MILESTONE_L_STUDY=<study-dir> \
-  sbatch --array=0-6%1 scripts/milestone_l_validation.sbatch
+squeue -j 267080
 ```
