@@ -1,0 +1,618 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="640" viewBox="0 0 900 640">
+<rect width="100%" height="100%" fill="white"/>
+<style>text{font-family:Arial,sans-serif;fill:#222}.title{font-size:20px;font-weight:700}.panel{font-size:14px;font-weight:700}.axis{font-size:10px}.note{font-size:11px;fill:#444}</style>
+<text x="450" y="28" text-anchor="middle" class="title">P1 group alignment for MMHH (total profile)</text>
+<text x="177" y="58" text-anchor="middle" class="panel">Original physical loads</text>
+<text x="123" y="79" text-anchor="middle" class="axis">G0 1635</text>
+<text x="159" y="79" text-anchor="middle" class="axis">G1 1635</text>
+<text x="195" y="79" text-anchor="middle" class="axis">G2 2520</text>
+<text x="231" y="79" text-anchor="middle" class="axis">G3 2520</text>
+<rect x="105" y="88" width="36" height="9" fill="#fefeff" stroke="#fff" stroke-width="0.35"><title>Layer 0, GPU 0: 0.2495</title></rect>
+<rect x="141" y="88" width="36" height="9" fill="#c7d9ea" stroke="#fff" stroke-width="0.35"><title>Layer 0, GPU 1: 0.2184</title></rect>
+<rect x="177" y="88" width="36" height="9" fill="#f7e7e9" stroke="#fff" stroke-width="0.35"><title>Layer 0, GPU 2: 0.2626</title></rect>
+<rect x="213" y="88" width="36" height="9" fill="#f3dadd" stroke="#fff" stroke-width="0.35"><title>Layer 0, GPU 3: 0.2695</title></rect>
+<text x="97" y="95" text-anchor="end" class="axis">0</text>
+<rect x="105" y="97" width="36" height="9" fill="#f3dcdf" stroke="#fff" stroke-width="0.35"><title>Layer 1, GPU 0: 0.2684</title></rect>
+<rect x="141" y="97" width="36" height="9" fill="#fcf6f7" stroke="#fff" stroke-width="0.35"><title>Layer 1, GPU 1: 0.2546</title></rect>
+<rect x="177" y="97" width="36" height="9" fill="#c8d9ea" stroke="#fff" stroke-width="0.35"><title>Layer 1, GPU 2: 0.2188</title></rect>
+<rect x="213" y="97" width="36" height="9" fill="#faf0f1" stroke="#fff" stroke-width="0.35"><title>Layer 1, GPU 3: 0.2582</title></rect>
+<rect x="105" y="106" width="36" height="9" fill="#fbf4f4" stroke="#fff" stroke-width="0.35"><title>Layer 2, GPU 0: 0.2561</title></rect>
+<rect x="141" y="106" width="36" height="9" fill="#f9edef" stroke="#fff" stroke-width="0.35"><title>Layer 2, GPU 1: 0.2595</title></rect>
+<rect x="177" y="106" width="36" height="9" fill="#d0dfee" stroke="#fff" stroke-width="0.35"><title>Layer 2, GPU 2: 0.2235</title></rect>
+<rect x="213" y="106" width="36" height="9" fill="#f8ebec" stroke="#fff" stroke-width="0.35"><title>Layer 2, GPU 3: 0.2609</title></rect>
+<rect x="105" y="115" width="36" height="9" fill="#c1d4e8" stroke="#fff" stroke-width="0.35"><title>Layer 3, GPU 0: 0.2149</title></rect>
+<rect x="141" y="115" width="36" height="9" fill="#f4dde0" stroke="#fff" stroke-width="0.35"><title>Layer 3, GPU 1: 0.2682</title></rect>
+<rect x="177" y="115" width="36" height="9" fill="#9fbddb" stroke="#fff" stroke-width="0.35"><title>Layer 3, GPU 2: 0.1955</title></rect>
+<rect x="213" y="115" width="36" height="9" fill="#d27984" stroke="#fff" stroke-width="0.35"><title>Layer 3, GPU 3: 0.3214</title></rect>
+<rect x="105" y="124" width="36" height="9" fill="#e5edf5" stroke="#fff" stroke-width="0.35"><title>Layer 4, GPU 0: 0.2351</title></rect>
+<rect x="141" y="124" width="36" height="9" fill="#cc6673" stroke="#fff" stroke-width="0.35"><title>Layer 4, GPU 1: 0.3316</title></rect>
+<rect x="177" y="124" width="36" height="9" fill="#fdf9fa" stroke="#fff" stroke-width="0.35"><title>Layer 4, GPU 2: 0.2532</title></rect>
+<rect x="213" y="124" width="36" height="9" fill="#84aad1" stroke="#fff" stroke-width="0.35"><title>Layer 4, GPU 3: 0.1802</title></rect>
+<text x="97" y="131" text-anchor="end" class="axis">4</text>
+<rect x="105" y="133" width="36" height="9" fill="#e7eff6" stroke="#fff" stroke-width="0.35"><title>Layer 5, GPU 0: 0.2365</title></rect>
+<rect x="141" y="133" width="36" height="9" fill="#6696c6" stroke="#fff" stroke-width="0.35"><title>Layer 5, GPU 1: 0.1633</title></rect>
+<rect x="177" y="133" width="36" height="9" fill="#e4adb3" stroke="#fff" stroke-width="0.35"><title>Layer 5, GPU 2: 0.2940</title></rect>
+<rect x="213" y="133" width="36" height="9" fill="#dc959e" stroke="#fff" stroke-width="0.35"><title>Layer 5, GPU 3: 0.3062</title></rect>
+<rect x="105" y="142" width="36" height="9" fill="#c24857" stroke="#fff" stroke-width="0.35"><title>Layer 6, GPU 0: 0.3474</title></rect>
+<rect x="141" y="142" width="36" height="9" fill="#dae6f1" stroke="#fff" stroke-width="0.35"><title>Layer 6, GPU 1: 0.2292</title></rect>
+<rect x="177" y="142" width="36" height="9" fill="#6092c4" stroke="#fff" stroke-width="0.35"><title>Layer 6, GPU 2: 0.1600</title></rect>
+<rect x="213" y="142" width="36" height="9" fill="#f7e6e8" stroke="#fff" stroke-width="0.35"><title>Layer 6, GPU 3: 0.2634</title></rect>
+<rect x="105" y="151" width="36" height="9" fill="#f6e5e7" stroke="#fff" stroke-width="0.35"><title>Layer 7, GPU 0: 0.2639</title></rect>
+<rect x="141" y="151" width="36" height="9" fill="#75a0cb" stroke="#fff" stroke-width="0.35"><title>Layer 7, GPU 1: 0.1718</title></rect>
+<rect x="177" y="151" width="36" height="9" fill="#ca616e" stroke="#fff" stroke-width="0.35"><title>Layer 7, GPU 2: 0.3341</title></rect>
+<rect x="213" y="151" width="36" height="9" fill="#dce7f2" stroke="#fff" stroke-width="0.35"><title>Layer 7, GPU 3: 0.2303</title></rect>
+<rect x="105" y="160" width="36" height="9" fill="#d5e2ef" stroke="#fff" stroke-width="0.35"><title>Layer 8, GPU 0: 0.2262</title></rect>
+<rect x="141" y="160" width="36" height="9" fill="#e4ecf5" stroke="#fff" stroke-width="0.35"><title>Layer 8, GPU 1: 0.2347</title></rect>
+<rect x="177" y="160" width="36" height="9" fill="#d88a93" stroke="#fff" stroke-width="0.35"><title>Layer 8, GPU 2: 0.3125</title></rect>
+<rect x="213" y="160" width="36" height="9" fill="#d6e3f0" stroke="#fff" stroke-width="0.35"><title>Layer 8, GPU 3: 0.2266</title></rect>
+<text x="97" y="167" text-anchor="end" class="axis">8</text>
+<rect x="105" y="169" width="36" height="9" fill="#fffefe" stroke="#fff" stroke-width="0.35"><title>Layer 9, GPU 0: 0.2504</title></rect>
+<rect x="141" y="169" width="36" height="9" fill="#e1a4ac" stroke="#fff" stroke-width="0.35"><title>Layer 9, GPU 1: 0.2984</title></rect>
+<rect x="177" y="169" width="36" height="9" fill="#5c8ec2" stroke="#fff" stroke-width="0.35"><title>Layer 9, GPU 2: 0.1573</title></rect>
+<rect x="213" y="169" width="36" height="9" fill="#e4adb3" stroke="#fff" stroke-width="0.35"><title>Layer 9, GPU 3: 0.2938</title></rect>
+<rect x="105" y="178" width="36" height="9" fill="#d1e0ee" stroke="#fff" stroke-width="0.35"><title>Layer 10, GPU 0: 0.2242</title></rect>
+<rect x="141" y="178" width="36" height="9" fill="#c8d9eb" stroke="#fff" stroke-width="0.35"><title>Layer 10, GPU 1: 0.2189</title></rect>
+<rect x="177" y="178" width="36" height="9" fill="#b9cfe5" stroke="#fff" stroke-width="0.35"><title>Layer 10, GPU 2: 0.2105</title></rect>
+<rect x="213" y="178" width="36" height="9" fill="#c34a59" stroke="#fff" stroke-width="0.35"><title>Layer 10, GPU 3: 0.3465</title></rect>
+<rect x="105" y="187" width="36" height="9" fill="#f3f6fa" stroke="#fff" stroke-width="0.35"><title>Layer 11, GPU 0: 0.2430</title></rect>
+<rect x="141" y="187" width="36" height="9" fill="#ecf2f8" stroke="#fff" stroke-width="0.35"><title>Layer 11, GPU 1: 0.2393</title></rect>
+<rect x="177" y="187" width="36" height="9" fill="#f9fbfd" stroke="#fff" stroke-width="0.35"><title>Layer 11, GPU 2: 0.2466</title></rect>
+<rect x="213" y="187" width="36" height="9" fill="#f2d7db" stroke="#fff" stroke-width="0.35"><title>Layer 11, GPU 3: 0.2711</title></rect>
+<rect x="105" y="196" width="36" height="9" fill="#dd98a1" stroke="#fff" stroke-width="0.35"><title>Layer 12, GPU 0: 0.3049</title></rect>
+<rect x="141" y="196" width="36" height="9" fill="#ccdcec" stroke="#fff" stroke-width="0.35"><title>Layer 12, GPU 1: 0.2210</title></rect>
+<rect x="177" y="196" width="36" height="9" fill="#e6b4ba" stroke="#fff" stroke-width="0.35"><title>Layer 12, GPU 2: 0.2899</title></rect>
+<rect x="213" y="196" width="36" height="9" fill="#8bafd4" stroke="#fff" stroke-width="0.35"><title>Layer 12, GPU 3: 0.1842</title></rect>
+<text x="97" y="203" text-anchor="end" class="axis">12</text>
+<rect x="105" y="205" width="36" height="9" fill="#84aad1" stroke="#fff" stroke-width="0.35"><title>Layer 13, GPU 0: 0.1803</title></rect>
+<rect x="141" y="205" width="36" height="9" fill="#f6e5e8" stroke="#fff" stroke-width="0.35"><title>Layer 13, GPU 1: 0.2636</title></rect>
+<rect x="177" y="205" width="36" height="9" fill="#e9f0f7" stroke="#fff" stroke-width="0.35"><title>Layer 13, GPU 2: 0.2376</title></rect>
+<rect x="213" y="205" width="36" height="9" fill="#d47f89" stroke="#fff" stroke-width="0.35"><title>Layer 13, GPU 3: 0.3185</title></rect>
+<rect x="105" y="214" width="36" height="9" fill="#98b8d9" stroke="#fff" stroke-width="0.35"><title>Layer 14, GPU 0: 0.1917</title></rect>
+<rect x="141" y="214" width="36" height="9" fill="#ce6d79" stroke="#fff" stroke-width="0.35"><title>Layer 14, GPU 1: 0.3278</title></rect>
+<rect x="177" y="214" width="36" height="9" fill="#faf1f2" stroke="#fff" stroke-width="0.35"><title>Layer 14, GPU 2: 0.2577</title></rect>
+<rect x="213" y="214" width="36" height="9" fill="#cfdeed" stroke="#fff" stroke-width="0.35"><title>Layer 14, GPU 3: 0.2229</title></rect>
+<rect x="105" y="223" width="36" height="9" fill="#fefdfd" stroke="#fff" stroke-width="0.35"><title>Layer 15, GPU 0: 0.2509</title></rect>
+<rect x="141" y="223" width="36" height="9" fill="#de9da5" stroke="#fff" stroke-width="0.35"><title>Layer 15, GPU 1: 0.3022</title></rect>
+<rect x="177" y="223" width="36" height="9" fill="#96b6d8" stroke="#fff" stroke-width="0.35"><title>Layer 15, GPU 2: 0.1902</title></rect>
+<rect x="213" y="223" width="36" height="9" fill="#fbf2f3" stroke="#fff" stroke-width="0.35"><title>Layer 15, GPU 3: 0.2568</title></rect>
+<rect x="105" y="232" width="36" height="9" fill="#b0c8e1" stroke="#fff" stroke-width="0.35"><title>Layer 16, GPU 0: 0.2050</title></rect>
+<rect x="141" y="232" width="36" height="9" fill="#e3acb2" stroke="#fff" stroke-width="0.35"><title>Layer 16, GPU 1: 0.2945</title></rect>
+<rect x="177" y="232" width="36" height="9" fill="#f0f5f9" stroke="#fff" stroke-width="0.35"><title>Layer 16, GPU 2: 0.2415</title></rect>
+<rect x="213" y="232" width="36" height="9" fill="#f9eef0" stroke="#fff" stroke-width="0.35"><title>Layer 16, GPU 3: 0.2590</title></rect>
+<text x="97" y="239" text-anchor="end" class="axis">16</text>
+<rect x="105" y="241" width="36" height="9" fill="#feffff" stroke="#fff" stroke-width="0.35"><title>Layer 17, GPU 0: 0.2496</title></rect>
+<rect x="141" y="241" width="36" height="9" fill="#bed2e7" stroke="#fff" stroke-width="0.35"><title>Layer 17, GPU 1: 0.2132</title></rect>
+<rect x="177" y="241" width="36" height="9" fill="#db929b" stroke="#fff" stroke-width="0.35"><title>Layer 17, GPU 2: 0.3083</title></rect>
+<rect x="213" y="241" width="36" height="9" fill="#dae5f1" stroke="#fff" stroke-width="0.35"><title>Layer 17, GPU 3: 0.2288</title></rect>
+<rect x="105" y="250" width="36" height="9" fill="#adc7e0" stroke="#fff" stroke-width="0.35"><title>Layer 18, GPU 0: 0.2036</title></rect>
+<rect x="141" y="250" width="36" height="9" fill="#578bc0" stroke="#fff" stroke-width="0.35"><title>Layer 18, GPU 1: 0.1545</title></rect>
+<rect x="177" y="250" width="36" height="9" fill="#f3dcde" stroke="#fff" stroke-width="0.35"><title>Layer 18, GPU 2: 0.2689</title></rect>
+<rect x="213" y="250" width="36" height="9" fill="#b2182b" stroke="#fff" stroke-width="0.35"><title>Layer 18, GPU 3: 0.3731</title></rect>
+<rect x="105" y="259" width="36" height="9" fill="#fdfafb" stroke="#fff" stroke-width="0.35"><title>Layer 19, GPU 0: 0.2525</title></rect>
+<rect x="141" y="259" width="36" height="9" fill="#d98d97" stroke="#fff" stroke-width="0.35"><title>Layer 19, GPU 1: 0.3105</title></rect>
+<rect x="177" y="259" width="36" height="9" fill="#d88993" stroke="#fff" stroke-width="0.35"><title>Layer 19, GPU 2: 0.3130</title></rect>
+<rect x="213" y="259" width="36" height="9" fill="#2166ac" stroke="#fff" stroke-width="0.35"><title>Layer 19, GPU 3: 0.1240</title></rect>
+<rect x="105" y="268" width="36" height="9" fill="#d1dfee" stroke="#fff" stroke-width="0.35"><title>Layer 20, GPU 0: 0.2240</title></rect>
+<rect x="141" y="268" width="36" height="9" fill="#bad0e5" stroke="#fff" stroke-width="0.35"><title>Layer 20, GPU 1: 0.2109</title></rect>
+<rect x="177" y="268" width="36" height="9" fill="#f4f8fb" stroke="#fff" stroke-width="0.35"><title>Layer 20, GPU 2: 0.2440</title></rect>
+<rect x="213" y="268" width="36" height="9" fill="#d37a85" stroke="#fff" stroke-width="0.35"><title>Layer 20, GPU 3: 0.3211</title></rect>
+<text x="97" y="275" text-anchor="end" class="axis">20</text>
+<rect x="105" y="277" width="36" height="9" fill="#c2d5e8" stroke="#fff" stroke-width="0.35"><title>Layer 21, GPU 0: 0.2152</title></rect>
+<rect x="141" y="277" width="36" height="9" fill="#e9bdc2" stroke="#fff" stroke-width="0.35"><title>Layer 21, GPU 1: 0.2852</title></rect>
+<rect x="177" y="277" width="36" height="9" fill="#eeccd0" stroke="#fff" stroke-width="0.35"><title>Layer 21, GPU 2: 0.2771</title></rect>
+<rect x="213" y="277" width="36" height="9" fill="#cfdeed" stroke="#fff" stroke-width="0.35"><title>Layer 21, GPU 3: 0.2225</title></rect>
+<rect x="105" y="286" width="36" height="9" fill="#fdfefe" stroke="#fff" stroke-width="0.35"><title>Layer 22, GPU 0: 0.2489</title></rect>
+<rect x="141" y="286" width="36" height="9" fill="#c9daeb" stroke="#fff" stroke-width="0.35"><title>Layer 22, GPU 1: 0.2191</title></rect>
+<rect x="177" y="286" width="36" height="9" fill="#f8eaeb" stroke="#fff" stroke-width="0.35"><title>Layer 22, GPU 2: 0.2614</title></rect>
+<rect x="213" y="286" width="36" height="9" fill="#f2d8dc" stroke="#fff" stroke-width="0.35"><title>Layer 22, GPU 3: 0.2706</title></rect>
+<rect x="105" y="295" width="36" height="9" fill="#a3c0dd" stroke="#fff" stroke-width="0.35"><title>Layer 23, GPU 0: 0.1980</title></rect>
+<rect x="141" y="295" width="36" height="9" fill="#fbf3f4" stroke="#fff" stroke-width="0.35"><title>Layer 23, GPU 1: 0.2563</title></rect>
+<rect x="177" y="295" width="36" height="9" fill="#d78690" stroke="#fff" stroke-width="0.35"><title>Layer 23, GPU 2: 0.3144</title></rect>
+<rect x="213" y="295" width="36" height="9" fill="#dee8f3" stroke="#fff" stroke-width="0.35"><title>Layer 23, GPU 3: 0.2313</title></rect>
+<rect x="105" y="304" width="36" height="9" fill="#efcfd3" stroke="#fff" stroke-width="0.35"><title>Layer 24, GPU 0: 0.2754</title></rect>
+<rect x="141" y="304" width="36" height="9" fill="#e9bec3" stroke="#fff" stroke-width="0.35"><title>Layer 24, GPU 1: 0.2846</title></rect>
+<rect x="177" y="304" width="36" height="9" fill="#d8e4f0" stroke="#fff" stroke-width="0.35"><title>Layer 24, GPU 2: 0.2278</title></rect>
+<rect x="213" y="304" width="36" height="9" fill="#bcd1e6" stroke="#fff" stroke-width="0.35"><title>Layer 24, GPU 3: 0.2122</title></rect>
+<text x="97" y="311" text-anchor="end" class="axis">24</text>
+<rect x="105" y="313" width="36" height="9" fill="#e0a1a9" stroke="#fff" stroke-width="0.35"><title>Layer 25, GPU 0: 0.3001</title></rect>
+<rect x="141" y="313" width="36" height="9" fill="#acc6e0" stroke="#fff" stroke-width="0.35"><title>Layer 25, GPU 1: 0.2031</title></rect>
+<rect x="177" y="313" width="36" height="9" fill="#c3d5e8" stroke="#fff" stroke-width="0.35"><title>Layer 25, GPU 2: 0.2157</title></rect>
+<rect x="213" y="313" width="36" height="9" fill="#ecc5c9" stroke="#fff" stroke-width="0.35"><title>Layer 25, GPU 3: 0.2811</title></rect>
+<rect x="105" y="322" width="36" height="9" fill="#e3abb2" stroke="#fff" stroke-width="0.35"><title>Layer 26, GPU 0: 0.2945</title></rect>
+<rect x="141" y="322" width="36" height="9" fill="#bfd3e7" stroke="#fff" stroke-width="0.35"><title>Layer 26, GPU 1: 0.2139</title></rect>
+<rect x="177" y="322" width="36" height="9" fill="#e2ebf4" stroke="#fff" stroke-width="0.35"><title>Layer 26, GPU 2: 0.2337</title></rect>
+<rect x="213" y="322" width="36" height="9" fill="#faf0f1" stroke="#fff" stroke-width="0.35"><title>Layer 26, GPU 3: 0.2579</title></rect>
+<rect x="105" y="331" width="36" height="9" fill="#9cbbda" stroke="#fff" stroke-width="0.35"><title>Layer 27, GPU 0: 0.1938</title></rect>
+<rect x="141" y="331" width="36" height="9" fill="#eecbcf" stroke="#fff" stroke-width="0.35"><title>Layer 27, GPU 1: 0.2776</title></rect>
+<rect x="177" y="331" width="36" height="9" fill="#d88b95" stroke="#fff" stroke-width="0.35"><title>Layer 27, GPU 2: 0.3118</title></rect>
+<rect x="213" y="331" width="36" height="9" fill="#c4d7e9" stroke="#fff" stroke-width="0.35"><title>Layer 27, GPU 3: 0.2167</title></rect>
+<rect x="105" y="340" width="36" height="9" fill="#e4afb6" stroke="#fff" stroke-width="0.35"><title>Layer 28, GPU 0: 0.2925</title></rect>
+<rect x="141" y="340" width="36" height="9" fill="#d7e4f0" stroke="#fff" stroke-width="0.35"><title>Layer 28, GPU 1: 0.2274</title></rect>
+<rect x="177" y="340" width="36" height="9" fill="#edcace" stroke="#fff" stroke-width="0.35"><title>Layer 28, GPU 2: 0.2783</title></rect>
+<rect x="213" y="340" width="36" height="9" fill="#aac5df" stroke="#fff" stroke-width="0.35"><title>Layer 28, GPU 3: 0.2019</title></rect>
+<text x="97" y="347" text-anchor="end" class="axis">28</text>
+<rect x="105" y="349" width="36" height="9" fill="#e5edf5" stroke="#fff" stroke-width="0.35"><title>Layer 29, GPU 0: 0.2354</title></rect>
+<rect x="141" y="349" width="36" height="9" fill="#e8eff6" stroke="#fff" stroke-width="0.35"><title>Layer 29, GPU 1: 0.2367</title></rect>
+<rect x="177" y="349" width="36" height="9" fill="#eecdd1" stroke="#fff" stroke-width="0.35"><title>Layer 29, GPU 2: 0.2767</title></rect>
+<rect x="213" y="349" width="36" height="9" fill="#fefdfd" stroke="#fff" stroke-width="0.35"><title>Layer 29, GPU 3: 0.2511</title></rect>
+<rect x="105" y="358" width="36" height="9" fill="#cd6874" stroke="#fff" stroke-width="0.35"><title>Layer 30, GPU 0: 0.3305</title></rect>
+<rect x="141" y="358" width="36" height="9" fill="#e8babf" stroke="#fff" stroke-width="0.35"><title>Layer 30, GPU 1: 0.2869</title></rect>
+<rect x="177" y="358" width="36" height="9" fill="#cfdeed" stroke="#fff" stroke-width="0.35"><title>Layer 30, GPU 2: 0.2230</title></rect>
+<rect x="213" y="358" width="36" height="9" fill="#6091c3" stroke="#fff" stroke-width="0.35"><title>Layer 30, GPU 3: 0.1596</title></rect>
+<rect x="105" y="367" width="36" height="9" fill="#d4e2ef" stroke="#fff" stroke-width="0.35"><title>Layer 31, GPU 0: 0.2258</title></rect>
+<rect x="141" y="367" width="36" height="9" fill="#dd9aa2" stroke="#fff" stroke-width="0.35"><title>Layer 31, GPU 1: 0.3038</title></rect>
+<rect x="177" y="367" width="36" height="9" fill="#ebc4c9" stroke="#fff" stroke-width="0.35"><title>Layer 31, GPU 2: 0.2816</title></rect>
+<rect x="213" y="367" width="36" height="9" fill="#93b5d7" stroke="#fff" stroke-width="0.35"><title>Layer 31, GPU 3: 0.1889</title></rect>
+<rect x="105" y="376" width="36" height="9" fill="#d8e4f1" stroke="#fff" stroke-width="0.35"><title>Layer 32, GPU 0: 0.2281</title></rect>
+<rect x="141" y="376" width="36" height="9" fill="#bbd0e6" stroke="#fff" stroke-width="0.35"><title>Layer 32, GPU 1: 0.2114</title></rect>
+<rect x="177" y="376" width="36" height="9" fill="#e4afb6" stroke="#fff" stroke-width="0.35"><title>Layer 32, GPU 2: 0.2924</title></rect>
+<rect x="213" y="376" width="36" height="9" fill="#f4dde0" stroke="#fff" stroke-width="0.35"><title>Layer 32, GPU 3: 0.2682</title></rect>
+<text x="97" y="383" text-anchor="end" class="axis">32</text>
+<rect x="105" y="385" width="36" height="9" fill="#eeccd0" stroke="#fff" stroke-width="0.35"><title>Layer 33, GPU 0: 0.2772</title></rect>
+<rect x="141" y="385" width="36" height="9" fill="#8aafd3" stroke="#fff" stroke-width="0.35"><title>Layer 33, GPU 1: 0.1838</title></rect>
+<rect x="177" y="385" width="36" height="9" fill="#f2d9dc" stroke="#fff" stroke-width="0.35"><title>Layer 33, GPU 2: 0.2702</title></rect>
+<rect x="213" y="385" width="36" height="9" fill="#f3dcdf" stroke="#fff" stroke-width="0.35"><title>Layer 33, GPU 3: 0.2688</title></rect>
+<rect x="105" y="394" width="36" height="9" fill="#f4dfe1" stroke="#fff" stroke-width="0.35"><title>Layer 34, GPU 0: 0.2672</title></rect>
+<rect x="141" y="394" width="36" height="9" fill="#db949d" stroke="#fff" stroke-width="0.35"><title>Layer 34, GPU 1: 0.3071</title></rect>
+<rect x="177" y="394" width="36" height="9" fill="#9dbcda" stroke="#fff" stroke-width="0.35"><title>Layer 34, GPU 2: 0.1944</title></rect>
+<rect x="213" y="394" width="36" height="9" fill="#dee8f3" stroke="#fff" stroke-width="0.35"><title>Layer 34, GPU 3: 0.2313</title></rect>
+<rect x="105" y="403" width="36" height="9" fill="#e0e9f3" stroke="#fff" stroke-width="0.35"><title>Layer 35, GPU 0: 0.2322</title></rect>
+<rect x="141" y="403" width="36" height="9" fill="#f0d3d7" stroke="#fff" stroke-width="0.35"><title>Layer 35, GPU 1: 0.2733</title></rect>
+<rect x="177" y="403" width="36" height="9" fill="#ecc7cc" stroke="#fff" stroke-width="0.35"><title>Layer 35, GPU 2: 0.2796</title></rect>
+<rect x="213" y="403" width="36" height="9" fill="#c1d4e8" stroke="#fff" stroke-width="0.35"><title>Layer 35, GPU 3: 0.2149</title></rect>
+<rect x="105" y="412" width="36" height="9" fill="#d98e98" stroke="#fff" stroke-width="0.35"><title>Layer 36, GPU 0: 0.3100</title></rect>
+<rect x="141" y="412" width="36" height="9" fill="#f9ecee" stroke="#fff" stroke-width="0.35"><title>Layer 36, GPU 1: 0.2601</title></rect>
+<rect x="177" y="412" width="36" height="9" fill="#89aed3" stroke="#fff" stroke-width="0.35"><title>Layer 36, GPU 2: 0.1832</title></rect>
+<rect x="213" y="412" width="36" height="9" fill="#f9fbfd" stroke="#fff" stroke-width="0.35"><title>Layer 36, GPU 3: 0.2467</title></rect>
+<text x="97" y="419" text-anchor="end" class="axis">36</text>
+<rect x="105" y="421" width="36" height="9" fill="#d6838d" stroke="#fff" stroke-width="0.35"><title>Layer 37, GPU 0: 0.3163</title></rect>
+<rect x="141" y="421" width="36" height="9" fill="#9bbada" stroke="#fff" stroke-width="0.35"><title>Layer 37, GPU 1: 0.1931</title></rect>
+<rect x="177" y="421" width="36" height="9" fill="#f5e2e4" stroke="#fff" stroke-width="0.35"><title>Layer 37, GPU 2: 0.2655</title></rect>
+<rect x="213" y="421" width="36" height="9" fill="#d3e1ef" stroke="#fff" stroke-width="0.35"><title>Layer 37, GPU 3: 0.2251</title></rect>
+<rect x="105" y="430" width="36" height="9" fill="#ecf2f8" stroke="#fff" stroke-width="0.35"><title>Layer 38, GPU 0: 0.2393</title></rect>
+<rect x="141" y="430" width="36" height="9" fill="#fcfdfe" stroke="#fff" stroke-width="0.35"><title>Layer 38, GPU 1: 0.2485</title></rect>
+<rect x="177" y="430" width="36" height="9" fill="#f4dfe1" stroke="#fff" stroke-width="0.35"><title>Layer 38, GPU 2: 0.2672</title></rect>
+<rect x="213" y="430" width="36" height="9" fill="#f6f9fc" stroke="#fff" stroke-width="0.35"><title>Layer 38, GPU 3: 0.2450</title></rect>
+<rect x="105" y="439" width="36" height="9" fill="#e0eaf3" stroke="#fff" stroke-width="0.35"><title>Layer 39, GPU 0: 0.2324</title></rect>
+<rect x="141" y="439" width="36" height="9" fill="#f9eeef" stroke="#fff" stroke-width="0.35"><title>Layer 39, GPU 1: 0.2592</title></rect>
+<rect x="177" y="439" width="36" height="9" fill="#a7c2de" stroke="#fff" stroke-width="0.35"><title>Layer 39, GPU 2: 0.2002</title></rect>
+<rect x="213" y="439" width="36" height="9" fill="#db929b" stroke="#fff" stroke-width="0.35"><title>Layer 39, GPU 3: 0.3082</title></rect>
+<rect x="105" y="448" width="36" height="9" fill="#7ba4ce" stroke="#fff" stroke-width="0.35"><title>Layer 40, GPU 0: 0.1752</title></rect>
+<rect x="141" y="448" width="36" height="9" fill="#e4adb4" stroke="#fff" stroke-width="0.35"><title>Layer 40, GPU 1: 0.2935</title></rect>
+<rect x="177" y="448" width="36" height="9" fill="#f2d9dc" stroke="#fff" stroke-width="0.35"><title>Layer 40, GPU 2: 0.2700</title></rect>
+<rect x="213" y="448" width="36" height="9" fill="#f8eaec" stroke="#fff" stroke-width="0.35"><title>Layer 40, GPU 3: 0.2613</title></rect>
+<text x="97" y="455" text-anchor="end" class="axis">40</text>
+<rect x="105" y="457" width="36" height="9" fill="#fdf8f9" stroke="#fff" stroke-width="0.35"><title>Layer 41, GPU 0: 0.2536</title></rect>
+<rect x="141" y="457" width="36" height="9" fill="#fefbfb" stroke="#fff" stroke-width="0.35"><title>Layer 41, GPU 1: 0.2523</title></rect>
+<rect x="177" y="457" width="36" height="9" fill="#cdddec" stroke="#fff" stroke-width="0.35"><title>Layer 41, GPU 2: 0.2217</title></rect>
+<rect x="213" y="457" width="36" height="9" fill="#f1d5d8" stroke="#fff" stroke-width="0.35"><title>Layer 41, GPU 3: 0.2724</title></rect>
+<rect x="105" y="466" width="36" height="9" fill="#f7e8ea" stroke="#fff" stroke-width="0.35"><title>Layer 42, GPU 0: 0.2621</title></rect>
+<rect x="141" y="466" width="36" height="9" fill="#e1eaf4" stroke="#fff" stroke-width="0.35"><title>Layer 42, GPU 1: 0.2331</title></rect>
+<rect x="177" y="466" width="36" height="9" fill="#eac1c7" stroke="#fff" stroke-width="0.35"><title>Layer 42, GPU 2: 0.2828</title></rect>
+<rect x="213" y="466" width="36" height="9" fill="#cedded" stroke="#fff" stroke-width="0.35"><title>Layer 42, GPU 3: 0.2220</title></rect>
+<rect x="105" y="475" width="36" height="9" fill="#cf6e7a" stroke="#fff" stroke-width="0.35"><title>Layer 43, GPU 0: 0.3270</title></rect>
+<rect x="141" y="475" width="36" height="9" fill="#dce7f2" stroke="#fff" stroke-width="0.35"><title>Layer 43, GPU 1: 0.2299</title></rect>
+<rect x="177" y="475" width="36" height="9" fill="#f8e9eb" stroke="#fff" stroke-width="0.35"><title>Layer 43, GPU 2: 0.2619</title></rect>
+<rect x="213" y="475" width="36" height="9" fill="#86abd2" stroke="#fff" stroke-width="0.35"><title>Layer 43, GPU 3: 0.1812</title></rect>
+<rect x="105" y="484" width="36" height="9" fill="#fdf9fa" stroke="#fff" stroke-width="0.35"><title>Layer 44, GPU 0: 0.2529</title></rect>
+<rect x="141" y="484" width="36" height="9" fill="#e6eef6" stroke="#fff" stroke-width="0.35"><title>Layer 44, GPU 1: 0.2359</title></rect>
+<rect x="177" y="484" width="36" height="9" fill="#fcf6f6" stroke="#fff" stroke-width="0.35"><title>Layer 44, GPU 2: 0.2549</title></rect>
+<rect x="213" y="484" width="36" height="9" fill="#fbf3f4" stroke="#fff" stroke-width="0.35"><title>Layer 44, GPU 3: 0.2562</title></rect>
+<text x="97" y="491" text-anchor="end" class="axis">44</text>
+<rect x="105" y="493" width="36" height="9" fill="#d78892" stroke="#fff" stroke-width="0.35"><title>Layer 45, GPU 0: 0.3133</title></rect>
+<rect x="141" y="493" width="36" height="9" fill="#bcd1e6" stroke="#fff" stroke-width="0.35"><title>Layer 45, GPU 1: 0.2121</title></rect>
+<rect x="177" y="493" width="36" height="9" fill="#c9daeb" stroke="#fff" stroke-width="0.35"><title>Layer 45, GPU 2: 0.2196</title></rect>
+<rect x="213" y="493" width="36" height="9" fill="#fcf6f6" stroke="#fff" stroke-width="0.35"><title>Layer 45, GPU 3: 0.2550</title></rect>
+<rect x="105" y="502" width="36" height="9" fill="#f4f8fb" stroke="#fff" stroke-width="0.35"><title>Layer 46, GPU 0: 0.2439</title></rect>
+<rect x="141" y="502" width="36" height="9" fill="#f8fafc" stroke="#fff" stroke-width="0.35"><title>Layer 46, GPU 1: 0.2462</title></rect>
+<rect x="177" y="502" width="36" height="9" fill="#d6858f" stroke="#fff" stroke-width="0.35"><title>Layer 46, GPU 2: 0.3148</title></rect>
+<rect x="213" y="502" width="36" height="9" fill="#9ebcdb" stroke="#fff" stroke-width="0.35"><title>Layer 46, GPU 3: 0.1950</title></rect>
+<rect x="105" y="511" width="36" height="9" fill="#efcfd3" stroke="#fff" stroke-width="0.35"><title>Layer 47, GPU 0: 0.2753</title></rect>
+<rect x="141" y="511" width="36" height="9" fill="#ecf2f8" stroke="#fff" stroke-width="0.35"><title>Layer 47, GPU 1: 0.2393</title></rect>
+<rect x="177" y="511" width="36" height="9" fill="#f9fbfd" stroke="#fff" stroke-width="0.35"><title>Layer 47, GPU 2: 0.2468</title></rect>
+<rect x="213" y="511" width="36" height="9" fill="#ebf1f8" stroke="#fff" stroke-width="0.35"><title>Layer 47, GPU 3: 0.2386</title></rect>
+<text x="437" y="58" text-anchor="middle" class="panel">Aligned physical loads</text>
+<text x="383" y="79" text-anchor="middle" class="axis">G0 1635</text>
+<text x="419" y="79" text-anchor="middle" class="axis">G1 1635</text>
+<text x="455" y="79" text-anchor="middle" class="axis">G2 2520</text>
+<text x="491" y="79" text-anchor="middle" class="axis">G3 2520</text>
+<rect x="365" y="88" width="36" height="9" fill="#fefeff" stroke="#fff" stroke-width="0.35"><title>Layer 0, GPU 0: 0.2495</title></rect>
+<rect x="401" y="88" width="36" height="9" fill="#c7d9ea" stroke="#fff" stroke-width="0.35"><title>Layer 0, GPU 1: 0.2184</title></rect>
+<rect x="437" y="88" width="36" height="9" fill="#f7e7e9" stroke="#fff" stroke-width="0.35"><title>Layer 0, GPU 2: 0.2626</title></rect>
+<rect x="473" y="88" width="36" height="9" fill="#f3dadd" stroke="#fff" stroke-width="0.35"><title>Layer 0, GPU 3: 0.2695</title></rect>
+<rect x="365" y="97" width="36" height="9" fill="#c8d9ea" stroke="#fff" stroke-width="0.35"><title>Layer 1, GPU 0: 0.2188</title></rect>
+<rect x="401" y="97" width="36" height="9" fill="#fcf6f7" stroke="#fff" stroke-width="0.35"><title>Layer 1, GPU 1: 0.2546</title></rect>
+<rect x="437" y="97" width="36" height="9" fill="#f3dcdf" stroke="#fff" stroke-width="0.35"><title>Layer 1, GPU 2: 0.2684</title></rect>
+<rect x="473" y="97" width="36" height="9" fill="#faf0f1" stroke="#fff" stroke-width="0.35"><title>Layer 1, GPU 3: 0.2582</title></rect>
+<rect x="365" y="106" width="36" height="9" fill="#fbf4f4" stroke="#fff" stroke-width="0.35"><title>Layer 2, GPU 0: 0.2561</title></rect>
+<rect x="401" y="106" width="36" height="9" fill="#d0dfee" stroke="#fff" stroke-width="0.35"><title>Layer 2, GPU 1: 0.2235</title></rect>
+<rect x="437" y="106" width="36" height="9" fill="#f9edef" stroke="#fff" stroke-width="0.35"><title>Layer 2, GPU 2: 0.2595</title></rect>
+<rect x="473" y="106" width="36" height="9" fill="#f8ebec" stroke="#fff" stroke-width="0.35"><title>Layer 2, GPU 3: 0.2609</title></rect>
+<rect x="365" y="115" width="36" height="9" fill="#c1d4e8" stroke="#fff" stroke-width="0.35"><title>Layer 3, GPU 0: 0.2149</title></rect>
+<rect x="401" y="115" width="36" height="9" fill="#9fbddb" stroke="#fff" stroke-width="0.35"><title>Layer 3, GPU 1: 0.1955</title></rect>
+<rect x="437" y="115" width="36" height="9" fill="#f4dde0" stroke="#fff" stroke-width="0.35"><title>Layer 3, GPU 2: 0.2682</title></rect>
+<rect x="473" y="115" width="36" height="9" fill="#d27984" stroke="#fff" stroke-width="0.35"><title>Layer 3, GPU 3: 0.3214</title></rect>
+<rect x="365" y="124" width="36" height="9" fill="#e5edf5" stroke="#fff" stroke-width="0.35"><title>Layer 4, GPU 0: 0.2351</title></rect>
+<rect x="401" y="124" width="36" height="9" fill="#84aad1" stroke="#fff" stroke-width="0.35"><title>Layer 4, GPU 1: 0.1802</title></rect>
+<rect x="437" y="124" width="36" height="9" fill="#fdf9fa" stroke="#fff" stroke-width="0.35"><title>Layer 4, GPU 2: 0.2532</title></rect>
+<rect x="473" y="124" width="36" height="9" fill="#cc6673" stroke="#fff" stroke-width="0.35"><title>Layer 4, GPU 3: 0.3316</title></rect>
+<rect x="365" y="133" width="36" height="9" fill="#e7eff6" stroke="#fff" stroke-width="0.35"><title>Layer 5, GPU 0: 0.2365</title></rect>
+<rect x="401" y="133" width="36" height="9" fill="#6696c6" stroke="#fff" stroke-width="0.35"><title>Layer 5, GPU 1: 0.1633</title></rect>
+<rect x="437" y="133" width="36" height="9" fill="#e4adb3" stroke="#fff" stroke-width="0.35"><title>Layer 5, GPU 2: 0.2940</title></rect>
+<rect x="473" y="133" width="36" height="9" fill="#dc959e" stroke="#fff" stroke-width="0.35"><title>Layer 5, GPU 3: 0.3062</title></rect>
+<rect x="365" y="142" width="36" height="9" fill="#6092c4" stroke="#fff" stroke-width="0.35"><title>Layer 6, GPU 0: 0.1600</title></rect>
+<rect x="401" y="142" width="36" height="9" fill="#dae6f1" stroke="#fff" stroke-width="0.35"><title>Layer 6, GPU 1: 0.2292</title></rect>
+<rect x="437" y="142" width="36" height="9" fill="#c24857" stroke="#fff" stroke-width="0.35"><title>Layer 6, GPU 2: 0.3474</title></rect>
+<rect x="473" y="142" width="36" height="9" fill="#f7e6e8" stroke="#fff" stroke-width="0.35"><title>Layer 6, GPU 3: 0.2634</title></rect>
+<rect x="365" y="151" width="36" height="9" fill="#dce7f2" stroke="#fff" stroke-width="0.35"><title>Layer 7, GPU 0: 0.2303</title></rect>
+<rect x="401" y="151" width="36" height="9" fill="#75a0cb" stroke="#fff" stroke-width="0.35"><title>Layer 7, GPU 1: 0.1718</title></rect>
+<rect x="437" y="151" width="36" height="9" fill="#ca616e" stroke="#fff" stroke-width="0.35"><title>Layer 7, GPU 2: 0.3341</title></rect>
+<rect x="473" y="151" width="36" height="9" fill="#f6e5e7" stroke="#fff" stroke-width="0.35"><title>Layer 7, GPU 3: 0.2639</title></rect>
+<rect x="365" y="160" width="36" height="9" fill="#d5e2ef" stroke="#fff" stroke-width="0.35"><title>Layer 8, GPU 0: 0.2262</title></rect>
+<rect x="401" y="160" width="36" height="9" fill="#d6e3f0" stroke="#fff" stroke-width="0.35"><title>Layer 8, GPU 1: 0.2266</title></rect>
+<rect x="437" y="160" width="36" height="9" fill="#d88a93" stroke="#fff" stroke-width="0.35"><title>Layer 8, GPU 2: 0.3125</title></rect>
+<rect x="473" y="160" width="36" height="9" fill="#e4ecf5" stroke="#fff" stroke-width="0.35"><title>Layer 8, GPU 3: 0.2347</title></rect>
+<rect x="365" y="169" width="36" height="9" fill="#fffefe" stroke="#fff" stroke-width="0.35"><title>Layer 9, GPU 0: 0.2504</title></rect>
+<rect x="401" y="169" width="36" height="9" fill="#5c8ec2" stroke="#fff" stroke-width="0.35"><title>Layer 9, GPU 1: 0.1573</title></rect>
+<rect x="437" y="169" width="36" height="9" fill="#e1a4ac" stroke="#fff" stroke-width="0.35"><title>Layer 9, GPU 2: 0.2984</title></rect>
+<rect x="473" y="169" width="36" height="9" fill="#e4adb3" stroke="#fff" stroke-width="0.35"><title>Layer 9, GPU 3: 0.2938</title></rect>
+<rect x="365" y="178" width="36" height="9" fill="#b9cfe5" stroke="#fff" stroke-width="0.35"><title>Layer 10, GPU 0: 0.2105</title></rect>
+<rect x="401" y="178" width="36" height="9" fill="#c8d9eb" stroke="#fff" stroke-width="0.35"><title>Layer 10, GPU 1: 0.2189</title></rect>
+<rect x="437" y="178" width="36" height="9" fill="#d1e0ee" stroke="#fff" stroke-width="0.35"><title>Layer 10, GPU 2: 0.2242</title></rect>
+<rect x="473" y="178" width="36" height="9" fill="#c34a59" stroke="#fff" stroke-width="0.35"><title>Layer 10, GPU 3: 0.3465</title></rect>
+<rect x="365" y="187" width="36" height="9" fill="#f3f6fa" stroke="#fff" stroke-width="0.35"><title>Layer 11, GPU 0: 0.2430</title></rect>
+<rect x="401" y="187" width="36" height="9" fill="#ecf2f8" stroke="#fff" stroke-width="0.35"><title>Layer 11, GPU 1: 0.2393</title></rect>
+<rect x="437" y="187" width="36" height="9" fill="#f9fbfd" stroke="#fff" stroke-width="0.35"><title>Layer 11, GPU 2: 0.2466</title></rect>
+<rect x="473" y="187" width="36" height="9" fill="#f2d7db" stroke="#fff" stroke-width="0.35"><title>Layer 11, GPU 3: 0.2711</title></rect>
+<rect x="365" y="196" width="36" height="9" fill="#8bafd4" stroke="#fff" stroke-width="0.35"><title>Layer 12, GPU 0: 0.1842</title></rect>
+<rect x="401" y="196" width="36" height="9" fill="#ccdcec" stroke="#fff" stroke-width="0.35"><title>Layer 12, GPU 1: 0.2210</title></rect>
+<rect x="437" y="196" width="36" height="9" fill="#e6b4ba" stroke="#fff" stroke-width="0.35"><title>Layer 12, GPU 2: 0.2899</title></rect>
+<rect x="473" y="196" width="36" height="9" fill="#dd98a1" stroke="#fff" stroke-width="0.35"><title>Layer 12, GPU 3: 0.3049</title></rect>
+<rect x="365" y="205" width="36" height="9" fill="#84aad1" stroke="#fff" stroke-width="0.35"><title>Layer 13, GPU 0: 0.1803</title></rect>
+<rect x="401" y="205" width="36" height="9" fill="#e9f0f7" stroke="#fff" stroke-width="0.35"><title>Layer 13, GPU 1: 0.2376</title></rect>
+<rect x="437" y="205" width="36" height="9" fill="#f6e5e8" stroke="#fff" stroke-width="0.35"><title>Layer 13, GPU 2: 0.2636</title></rect>
+<rect x="473" y="205" width="36" height="9" fill="#d47f89" stroke="#fff" stroke-width="0.35"><title>Layer 13, GPU 3: 0.3185</title></rect>
+<rect x="365" y="214" width="36" height="9" fill="#98b8d9" stroke="#fff" stroke-width="0.35"><title>Layer 14, GPU 0: 0.1917</title></rect>
+<rect x="401" y="214" width="36" height="9" fill="#cfdeed" stroke="#fff" stroke-width="0.35"><title>Layer 14, GPU 1: 0.2229</title></rect>
+<rect x="437" y="214" width="36" height="9" fill="#faf1f2" stroke="#fff" stroke-width="0.35"><title>Layer 14, GPU 2: 0.2577</title></rect>
+<rect x="473" y="214" width="36" height="9" fill="#ce6d79" stroke="#fff" stroke-width="0.35"><title>Layer 14, GPU 3: 0.3278</title></rect>
+<rect x="365" y="223" width="36" height="9" fill="#fefdfd" stroke="#fff" stroke-width="0.35"><title>Layer 15, GPU 0: 0.2509</title></rect>
+<rect x="401" y="223" width="36" height="9" fill="#96b6d8" stroke="#fff" stroke-width="0.35"><title>Layer 15, GPU 1: 0.1902</title></rect>
+<rect x="437" y="223" width="36" height="9" fill="#de9da5" stroke="#fff" stroke-width="0.35"><title>Layer 15, GPU 2: 0.3022</title></rect>
+<rect x="473" y="223" width="36" height="9" fill="#fbf2f3" stroke="#fff" stroke-width="0.35"><title>Layer 15, GPU 3: 0.2568</title></rect>
+<rect x="365" y="232" width="36" height="9" fill="#b0c8e1" stroke="#fff" stroke-width="0.35"><title>Layer 16, GPU 0: 0.2050</title></rect>
+<rect x="401" y="232" width="36" height="9" fill="#f0f5f9" stroke="#fff" stroke-width="0.35"><title>Layer 16, GPU 1: 0.2415</title></rect>
+<rect x="437" y="232" width="36" height="9" fill="#e3acb2" stroke="#fff" stroke-width="0.35"><title>Layer 16, GPU 2: 0.2945</title></rect>
+<rect x="473" y="232" width="36" height="9" fill="#f9eef0" stroke="#fff" stroke-width="0.35"><title>Layer 16, GPU 3: 0.2590</title></rect>
+<rect x="365" y="241" width="36" height="9" fill="#dae5f1" stroke="#fff" stroke-width="0.35"><title>Layer 17, GPU 0: 0.2288</title></rect>
+<rect x="401" y="241" width="36" height="9" fill="#bed2e7" stroke="#fff" stroke-width="0.35"><title>Layer 17, GPU 1: 0.2132</title></rect>
+<rect x="437" y="241" width="36" height="9" fill="#db929b" stroke="#fff" stroke-width="0.35"><title>Layer 17, GPU 2: 0.3083</title></rect>
+<rect x="473" y="241" width="36" height="9" fill="#feffff" stroke="#fff" stroke-width="0.35"><title>Layer 17, GPU 3: 0.2496</title></rect>
+<rect x="365" y="250" width="36" height="9" fill="#adc7e0" stroke="#fff" stroke-width="0.35"><title>Layer 18, GPU 0: 0.2036</title></rect>
+<rect x="401" y="250" width="36" height="9" fill="#578bc0" stroke="#fff" stroke-width="0.35"><title>Layer 18, GPU 1: 0.1545</title></rect>
+<rect x="437" y="250" width="36" height="9" fill="#f3dcde" stroke="#fff" stroke-width="0.35"><title>Layer 18, GPU 2: 0.2689</title></rect>
+<rect x="473" y="250" width="36" height="9" fill="#b2182b" stroke="#fff" stroke-width="0.35"><title>Layer 18, GPU 3: 0.3731</title></rect>
+<rect x="365" y="259" width="36" height="9" fill="#fdfafb" stroke="#fff" stroke-width="0.35"><title>Layer 19, GPU 0: 0.2525</title></rect>
+<rect x="401" y="259" width="36" height="9" fill="#2166ac" stroke="#fff" stroke-width="0.35"><title>Layer 19, GPU 1: 0.1240</title></rect>
+<rect x="437" y="259" width="36" height="9" fill="#d88993" stroke="#fff" stroke-width="0.35"><title>Layer 19, GPU 2: 0.3130</title></rect>
+<rect x="473" y="259" width="36" height="9" fill="#d98d97" stroke="#fff" stroke-width="0.35"><title>Layer 19, GPU 3: 0.3105</title></rect>
+<rect x="365" y="268" width="36" height="9" fill="#d1dfee" stroke="#fff" stroke-width="0.35"><title>Layer 20, GPU 0: 0.2240</title></rect>
+<rect x="401" y="268" width="36" height="9" fill="#bad0e5" stroke="#fff" stroke-width="0.35"><title>Layer 20, GPU 1: 0.2109</title></rect>
+<rect x="437" y="268" width="36" height="9" fill="#f4f8fb" stroke="#fff" stroke-width="0.35"><title>Layer 20, GPU 2: 0.2440</title></rect>
+<rect x="473" y="268" width="36" height="9" fill="#d37a85" stroke="#fff" stroke-width="0.35"><title>Layer 20, GPU 3: 0.3211</title></rect>
+<rect x="365" y="277" width="36" height="9" fill="#c2d5e8" stroke="#fff" stroke-width="0.35"><title>Layer 21, GPU 0: 0.2152</title></rect>
+<rect x="401" y="277" width="36" height="9" fill="#cfdeed" stroke="#fff" stroke-width="0.35"><title>Layer 21, GPU 1: 0.2225</title></rect>
+<rect x="437" y="277" width="36" height="9" fill="#eeccd0" stroke="#fff" stroke-width="0.35"><title>Layer 21, GPU 2: 0.2771</title></rect>
+<rect x="473" y="277" width="36" height="9" fill="#e9bdc2" stroke="#fff" stroke-width="0.35"><title>Layer 21, GPU 3: 0.2852</title></rect>
+<rect x="365" y="286" width="36" height="9" fill="#fdfefe" stroke="#fff" stroke-width="0.35"><title>Layer 22, GPU 0: 0.2489</title></rect>
+<rect x="401" y="286" width="36" height="9" fill="#c9daeb" stroke="#fff" stroke-width="0.35"><title>Layer 22, GPU 1: 0.2191</title></rect>
+<rect x="437" y="286" width="36" height="9" fill="#f8eaeb" stroke="#fff" stroke-width="0.35"><title>Layer 22, GPU 2: 0.2614</title></rect>
+<rect x="473" y="286" width="36" height="9" fill="#f2d8dc" stroke="#fff" stroke-width="0.35"><title>Layer 22, GPU 3: 0.2706</title></rect>
+<rect x="365" y="295" width="36" height="9" fill="#a3c0dd" stroke="#fff" stroke-width="0.35"><title>Layer 23, GPU 0: 0.1980</title></rect>
+<rect x="401" y="295" width="36" height="9" fill="#dee8f3" stroke="#fff" stroke-width="0.35"><title>Layer 23, GPU 1: 0.2313</title></rect>
+<rect x="437" y="295" width="36" height="9" fill="#d78690" stroke="#fff" stroke-width="0.35"><title>Layer 23, GPU 2: 0.3144</title></rect>
+<rect x="473" y="295" width="36" height="9" fill="#fbf3f4" stroke="#fff" stroke-width="0.35"><title>Layer 23, GPU 3: 0.2563</title></rect>
+<rect x="365" y="304" width="36" height="9" fill="#d8e4f0" stroke="#fff" stroke-width="0.35"><title>Layer 24, GPU 0: 0.2278</title></rect>
+<rect x="401" y="304" width="36" height="9" fill="#bcd1e6" stroke="#fff" stroke-width="0.35"><title>Layer 24, GPU 1: 0.2122</title></rect>
+<rect x="437" y="304" width="36" height="9" fill="#efcfd3" stroke="#fff" stroke-width="0.35"><title>Layer 24, GPU 2: 0.2754</title></rect>
+<rect x="473" y="304" width="36" height="9" fill="#e9bec3" stroke="#fff" stroke-width="0.35"><title>Layer 24, GPU 3: 0.2846</title></rect>
+<rect x="365" y="313" width="36" height="9" fill="#c3d5e8" stroke="#fff" stroke-width="0.35"><title>Layer 25, GPU 0: 0.2157</title></rect>
+<rect x="401" y="313" width="36" height="9" fill="#acc6e0" stroke="#fff" stroke-width="0.35"><title>Layer 25, GPU 1: 0.2031</title></rect>
+<rect x="437" y="313" width="36" height="9" fill="#e0a1a9" stroke="#fff" stroke-width="0.35"><title>Layer 25, GPU 2: 0.3001</title></rect>
+<rect x="473" y="313" width="36" height="9" fill="#ecc5c9" stroke="#fff" stroke-width="0.35"><title>Layer 25, GPU 3: 0.2811</title></rect>
+<rect x="365" y="322" width="36" height="9" fill="#e2ebf4" stroke="#fff" stroke-width="0.35"><title>Layer 26, GPU 0: 0.2337</title></rect>
+<rect x="401" y="322" width="36" height="9" fill="#bfd3e7" stroke="#fff" stroke-width="0.35"><title>Layer 26, GPU 1: 0.2139</title></rect>
+<rect x="437" y="322" width="36" height="9" fill="#e3abb2" stroke="#fff" stroke-width="0.35"><title>Layer 26, GPU 2: 0.2945</title></rect>
+<rect x="473" y="322" width="36" height="9" fill="#faf0f1" stroke="#fff" stroke-width="0.35"><title>Layer 26, GPU 3: 0.2579</title></rect>
+<rect x="365" y="331" width="36" height="9" fill="#9cbbda" stroke="#fff" stroke-width="0.35"><title>Layer 27, GPU 0: 0.1938</title></rect>
+<rect x="401" y="331" width="36" height="9" fill="#c4d7e9" stroke="#fff" stroke-width="0.35"><title>Layer 27, GPU 1: 0.2167</title></rect>
+<rect x="437" y="331" width="36" height="9" fill="#d88b95" stroke="#fff" stroke-width="0.35"><title>Layer 27, GPU 2: 0.3118</title></rect>
+<rect x="473" y="331" width="36" height="9" fill="#eecbcf" stroke="#fff" stroke-width="0.35"><title>Layer 27, GPU 3: 0.2776</title></rect>
+<rect x="365" y="340" width="36" height="9" fill="#aac5df" stroke="#fff" stroke-width="0.35"><title>Layer 28, GPU 0: 0.2019</title></rect>
+<rect x="401" y="340" width="36" height="9" fill="#d7e4f0" stroke="#fff" stroke-width="0.35"><title>Layer 28, GPU 1: 0.2274</title></rect>
+<rect x="437" y="340" width="36" height="9" fill="#edcace" stroke="#fff" stroke-width="0.35"><title>Layer 28, GPU 2: 0.2783</title></rect>
+<rect x="473" y="340" width="36" height="9" fill="#e4afb6" stroke="#fff" stroke-width="0.35"><title>Layer 28, GPU 3: 0.2925</title></rect>
+<rect x="365" y="349" width="36" height="9" fill="#e5edf5" stroke="#fff" stroke-width="0.35"><title>Layer 29, GPU 0: 0.2354</title></rect>
+<rect x="401" y="349" width="36" height="9" fill="#e8eff6" stroke="#fff" stroke-width="0.35"><title>Layer 29, GPU 1: 0.2367</title></rect>
+<rect x="437" y="349" width="36" height="9" fill="#eecdd1" stroke="#fff" stroke-width="0.35"><title>Layer 29, GPU 2: 0.2767</title></rect>
+<rect x="473" y="349" width="36" height="9" fill="#fefdfd" stroke="#fff" stroke-width="0.35"><title>Layer 29, GPU 3: 0.2511</title></rect>
+<rect x="365" y="358" width="36" height="9" fill="#cfdeed" stroke="#fff" stroke-width="0.35"><title>Layer 30, GPU 0: 0.2230</title></rect>
+<rect x="401" y="358" width="36" height="9" fill="#6091c3" stroke="#fff" stroke-width="0.35"><title>Layer 30, GPU 1: 0.1596</title></rect>
+<rect x="437" y="358" width="36" height="9" fill="#cd6874" stroke="#fff" stroke-width="0.35"><title>Layer 30, GPU 2: 0.3305</title></rect>
+<rect x="473" y="358" width="36" height="9" fill="#e8babf" stroke="#fff" stroke-width="0.35"><title>Layer 30, GPU 3: 0.2869</title></rect>
+<rect x="365" y="367" width="36" height="9" fill="#d4e2ef" stroke="#fff" stroke-width="0.35"><title>Layer 31, GPU 0: 0.2258</title></rect>
+<rect x="401" y="367" width="36" height="9" fill="#93b5d7" stroke="#fff" stroke-width="0.35"><title>Layer 31, GPU 1: 0.1889</title></rect>
+<rect x="437" y="367" width="36" height="9" fill="#ebc4c9" stroke="#fff" stroke-width="0.35"><title>Layer 31, GPU 2: 0.2816</title></rect>
+<rect x="473" y="367" width="36" height="9" fill="#dd9aa2" stroke="#fff" stroke-width="0.35"><title>Layer 31, GPU 3: 0.3038</title></rect>
+<rect x="365" y="376" width="36" height="9" fill="#d8e4f1" stroke="#fff" stroke-width="0.35"><title>Layer 32, GPU 0: 0.2281</title></rect>
+<rect x="401" y="376" width="36" height="9" fill="#bbd0e6" stroke="#fff" stroke-width="0.35"><title>Layer 32, GPU 1: 0.2114</title></rect>
+<rect x="437" y="376" width="36" height="9" fill="#e4afb6" stroke="#fff" stroke-width="0.35"><title>Layer 32, GPU 2: 0.2924</title></rect>
+<rect x="473" y="376" width="36" height="9" fill="#f4dde0" stroke="#fff" stroke-width="0.35"><title>Layer 32, GPU 3: 0.2682</title></rect>
+<rect x="365" y="385" width="36" height="9" fill="#f3dcdf" stroke="#fff" stroke-width="0.35"><title>Layer 33, GPU 0: 0.2688</title></rect>
+<rect x="401" y="385" width="36" height="9" fill="#8aafd3" stroke="#fff" stroke-width="0.35"><title>Layer 33, GPU 1: 0.1838</title></rect>
+<rect x="437" y="385" width="36" height="9" fill="#f2d9dc" stroke="#fff" stroke-width="0.35"><title>Layer 33, GPU 2: 0.2702</title></rect>
+<rect x="473" y="385" width="36" height="9" fill="#eeccd0" stroke="#fff" stroke-width="0.35"><title>Layer 33, GPU 3: 0.2772</title></rect>
+<rect x="365" y="394" width="36" height="9" fill="#9dbcda" stroke="#fff" stroke-width="0.35"><title>Layer 34, GPU 0: 0.1944</title></rect>
+<rect x="401" y="394" width="36" height="9" fill="#dee8f3" stroke="#fff" stroke-width="0.35"><title>Layer 34, GPU 1: 0.2313</title></rect>
+<rect x="437" y="394" width="36" height="9" fill="#f4dfe1" stroke="#fff" stroke-width="0.35"><title>Layer 34, GPU 2: 0.2672</title></rect>
+<rect x="473" y="394" width="36" height="9" fill="#db949d" stroke="#fff" stroke-width="0.35"><title>Layer 34, GPU 3: 0.3071</title></rect>
+<rect x="365" y="403" width="36" height="9" fill="#e0e9f3" stroke="#fff" stroke-width="0.35"><title>Layer 35, GPU 0: 0.2322</title></rect>
+<rect x="401" y="403" width="36" height="9" fill="#c1d4e8" stroke="#fff" stroke-width="0.35"><title>Layer 35, GPU 1: 0.2149</title></rect>
+<rect x="437" y="403" width="36" height="9" fill="#ecc7cc" stroke="#fff" stroke-width="0.35"><title>Layer 35, GPU 2: 0.2796</title></rect>
+<rect x="473" y="403" width="36" height="9" fill="#f0d3d7" stroke="#fff" stroke-width="0.35"><title>Layer 35, GPU 3: 0.2733</title></rect>
+<rect x="365" y="412" width="36" height="9" fill="#89aed3" stroke="#fff" stroke-width="0.35"><title>Layer 36, GPU 0: 0.1832</title></rect>
+<rect x="401" y="412" width="36" height="9" fill="#f9fbfd" stroke="#fff" stroke-width="0.35"><title>Layer 36, GPU 1: 0.2467</title></rect>
+<rect x="437" y="412" width="36" height="9" fill="#d98e98" stroke="#fff" stroke-width="0.35"><title>Layer 36, GPU 2: 0.3100</title></rect>
+<rect x="473" y="412" width="36" height="9" fill="#f9ecee" stroke="#fff" stroke-width="0.35"><title>Layer 36, GPU 3: 0.2601</title></rect>
+<rect x="365" y="421" width="36" height="9" fill="#d3e1ef" stroke="#fff" stroke-width="0.35"><title>Layer 37, GPU 0: 0.2251</title></rect>
+<rect x="401" y="421" width="36" height="9" fill="#9bbada" stroke="#fff" stroke-width="0.35"><title>Layer 37, GPU 1: 0.1931</title></rect>
+<rect x="437" y="421" width="36" height="9" fill="#f5e2e4" stroke="#fff" stroke-width="0.35"><title>Layer 37, GPU 2: 0.2655</title></rect>
+<rect x="473" y="421" width="36" height="9" fill="#d6838d" stroke="#fff" stroke-width="0.35"><title>Layer 37, GPU 3: 0.3163</title></rect>
+<rect x="365" y="430" width="36" height="9" fill="#ecf2f8" stroke="#fff" stroke-width="0.35"><title>Layer 38, GPU 0: 0.2393</title></rect>
+<rect x="401" y="430" width="36" height="9" fill="#f6f9fc" stroke="#fff" stroke-width="0.35"><title>Layer 38, GPU 1: 0.2450</title></rect>
+<rect x="437" y="430" width="36" height="9" fill="#f4dfe1" stroke="#fff" stroke-width="0.35"><title>Layer 38, GPU 2: 0.2672</title></rect>
+<rect x="473" y="430" width="36" height="9" fill="#fcfdfe" stroke="#fff" stroke-width="0.35"><title>Layer 38, GPU 3: 0.2485</title></rect>
+<rect x="365" y="439" width="36" height="9" fill="#e0eaf3" stroke="#fff" stroke-width="0.35"><title>Layer 39, GPU 0: 0.2324</title></rect>
+<rect x="401" y="439" width="36" height="9" fill="#a7c2de" stroke="#fff" stroke-width="0.35"><title>Layer 39, GPU 1: 0.2002</title></rect>
+<rect x="437" y="439" width="36" height="9" fill="#f9eeef" stroke="#fff" stroke-width="0.35"><title>Layer 39, GPU 2: 0.2592</title></rect>
+<rect x="473" y="439" width="36" height="9" fill="#db929b" stroke="#fff" stroke-width="0.35"><title>Layer 39, GPU 3: 0.3082</title></rect>
+<rect x="365" y="448" width="36" height="9" fill="#7ba4ce" stroke="#fff" stroke-width="0.35"><title>Layer 40, GPU 0: 0.1752</title></rect>
+<rect x="401" y="448" width="36" height="9" fill="#f8eaec" stroke="#fff" stroke-width="0.35"><title>Layer 40, GPU 1: 0.2613</title></rect>
+<rect x="437" y="448" width="36" height="9" fill="#f2d9dc" stroke="#fff" stroke-width="0.35"><title>Layer 40, GPU 2: 0.2700</title></rect>
+<rect x="473" y="448" width="36" height="9" fill="#e4adb4" stroke="#fff" stroke-width="0.35"><title>Layer 40, GPU 3: 0.2935</title></rect>
+<rect x="365" y="457" width="36" height="9" fill="#cdddec" stroke="#fff" stroke-width="0.35"><title>Layer 41, GPU 0: 0.2217</title></rect>
+<rect x="401" y="457" width="36" height="9" fill="#fefbfb" stroke="#fff" stroke-width="0.35"><title>Layer 41, GPU 1: 0.2523</title></rect>
+<rect x="437" y="457" width="36" height="9" fill="#fdf8f9" stroke="#fff" stroke-width="0.35"><title>Layer 41, GPU 2: 0.2536</title></rect>
+<rect x="473" y="457" width="36" height="9" fill="#f1d5d8" stroke="#fff" stroke-width="0.35"><title>Layer 41, GPU 3: 0.2724</title></rect>
+<rect x="365" y="466" width="36" height="9" fill="#cedded" stroke="#fff" stroke-width="0.35"><title>Layer 42, GPU 0: 0.2220</title></rect>
+<rect x="401" y="466" width="36" height="9" fill="#e1eaf4" stroke="#fff" stroke-width="0.35"><title>Layer 42, GPU 1: 0.2331</title></rect>
+<rect x="437" y="466" width="36" height="9" fill="#eac1c7" stroke="#fff" stroke-width="0.35"><title>Layer 42, GPU 2: 0.2828</title></rect>
+<rect x="473" y="466" width="36" height="9" fill="#f7e8ea" stroke="#fff" stroke-width="0.35"><title>Layer 42, GPU 3: 0.2621</title></rect>
+<rect x="365" y="475" width="36" height="9" fill="#86abd2" stroke="#fff" stroke-width="0.35"><title>Layer 43, GPU 0: 0.1812</title></rect>
+<rect x="401" y="475" width="36" height="9" fill="#dce7f2" stroke="#fff" stroke-width="0.35"><title>Layer 43, GPU 1: 0.2299</title></rect>
+<rect x="437" y="475" width="36" height="9" fill="#f8e9eb" stroke="#fff" stroke-width="0.35"><title>Layer 43, GPU 2: 0.2619</title></rect>
+<rect x="473" y="475" width="36" height="9" fill="#cf6e7a" stroke="#fff" stroke-width="0.35"><title>Layer 43, GPU 3: 0.3270</title></rect>
+<rect x="365" y="484" width="36" height="9" fill="#fdf9fa" stroke="#fff" stroke-width="0.35"><title>Layer 44, GPU 0: 0.2529</title></rect>
+<rect x="401" y="484" width="36" height="9" fill="#e6eef6" stroke="#fff" stroke-width="0.35"><title>Layer 44, GPU 1: 0.2359</title></rect>
+<rect x="437" y="484" width="36" height="9" fill="#fcf6f6" stroke="#fff" stroke-width="0.35"><title>Layer 44, GPU 2: 0.2549</title></rect>
+<rect x="473" y="484" width="36" height="9" fill="#fbf3f4" stroke="#fff" stroke-width="0.35"><title>Layer 44, GPU 3: 0.2562</title></rect>
+<rect x="365" y="493" width="36" height="9" fill="#c9daeb" stroke="#fff" stroke-width="0.35"><title>Layer 45, GPU 0: 0.2196</title></rect>
+<rect x="401" y="493" width="36" height="9" fill="#bcd1e6" stroke="#fff" stroke-width="0.35"><title>Layer 45, GPU 1: 0.2121</title></rect>
+<rect x="437" y="493" width="36" height="9" fill="#d78892" stroke="#fff" stroke-width="0.35"><title>Layer 45, GPU 2: 0.3133</title></rect>
+<rect x="473" y="493" width="36" height="9" fill="#fcf6f6" stroke="#fff" stroke-width="0.35"><title>Layer 45, GPU 3: 0.2550</title></rect>
+<rect x="365" y="502" width="36" height="9" fill="#f4f8fb" stroke="#fff" stroke-width="0.35"><title>Layer 46, GPU 0: 0.2439</title></rect>
+<rect x="401" y="502" width="36" height="9" fill="#9ebcdb" stroke="#fff" stroke-width="0.35"><title>Layer 46, GPU 1: 0.1950</title></rect>
+<rect x="437" y="502" width="36" height="9" fill="#d6858f" stroke="#fff" stroke-width="0.35"><title>Layer 46, GPU 2: 0.3148</title></rect>
+<rect x="473" y="502" width="36" height="9" fill="#f8fafc" stroke="#fff" stroke-width="0.35"><title>Layer 46, GPU 3: 0.2462</title></rect>
+<rect x="365" y="511" width="36" height="9" fill="#ebf1f8" stroke="#fff" stroke-width="0.35"><title>Layer 47, GPU 0: 0.2386</title></rect>
+<rect x="401" y="511" width="36" height="9" fill="#ecf2f8" stroke="#fff" stroke-width="0.35"><title>Layer 47, GPU 1: 0.2393</title></rect>
+<rect x="437" y="511" width="36" height="9" fill="#f9fbfd" stroke="#fff" stroke-width="0.35"><title>Layer 47, GPU 2: 0.2468</title></rect>
+<rect x="473" y="511" width="36" height="9" fill="#efcfd3" stroke="#fff" stroke-width="0.35"><title>Layer 47, GPU 3: 0.2753</title></rect>
+<text x="697" y="58" text-anchor="middle" class="panel">Group at physical GPU</text>
+<text x="643" y="79" text-anchor="middle" class="axis">G0 1635</text>
+<text x="679" y="79" text-anchor="middle" class="axis">G1 1635</text>
+<text x="715" y="79" text-anchor="middle" class="axis">G2 2520</text>
+<text x="751" y="79" text-anchor="middle" class="axis">G3 2520</text>
+<rect x="625" y="88" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 0, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="88" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 0, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="88" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 0, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="88" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 0, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="97" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 1, GPU 0: original P1 group 2</title></rect>
+<rect x="661" y="97" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 1, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="97" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 1, GPU 2: original P1 group 0</title></rect>
+<rect x="733" y="97" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 1, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="106" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 2, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="106" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 2, GPU 1: original P1 group 2</title></rect>
+<rect x="697" y="106" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 2, GPU 2: original P1 group 1</title></rect>
+<rect x="733" y="106" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 2, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="115" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 3, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="115" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 3, GPU 1: original P1 group 2</title></rect>
+<rect x="697" y="115" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 3, GPU 2: original P1 group 1</title></rect>
+<rect x="733" y="115" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 3, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="124" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 4, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="124" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 4, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="124" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 4, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="124" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 4, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="133" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 5, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="133" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 5, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="133" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 5, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="133" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 5, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="142" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 6, GPU 0: original P1 group 2</title></rect>
+<rect x="661" y="142" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 6, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="142" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 6, GPU 2: original P1 group 0</title></rect>
+<rect x="733" y="142" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 6, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="151" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 7, GPU 0: original P1 group 3</title></rect>
+<rect x="661" y="151" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 7, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="151" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 7, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="151" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 7, GPU 3: original P1 group 0</title></rect>
+<rect x="625" y="160" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 8, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="160" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 8, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="160" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 8, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="160" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 8, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="169" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 9, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="169" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 9, GPU 1: original P1 group 2</title></rect>
+<rect x="697" y="169" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 9, GPU 2: original P1 group 1</title></rect>
+<rect x="733" y="169" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 9, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="178" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 10, GPU 0: original P1 group 2</title></rect>
+<rect x="661" y="178" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 10, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="178" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 10, GPU 2: original P1 group 0</title></rect>
+<rect x="733" y="178" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 10, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="187" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 11, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="187" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 11, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="187" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 11, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="187" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 11, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="196" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 12, GPU 0: original P1 group 3</title></rect>
+<rect x="661" y="196" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 12, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="196" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 12, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="196" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 12, GPU 3: original P1 group 0</title></rect>
+<rect x="625" y="205" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 13, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="205" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 13, GPU 1: original P1 group 2</title></rect>
+<rect x="697" y="205" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 13, GPU 2: original P1 group 1</title></rect>
+<rect x="733" y="205" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 13, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="214" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 14, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="214" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 14, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="214" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 14, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="214" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 14, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="223" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 15, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="223" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 15, GPU 1: original P1 group 2</title></rect>
+<rect x="697" y="223" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 15, GPU 2: original P1 group 1</title></rect>
+<rect x="733" y="223" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 15, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="232" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 16, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="232" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 16, GPU 1: original P1 group 2</title></rect>
+<rect x="697" y="232" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 16, GPU 2: original P1 group 1</title></rect>
+<rect x="733" y="232" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 16, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="241" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 17, GPU 0: original P1 group 3</title></rect>
+<rect x="661" y="241" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 17, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="241" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 17, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="241" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 17, GPU 3: original P1 group 0</title></rect>
+<rect x="625" y="250" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 18, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="250" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 18, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="250" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 18, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="250" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 18, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="259" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 19, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="259" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 19, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="259" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 19, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="259" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 19, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="268" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 20, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="268" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 20, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="268" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 20, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="268" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 20, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="277" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 21, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="277" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 21, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="277" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 21, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="277" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 21, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="286" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 22, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="286" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 22, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="286" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 22, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="286" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 22, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="295" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 23, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="295" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 23, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="295" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 23, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="295" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 23, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="304" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 24, GPU 0: original P1 group 2</title></rect>
+<rect x="661" y="304" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 24, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="304" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 24, GPU 2: original P1 group 0</title></rect>
+<rect x="733" y="304" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 24, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="313" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 25, GPU 0: original P1 group 2</title></rect>
+<rect x="661" y="313" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 25, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="313" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 25, GPU 2: original P1 group 0</title></rect>
+<rect x="733" y="313" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 25, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="322" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 26, GPU 0: original P1 group 2</title></rect>
+<rect x="661" y="322" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 26, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="322" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 26, GPU 2: original P1 group 0</title></rect>
+<rect x="733" y="322" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 26, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="331" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 27, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="331" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 27, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="331" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 27, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="331" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 27, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="340" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 28, GPU 0: original P1 group 3</title></rect>
+<rect x="661" y="340" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 28, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="340" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 28, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="340" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 28, GPU 3: original P1 group 0</title></rect>
+<rect x="625" y="349" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 29, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="349" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 29, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="349" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 29, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="349" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 29, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="358" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 30, GPU 0: original P1 group 2</title></rect>
+<rect x="661" y="358" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 30, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="358" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 30, GPU 2: original P1 group 0</title></rect>
+<rect x="733" y="358" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 30, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="367" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 31, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="367" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 31, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="367" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 31, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="367" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 31, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="376" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 32, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="376" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 32, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="376" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 32, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="376" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 32, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="385" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 33, GPU 0: original P1 group 3</title></rect>
+<rect x="661" y="385" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 33, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="385" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 33, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="385" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 33, GPU 3: original P1 group 0</title></rect>
+<rect x="625" y="394" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 34, GPU 0: original P1 group 2</title></rect>
+<rect x="661" y="394" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 34, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="394" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 34, GPU 2: original P1 group 0</title></rect>
+<rect x="733" y="394" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 34, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="403" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 35, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="403" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 35, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="403" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 35, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="403" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 35, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="412" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 36, GPU 0: original P1 group 2</title></rect>
+<rect x="661" y="412" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 36, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="412" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 36, GPU 2: original P1 group 0</title></rect>
+<rect x="733" y="412" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 36, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="421" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 37, GPU 0: original P1 group 3</title></rect>
+<rect x="661" y="421" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 37, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="421" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 37, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="421" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 37, GPU 3: original P1 group 0</title></rect>
+<rect x="625" y="430" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 38, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="430" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 38, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="430" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 38, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="430" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 38, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="439" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 39, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="439" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 39, GPU 1: original P1 group 2</title></rect>
+<rect x="697" y="439" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 39, GPU 2: original P1 group 1</title></rect>
+<rect x="733" y="439" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 39, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="448" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 40, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="448" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 40, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="448" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 40, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="448" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 40, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="457" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 41, GPU 0: original P1 group 2</title></rect>
+<rect x="661" y="457" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 41, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="457" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 41, GPU 2: original P1 group 0</title></rect>
+<rect x="733" y="457" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 41, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="466" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 42, GPU 0: original P1 group 3</title></rect>
+<rect x="661" y="466" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 42, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="466" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 42, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="466" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 42, GPU 3: original P1 group 0</title></rect>
+<rect x="625" y="475" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 43, GPU 0: original P1 group 3</title></rect>
+<rect x="661" y="475" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 43, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="475" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 43, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="475" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 43, GPU 3: original P1 group 0</title></rect>
+<rect x="625" y="484" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 44, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="484" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 44, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="484" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 44, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="484" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 44, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="493" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 45, GPU 0: original P1 group 2</title></rect>
+<rect x="661" y="493" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 45, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="493" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 45, GPU 2: original P1 group 0</title></rect>
+<rect x="733" y="493" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 45, GPU 3: original P1 group 3</title></rect>
+<rect x="625" y="502" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 46, GPU 0: original P1 group 0</title></rect>
+<rect x="661" y="502" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 46, GPU 1: original P1 group 3</title></rect>
+<rect x="697" y="502" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 46, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="502" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 46, GPU 3: original P1 group 1</title></rect>
+<rect x="625" y="511" width="36" height="9" fill="#e15759" stroke="#fff" stroke-width="0.35"><title>Layer 47, GPU 0: original P1 group 3</title></rect>
+<rect x="661" y="511" width="36" height="9" fill="#f28e2b" stroke="#fff" stroke-width="0.35"><title>Layer 47, GPU 1: original P1 group 1</title></rect>
+<rect x="697" y="511" width="36" height="9" fill="#59a14f" stroke="#fff" stroke-width="0.35"><title>Layer 47, GPU 2: original P1 group 2</title></rect>
+<rect x="733" y="511" width="36" height="9" fill="#4e79a7" stroke="#fff" stroke-width="0.35"><title>Layer 47, GPU 3: original P1 group 0</title></rect>
+<text x="28" y="310" text-anchor="middle" class="axis" transform="rotate(-90 28 310)">MoE layer</text>
+<rect x="625" y="548" width="12" height="12" fill="#4e79a7"/>
+<text x="641" y="558" class="axis">G0</text>
+<rect x="682" y="548" width="12" height="12" fill="#f28e2b"/>
+<text x="698" y="558" class="axis">G1</text>
+<rect x="739" y="548" width="12" height="12" fill="#59a14f"/>
+<text x="755" y="558" class="axis">G2</text>
+<rect x="796" y="548" width="12" height="12" fill="#e15759"/>
+<text x="812" y="558" class="axis">G3</text>
+<text x="450" y="605" text-anchor="middle" class="note">The first two physical GPUs are slower (M); colors in the load panels are centered at equal share 0.25.</text>
+</svg>

@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="500" viewBox="0 0 900 500">
+<rect width="100%" height="100%" fill="white"/>
+<style>text{font-family:Arial,sans-serif;fill:#222}.title{font-size:20px;font-weight:700}.axis{font-size:11px}.note{font-size:11px;fill:#444}</style>
+<text x="450" y="28" text-anchor="middle" class="title">Pressure-proxy reduction across focused frequency multisets</text>
+<line x1="75" x2="845" y1="410.0" y2="410.0" stroke="#ddd"/>
+<text x="67" y="414.0" text-anchor="end" class="axis">0.0</text>
+<line x1="75" x2="845" y1="340.0" y2="340.0" stroke="#ddd"/>
+<text x="67" y="344.0" text-anchor="end" class="axis">5.3</text>
+<line x1="75" x2="845" y1="270.0" y2="270.0" stroke="#ddd"/>
+<text x="67" y="274.0" text-anchor="end" class="axis">10.5</text>
+<line x1="75" x2="845" y1="200.0" y2="200.0" stroke="#ddd"/>
+<text x="67" y="204.0" text-anchor="end" class="axis">15.8</text>
+<line x1="75" x2="845" y1="130.0" y2="130.0" stroke="#ddd"/>
+<text x="67" y="134.0" text-anchor="end" class="axis">21.0</text>
+<line x1="75" x2="845" y1="60.0" y2="60.0" stroke="#ddd"/>
+<text x="67" y="64.0" text-anchor="end" class="axis">26.3</text>
+<text x="139.16666666666669" y="434" text-anchor="middle" class="axis">MHHH</text>
+<line x1="117.16666666666669" x2="117.16666666666669" y1="183.2572993914057" y2="206.97014101948454" stroke="#4e79a7" stroke-width="2"/>
+<circle cx="117.16666666666669" cy="195.23199606081462" r="4" fill="#4e79a7"><title>MHHH total: mean 16.14%, range 15.26-17.04%</title></circle>
+<line x1="139.16666666666669" x2="139.16666666666669" y1="186.03211261878056" y2="211.77970923786904" stroke="#59a14f" stroke-width="2"/>
+<circle cx="139.16666666666669" cy="198.1922787116746" r="4" fill="#59a14f"><title>MHHH prefill: mean 15.92%, range 14.89-16.83%</title></circle>
+<line x1="161.16666666666669" x2="161.16666666666669" y1="171.32040854377829" y2="190.49481969826905" stroke="#e15759" stroke-width="2"/>
+<circle cx="161.16666666666669" cy="180.12586916373044" r="4" fill="#e15759"><title>MHHH decode: mean 17.27%, range 16.49-17.93%</title></circle>
+<text x="267.5" y="434" text-anchor="middle" class="axis">LHHH</text>
+<line x1="245.5" x2="245.5" y1="126.95742070227561" y2="152.32116840275472" stroke="#4e79a7" stroke-width="2"/>
+<circle cx="245.5" cy="139.8158105970511" r="4" fill="#4e79a7"><title>LHHH total: mean 20.30%, range 19.36-21.27%</title></circle>
+<line x1="267.5" x2="267.5" y1="129.08861238859242" y2="156.05289864725208" stroke="#59a14f" stroke-width="2"/>
+<circle cx="267.5" cy="142.07138978495237" r="4" fill="#59a14f"><title>LHHH prefill: mean 20.13%, range 19.08-21.11%</title></circle>
+<line x1="289.5" x2="289.5" y1="98.64912905801577" y2="124.46935993809967" stroke="#e15759" stroke-width="2"/>
+<circle cx="289.5" cy="110.10059755118829" r="4" fill="#e15759"><title>LHHH decode: mean 22.53%, range 21.45-23.39%</title></circle>
+<text x="395.83333333333337" y="434" text-anchor="middle" class="axis">MMHH</text>
+<line x1="373.83333333333337" x2="373.83333333333337" y1="194.65081852113804" y2="215.9027939143812" stroke="#4e79a7" stroke-width="2"/>
+<circle cx="373.83333333333337" cy="207.56768060281536" r="4" fill="#4e79a7"><title>MMHH total: mean 15.21%, range 14.58-16.18%</title></circle>
+<line x1="395.83333333333337" x2="395.83333333333337" y1="196.27736084416324" y2="217.06881248491402" stroke="#59a14f" stroke-width="2"/>
+<circle cx="395.83333333333337" cy="208.30529600098146" r="4" fill="#59a14f"><title>MMHH prefill: mean 15.16%, range 14.50-16.06%</title></circle>
+<line x1="417.83333333333337" x2="417.83333333333337" y1="165.37835726599374" y2="187.0052657109577" stroke="#e15759" stroke-width="2"/>
+<circle cx="417.83333333333337" cy="178.44049345614334" r="4" fill="#e15759"><title>MMHH decode: mean 17.40%, range 16.76-18.38%</title></circle>
+<text x="524.1666666666667" y="434" text-anchor="middle" class="axis">LMHH</text>
+<line x1="502.16666666666674" x2="502.16666666666674" y1="125.03337347601911" y2="155.61252181777633" stroke="#4e79a7" stroke-width="2"/>
+<circle cx="502.16666666666674" cy="138.69809610246728" r="4" fill="#4e79a7"><title>LMHH total: mean 20.39%, range 19.11-21.41%</title></circle>
+<line x1="524.1666666666667" x2="524.1666666666667" y1="126.74560895337811" y2="159.15082084168154" stroke="#59a14f" stroke-width="2"/>
+<circle cx="524.1666666666667" cy="140.83748895220214" r="4" fill="#59a14f"><title>LMHH prefill: mean 20.22%, range 18.85-21.28%</title></circle>
+<line x1="546.1666666666667" x2="546.1666666666667" y1="97.50000000000006" y2="118.7804453417275" stroke="#e15759" stroke-width="2"/>
+<circle cx="546.1666666666667" cy="108.348453797682" r="4" fill="#e15759"><title>LMHH decode: mean 22.67%, range 21.88-23.48%</title></circle>
+<text x="652.5" y="434" text-anchor="middle" class="axis">LLHH</text>
+<line x1="630.5" x2="630.5" y1="190.2763258347662" y2="211.44496117299" stroke="#4e79a7" stroke-width="2"/>
+<circle cx="630.5" cy="203.78993755799655" r="4" fill="#4e79a7"><title>LLHH total: mean 15.49%, range 14.92-16.51%</title></circle>
+<line x1="652.5" x2="652.5" y1="191.41106182054614" y2="212.11194487321276" stroke="#59a14f" stroke-width="2"/>
+<circle cx="652.5" cy="204.19643547538155" r="4" fill="#59a14f"><title>LLHH prefill: mean 15.46%, range 14.87-16.42%</title></circle>
+<line x1="674.5" x2="674.5" y1="159.37957801697135" y2="179.47910122952246" stroke="#e15759" stroke-width="2"/>
+<circle cx="674.5" cy="171.36786953066778" r="4" fill="#e15759"><title>LLHH decode: mean 17.93%, range 17.32-18.83%</title></circle>
+<text x="780.8333333333334" y="434" text-anchor="middle" class="axis">LLLH</text>
+<line x1="758.8333333333334" x2="758.8333333333334" y1="270.53009375334364" y2="287.470437834887" stroke="#4e79a7" stroke-width="2"/>
+<circle cx="758.8333333333334" cy="280.6004441035347" r="4" fill="#4e79a7"><title>LLLH total: mean 9.72%, range 9.21-10.48%</title></circle>
+<line x1="780.8333333333334" x2="780.8333333333334" y1="267.88061978690905" y2="285.99406653604075" stroke="#59a14f" stroke-width="2"/>
+<circle cx="780.8333333333334" cy="278.99874295727517" r="4" fill="#59a14f"><title>LLLH prefill: mean 9.84%, range 9.32-10.68%</title></circle>
+<line x1="802.8333333333334" x2="802.8333333333334" y1="262.564236679719" y2="273.35261673532943" stroke="#e15759" stroke-width="2"/>
+<circle cx="802.8333333333334" cy="269.7925336999993" r="4" fill="#e15759"><title>LLLH decode: mean 10.54%, range 10.27-11.08%</title></circle>
+<text x="18" y="235" text-anchor="middle" class="axis" transform="rotate(-90 18 235)">Mean max-pressure reduction (%)</text>
+<circle cx="330" cy="470" r="5" fill="#4e79a7"/>
+<text x="340" y="474" class="axis">total</text>
+<circle cx="425" cy="470" r="5" fill="#59a14f"/>
+<text x="435" y="474" class="axis">prefill</text>
+<circle cx="520" cy="470" r="5" fill="#e15759"/>
+<text x="530" y="474" class="axis">decode</text>
+<text x="450" y="445" text-anchor="middle" class="note">Point: mean across physical permutations; line: min-max. Proxy only, not measured latency or energy.</text>
+</svg>

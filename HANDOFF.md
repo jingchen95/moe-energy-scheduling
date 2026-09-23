@@ -1,5 +1,46 @@
 # Handoff
 
+## Latest status — Milestone K placement-DVFS alignment complete
+
+Branch `milestone-k-placement-dvfs-alignment` contains an offline-only
+exhaustive analysis of permuting the four intact per-layer P1 expert groups
+onto heterogeneous physical-GPU frequencies. No GPU job was submitted and no
+runtime, vLLM, expert grouping, placement implementation, or DVFS code changed.
+
+- Frozen Milestone J/H profile and P1 hashes were verified. Every P1 group
+  retains its original 32 logical experts in every layer.
+- All 24 group-to-rank permutations were evaluated for every layer, phase,
+  and one of 81 H/M/L frequency tuples using only the preregistered maximum
+  normalized-pressure proxy.
+- HHHH has exactly zero advantage and preserves original P1.
+- Across all physical permutations, MHHH reduces mean maximum pressure by
+  14.89--17.93% depending on phase/ordering; MMHH gives 14.50--18.38%; LMHH
+  gives 18.85--23.48%.
+- For physical MHHH, the slow GPU receives the lightest group in 48/48 layers.
+  For MMHH, both slow GPUs receive the two lightest groups in 48/48 layers.
+- Decision: **A — strong structural opportunity**. This justifies a small
+  real-GPU original-versus-aligned validation, but makes no latency or energy
+  claim.
+- The complete CPU-safe suite passes: `56 passed, 2 warnings`.
+
+Artifacts:
+
+- Report: `docs/milestone_k_placement_dvfs_alignment.md`
+- Analysis: `tools/analyze_rank_permutation_dvfs_alignment.py`
+- Detailed/summary CSVs: `results/processed/milestone_k_alignment_layers.csv`
+  and `results/processed/milestone_k_alignment_summary.csv`
+- Manifest: `results/processed/milestone_k_manifest.json`
+- Figures: `results/figures/milestone_k_mmhh_alignment.svg` and
+  `results/figures/milestone_k_alignment_summary.svg`
+
+### Exact next command
+
+```bash
+cd /data/users/chjing/moe-energy-scheduling
+python3 tools/analyze_rank_permutation_dvfs_alignment.py
+cat docs/milestone_k_placement_dvfs_alignment.md
+```
+
 ## Latest status — Milestone J layer-wise load analysis complete
 
 Branch `milestone-j-layerwise-load-analysis` contains an offline-only analysis

@@ -1,0 +1,35 @@
+{
+  "analysis": "offline_P1_group_to_physical_rank_DVFS_alignment",
+  "caveat": "structural capacity proxy only; not execution time, latency, energy, or a service model",
+  "experts_per_group_per_layer": 32,
+  "frequencies_mhz": {
+    "H": 2520,
+    "L": 1005,
+    "M": 1635
+  },
+  "frequency_tuple_count": 81,
+  "p1_placement_path": "/data/users/chjing/moe-energy-scheduling/results/raw/milestone-d-255131-20260826T104006Z/placements/upstream_default_eplb.json",
+  "p1_placement_sha256": "0912c7744e87dc35b223ee8d145d6a6ac8bc6f3274a642b5cbb20d4a011454e7",
+  "permutation_semantics": "group_at_gpu[g] is the original P1 group assigned to physical GPU g",
+  "permutations_per_layer": 24,
+  "phases": [
+    "total",
+    "prefill",
+    "decode"
+  ],
+  "primary_proxy": "max_g(expert_load_fraction[layer,g] / (frequency[g] / H))",
+  "profile_path": "/data/users/chjing/moe-energy-scheduling/results/raw/milestone-f-phase-255174-20260826T214727Z/runs/c-math-20260826T214834.669632Z-0248d849/expert_counts.npz",
+  "profile_sha256": "d74af984fb9d9942e0eb15961657e13f0fd0e84c3eef823bdac6f4594533adda",
+  "profile_shape": [
+    48,
+    128
+  ],
+  "schema_version": 1,
+  "source_plan": "results/raw/milestone-h-plan-20260831T100215Z-seeded/matrix-plan.json",
+  "source_plan_sha256": "0916949b0814c5923b3733b1a9d9972ddc936bf27c6a5c2b7d24153fdc1fc9f2",
+  "tie_breakers": [
+    "fewest rank-order inversions",
+    "minimum Hamming distance from original P1 physical assignment",
+    "lexicographic group_at_gpu tuple"
+  ]
+}
