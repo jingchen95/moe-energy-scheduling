@@ -1,5 +1,36 @@
 # Handoff
 
+## Latest status — Milestone L prepared for real-GPU validation
+
+Branch `milestone-l-real-gpu-alignment-validation` prepares the preregistered
+21-run real-GPU comparison of original P1 versus intact-group-aligned P1 at
+identical HHHH, MHHH, and MMHH frequency tuples.
+
+- Seven configurations and three repetitions each are fixed; L-frequency
+  points and any broader sweep are excluded.
+- The validated Milestone I 300-request GSM8K trace at 16 req/s is reused.
+- Placement construction uses frozen total expert counts and the exact
+  Milestone K exhaustive permutation rule. All groups remain intact with 32
+  experts per rank per layer.
+- Configuration-task and repetition order use recorded seed `20260923`.
+- Primary FusedMoE timing is disabled because the existing path requires extra
+  patches plus `--enforce-eager`; primary behavior remains Milestone-I-like.
+- The job is designed as an exclusive, serialized seven-task Slurm array on
+  Uranus. Each task owns and terminates only its server and resets GPU clocks
+  on success, failure, or signal.
+
+The measured report, processed CSVs, and decision remain pending until the
+submitted array completes.
+
+### Exact next command
+
+```bash
+cd /data/users/chjing/moe-energy-scheduling
+study="results/raw/milestone-l-alignment-$(date -u +%Y%m%dT%H%M%SZ)"
+python3 tools/prepare_milestone_l.py --output-dir "${study}"
+MILESTONE_L_STUDY="${study}" sbatch --array=0-6%1 scripts/milestone_l_validation.sbatch
+```
+
 ## Latest status — Milestone K placement-DVFS alignment complete
 
 Branch `milestone-k-placement-dvfs-alignment` contains an offline-only

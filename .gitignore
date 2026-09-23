@@ -37,6 +37,10 @@ results/processed/*
 !results/processed/milestone_k_alignment_layers.csv
 !results/processed/milestone_k_alignment_summary.csv
 !results/processed/milestone_k_manifest.json
+!results/processed/milestone_l_runs.csv
+!results/processed/milestone_l_aggregate.csv
+!results/processed/milestone_l_comparisons.csv
+!results/processed/milestone_l_summary.json
 !results/figures/
 results/figures/*
 !results/figures/.gitkeep
@@ -50,6 +54,7 @@ results/figures/*
 !results/figures/milestone_j_placement_comparison.svg
 !results/figures/milestone_k_mmhh_alignment.svg
 !results/figures/milestone_k_alignment_summary.svg
+!results/figures/milestone_l_alignment_validation.svg
 logs/
 slurm-*.out
 slurm-*.err

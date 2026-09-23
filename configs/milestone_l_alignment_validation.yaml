@@ -1,0 +1,36 @@
+study: real_gpu_p1_group_alignment_validation
+
+source:
+  milestone_i_study: results/raw/milestone-i-repeatability-20260901T091212Z-r16-validated
+  milestone_k_manifest: results/processed/milestone_k_manifest.json
+
+model: Qwen/Qwen3-30B-A3B
+vllm_version: 0.15.1
+node: uranus
+
+parallel:
+  tensor: 1
+  data: 4
+  expert: 4
+  all2all_backend: allgather_reducescatter
+
+workload:
+  request_rate: 16.0
+  requests: 300
+  repetitions: 3
+  ttft_guard_ms: 500.0
+
+frequencies_mhz:
+  H: 2520
+  M: 1635
+
+configuration_order_seed: 20260923
+
+instrumentation:
+  nvml_cumulative_energy: true
+  idle_energy_subtraction: false
+  fused_moe_timing_primary_runs: false
+  fused_moe_timing_reason: >-
+    Existing timing requires extra patches and enforce-eager; exclude it from
+    the primary runs because its overhead and semantic equivalence are not
+    established.
