@@ -1,5 +1,45 @@
 # Handoff
 
+## Latest status — Milestone J layer-wise load analysis complete
+
+Branch `milestone-j-layerwise-load-analysis` contains an offline-only analysis
+of the frozen phase-resolved GSM8K expert profile and the existing P1--P4
+placements. No GPU job was submitted and no runtime, vLLM, placement, or DVFS
+code was changed.
+
+- The total/prefill/decode logical-expert arrays are each `48 x 128`; phase
+  conservation and profile hash were verified.
+- Every reused P1--P4 mapping is per layer and preserves exactly 32 experts per
+  rank per layer.
+- P1 aggregate total load is nearly balanced (`max/mean = 1.012`), but its
+  individual-layer mean `max/mean` is `1.207`. The heavy rank changes at 40 of
+  47 layer boundaries and no heavy/light identity run exceeds three layers.
+- P2--P4 keep GPU0 heaviest for all 48 layers in total, prefill, and decode.
+  This is persistent rank-specific imbalance, not changing regional slack.
+- Decision: **Case B — little temporal opportunity**. The profile does not
+  reveal natural stable multi-layer regions that strongly motivate a
+  region-level dynamic DVFS controller.
+- The complete CPU-safe suite passes: `51 passed, 2 warnings`.
+
+Artifacts:
+
+- Report: `docs/milestone_j_layerwise_load_analysis.md`
+- Analysis: `tools/analyze_layerwise_loads.py`
+- Detailed CSV: `results/processed/milestone_j_layer_loads.csv`
+- Run/summary CSVs: `results/processed/milestone_j_persistence_runs.csv` and
+  `results/processed/milestone_j_summary.csv`
+- Manifest: `results/processed/milestone_j_manifest.json`
+- Figures: `results/figures/milestone_j_p1_layer_load_heatmaps.svg` and
+  `results/figures/milestone_j_placement_comparison.svg`
+
+### Exact next command
+
+```bash
+cd /data/users/chjing/moe-energy-scheduling
+python3 tools/analyze_layerwise_loads.py
+cat docs/milestone_j_layerwise_load_analysis.md
+```
+
 ## Latest status — Milestone I higher-load repeatability check complete
 
 Branch `milestone-i-higher-load-repeatability` contains the completed final
