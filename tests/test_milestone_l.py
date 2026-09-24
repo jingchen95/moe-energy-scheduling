@@ -5,7 +5,11 @@ from tools.prepare_milestone_l import (
     experiment_configurations,
     validate_intact_group_permutation,
 )
-from tools.analyze_milestone_l import aggregate_runs, compare_aggregates
+from tools.analyze_milestone_l import (
+    aggregate_runs,
+    classify_result,
+    compare_aggregates,
+)
 
 
 def _mapping() -> list[list[int]]:
@@ -117,3 +121,16 @@ def test_aggregate_and_comparison_report_all_three_values():
     mhhh = next(row for row in comparisons if row["comparison"] == "A_MHHH")
     assert mhhh["original_config"] == "C4"
     assert mhhh["aligned_config"] == "C5"
+
+
+def test_decision_preserves_no_effect_and_non_neutral_control():
+    rows = []
+    for name in ("A_MHHH", "B_MMHH", "C_HHHH_align_MHHH"):
+        row = {"comparison": name}
+        for metric in ("ttft_p99_ms", "tpot_p99_ms", "total_gpu_energy_j"):
+            row[f"aligned_vs_original_{metric}_pct"] = 0.4
+            row[f"{metric}_benefit_pct"] = -0.4
+        rows.append(row)
+    assert classify_result(rows)["decision"] == "C_NO_MEASURED_EFFECT"
+    rows[-1]["aligned_vs_original_tpot_p99_ms_pct"] = 6.0
+    assert classify_result(rows)["decision"] == "D_HHHH_CONTROL_NOT_NEUTRAL"

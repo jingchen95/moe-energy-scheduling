@@ -1,5 +1,46 @@
 # Handoff
 
+## Latest status — Milestone L real-GPU validation complete
+
+Slurm array `267080` completed the 21-run original-versus-aligned P1-group
+validation on Uranus. All seven tasks exited 0; every run completed 300/300
+requests with zero failures, one trace hash, cumulative NVML energy,
+target-matching clocks, valid client scheduling, and successful clock/patch
+cleanup.
+
+- MHHH alignment versus original changes TTFT p99 by `+3.027%`, TPOT p99 by
+  `-0.428%`, total energy by `+0.267%`, and throughput by `+0.278%`.
+- MMHH alignment changes TTFT p99 by `+1.141%`, TPOT p99 by `+0.106%`, total
+  energy by `-0.003%`, and throughput by `+0.010%`.
+- HHHH aligned-placement controls remain approximately neutral; their TPOT
+  differences are `+0.511%` and `-0.150%`, within repeat variability.
+- The frozen diagnostic confirms slower GPUs receive lighter intact P1 groups,
+  but the measured total serving latency/energy effect is negligible.
+- Decision: **C — no measured effect**. The Milestone K pressure proxy does not
+  identify the serving critical path under the current runtime; do not build a
+  broader joint scheduler from this mechanism.
+- Primary FusedMoE timing was intentionally not collected because the existing
+  path changes the runtime with extra patches and `--enforce-eager`.
+- The complete CPU-safe suite passes: `62 passed, 2 warnings`.
+
+Artifacts:
+
+- Report: `docs/milestone_l_real_gpu_alignment.md`
+- Raw study: `results/raw/milestone-l-alignment-20260923T141055Z`
+- Per-run/aggregate/comparison tables: `results/processed/milestone_l_runs.csv`,
+  `results/processed/milestone_l_aggregate.csv`, and
+  `results/processed/milestone_l_comparisons.csv`
+- Summary: `results/processed/milestone_l_summary.json`
+- Figure: `results/figures/milestone_l_alignment_validation.svg`
+
+### Exact next command
+
+```bash
+cd /data/users/chjing/moe-energy-scheduling
+cat docs/milestone_l_real_gpu_alignment.md
+cat results/processed/milestone_l_summary.json
+```
+
 ## Latest status — Milestone L real-GPU validation submitted
 
 Branch `milestone-l-real-gpu-alignment-validation` prepares the preregistered

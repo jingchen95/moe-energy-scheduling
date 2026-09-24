@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="720" viewBox="0 0 1120 720">
+<rect width="100%" height="100%" fill="white"/>
+<style>text{font-family:Arial,sans-serif;fill:#222}.title{font-size:20px;font-weight:700}.panel{font-size:14px;font-weight:700}.axis{font-size:10px}.note{font-size:11px;fill:#444}</style>
+<text x="560" y="28" text-anchor="middle" class="title">Original versus intact-group-aligned P1</text>
+<text x="20" y="150" text-anchor="middle" class="panel" transform="rotate(-90 20 150)">TPOT p99 (ms)</text>
+<text x="210" y="65" text-anchor="middle" class="panel">MHHH</text>
+<rect x="110" y="101.26086956521739" width="48" height="121.73913043478261" fill="#4e79a7"/>
+<line x1="134" x2="134" y1="99.80667220126533" y2="102.71506692916945" stroke="#222"/>
+<text x="134" y="243" text-anchor="middle" class="axis">C4</text>
+<title>C4: 68.032 +/- 0.813</title>
+<rect x="188" y="101.78221808712617" width="48" height="121.21778191287383" fill="#e15759"/>
+<line x1="212" x2="212" y1="101.36745444930581" y2="102.19698172494653" stroke="#222"/>
+<text x="212" y="243" text-anchor="middle" class="axis">C5</text>
+<title>C5: 67.740 +/- 0.232</title>
+<line x1="90" x2="345" y1="223" y2="223" stroke="#444"/>
+<text x="560" y="65" text-anchor="middle" class="panel">MMHH</text>
+<rect x="460" y="101.38944867836199" width="48" height="121.61055132163801" fill="#4e79a7"/>
+<line x1="484" x2="484" y1="100.87870494284505" y2="101.90019241387893" stroke="#222"/>
+<text x="484" y="243" text-anchor="middle" class="axis">C6</text>
+<title>C6: 68.599 +/- 0.288</title>
+<rect x="538" y="101.26086956521738" width="48" height="121.73913043478262" fill="#e15759"/>
+<line x1="562" x2="562" y1="100.63059433404747" y2="101.89114479638728" stroke="#222"/>
+<text x="562" y="243" text-anchor="middle" class="axis">C7</text>
+<title>C7: 68.671 +/- 0.356</title>
+<line x1="440" x2="695" y1="223" y2="223" stroke="#444"/>
+<text x="910" y="65" text-anchor="middle" class="panel">HHHH controls</text>
+<rect x="810" y="101.88036665263844" width="48" height="121.11963334736156" fill="#4e79a7"/>
+<line x1="834" x2="834" y1="101.29343911395195" y2="102.46729419132494" stroke="#222"/>
+<text x="834" y="243" text-anchor="middle" class="axis">C1</text>
+<title>C1: 64.602 +/- 0.313</title>
+<rect x="888" y="101.26086956521739" width="48" height="121.73913043478261" fill="#e15759"/>
+<line x1="912" x2="912" y1="99.9424170384698" y2="102.57932209196498" stroke="#222"/>
+<text x="912" y="243" text-anchor="middle" class="axis">C2</text>
+<title>C2: 64.932 +/- 0.703</title>
+<rect x="966" y="102.06255931306555" width="48" height="120.93744068693445" fill="#59a14f"/>
+<line x1="990" x2="990" y1="101.11305412941859" y2="103.01206449671251" stroke="#222"/>
+<text x="990" y="243" text-anchor="middle" class="axis">C3</text>
+<title>C3: 64.505 +/- 0.506</title>
+<line x1="790" x2="1045" y1="223" y2="223" stroke="#444"/>
+<text x="20" y="355" text-anchor="middle" class="panel" transform="rotate(-90 20 355)">TTFT p99 (ms)</text>
+<text x="210" y="270" text-anchor="middle" class="panel">MHHH</text>
+<rect x="110" y="309.8374301459767" width="48" height="118.16256985402327" fill="#4e79a7"/>
+<line x1="134" x2="134" y1="308.34201970135786" y2="311.3328405905956" stroke="#222"/>
+<text x="134" y="448" text-anchor="middle" class="axis">C4</text>
+<title>C4: 243.274 +/- 3.079</title>
+<rect x="188" y="306.2608695652174" width="48" height="121.73913043478264" fill="#e15759"/>
+<line x1="212" x2="212" y1="304.6893940440885" y2="307.83234508634627" stroke="#222"/>
+<text x="212" y="448" text-anchor="middle" class="axis">C5</text>
+<title>C5: 250.637 +/- 3.235</title>
+<line x1="90" x2="345" y1="428" y2="428" stroke="#444"/>
+<text x="560" y="270" text-anchor="middle" class="panel">MMHH</text>
+<rect x="460" y="307.6340857605985" width="48" height="120.36591423940146" fill="#4e79a7"/>
+<line x1="484" x2="484" y1="305.9816201539902" y2="309.2865513672068" stroke="#222"/>
+<text x="484" y="448" text-anchor="middle" class="axis">C6</text>
+<title>C6: 247.933 +/- 3.404</title>
+<rect x="538" y="306.2608695652174" width="48" height="121.73913043478261" fill="#e15759"/>
+<line x1="562" x2="562" y1="303.3886661549869" y2="309.1330729754479" stroke="#222"/>
+<text x="562" y="448" text-anchor="middle" class="axis">C7</text>
+<title>C7: 250.762 +/- 5.916</title>
+<line x1="440" x2="695" y1="428" y2="428" stroke="#444"/>
+<text x="910" y="270" text-anchor="middle" class="panel">HHHH controls</text>
+<rect x="810" y="306.26271298128603" width="48" height="121.73728701871396" fill="#4e79a7"/>
+<line x1="834" x2="834" y1="299.69027366578354" y2="312.8351522967885" stroke="#222"/>
+<text x="834" y="448" text-anchor="middle" class="axis">C1</text>
+<title>C1: 234.678 +/- 12.670</title>
+<rect x="888" y="306.2608695652174" width="48" height="121.73913043478264" fill="#e15759"/>
+<line x1="912" x2="912" y1="301.35689739127554" y2="311.1648417391592" stroke="#222"/>
+<text x="912" y="448" text-anchor="middle" class="axis">C2</text>
+<title>C2: 234.682 +/- 9.454</title>
+<rect x="966" y="307.54398627798105" width="48" height="120.45601372201892" fill="#59a14f"/>
+<line x1="990" x2="990" y1="303.34622206737504" y2="311.74175048858706" stroke="#222"/>
+<text x="990" y="448" text-anchor="middle" class="axis">C3</text>
+<title>C3: 232.208 +/- 8.092</title>
+<line x1="790" x2="1045" y1="428" y2="428" stroke="#444"/>
+<text x="20" y="560" text-anchor="middle" class="panel" transform="rotate(-90 20 560)">Total GPU energy (J)</text>
+<text x="210" y="475" text-anchor="middle" class="panel">MHHH</text>
+<rect x="110" y="511.58540565275604" width="48" height="121.41459434724396" fill="#4e79a7"/>
+<line x1="134" x2="134" y1="510.2970487655156" y2="512.8737625399965" stroke="#222"/>
+<text x="134" y="653" text-anchor="middle" class="axis">C4</text>
+<title>C4: 19765.370 +/- 209.735</title>
+<rect x="188" y="511.2608695652174" width="48" height="121.73913043478262" fill="#e15759"/>
+<line x1="212" x2="212" y1="509.9978868880674" y2="512.5238522423673" stroke="#222"/>
+<text x="212" y="653" text-anchor="middle" class="axis">C5</text>
+<title>C5: 19818.202 +/- 205.604</title>
+<line x1="90" x2="345" y1="633" y2="633" stroke="#444"/>
+<text x="560" y="475" text-anchor="middle" class="panel">MMHH</text>
+<rect x="460" y="511.2608695652174" width="48" height="121.73913043478262" fill="#4e79a7"/>
+<line x1="484" x2="484" y1="510.6695761182304" y2="511.85216301220436" stroke="#222"/>
+<text x="484" y="653" text-anchor="middle" class="axis">C6</text>
+<title>C6: 18667.898 +/- 90.671</title>
+<rect x="538" y="511.26482147837476" width="48" height="121.73517852162526" fill="#e15759"/>
+<line x1="562" x2="562" y1="510.41022852771727" y2="512.1194144290322" stroke="#222"/>
+<text x="562" y="653" text-anchor="middle" class="axis">C7</text>
+<title>C7: 18667.292 +/- 131.046</title>
+<line x1="440" x2="695" y1="633" y2="633" stroke="#444"/>
+<text x="910" y="475" text-anchor="middle" class="panel">HHHH controls</text>
+<rect x="810" y="511.2608695652174" width="48" height="121.73913043478262" fill="#4e79a7"/>
+<line x1="834" x2="834" y1="510.1874146002485" y2="512.3343245301863" stroke="#222"/>
+<text x="834" y="653" text-anchor="middle" class="axis">C1</text>
+<title>C1: 21213.773 +/- 187.056</title>
+<rect x="888" y="511.64330117657215" width="48" height="121.35669882342785" fill="#e15759"/>
+<line x1="912" x2="912" y1="509.5176711275243" y2="513.76893122562" stroke="#222"/>
+<text x="912" y="653" text-anchor="middle" class="axis">C2</text>
+<title>C2: 21147.132 +/- 370.404</title>
+<rect x="966" y="511.3346403424261" width="48" height="121.66535965757392" fill="#59a14f"/>
+<line x1="990" x2="990" y1="509.9026519960856" y2="512.7666286887667" stroke="#222"/>
+<text x="990" y="653" text-anchor="middle" class="axis">C3</text>
+<title>C3: 21200.918 +/- 249.533</title>
+<line x1="790" x2="1045" y1="633" y2="633" stroke="#444"/>
+<text x="560" y="698" text-anchor="middle" class="note">Bars are means across three runs; error bars are sample standard deviations.</text>
+</svg>

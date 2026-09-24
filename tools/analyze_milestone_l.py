@@ -63,7 +63,10 @@ def complete_controller(study: Path, task_index: int, config_id: str) -> Path:
             continue
         complete = [row for row in rows if row.get("status") == "complete"]
         exit_status = (path / "exit-status.txt").read_text(encoding="utf-8").strip()
-        if result.get("status") == "complete" and len(complete) == 3 and exit_status == "0":
+        reset_path = path / "final-clock-reset.json"
+        reset = json.loads(reset_path.read_text(encoding="utf-8")) if reset_path.is_file() else []
+        if (result.get("status") == "complete" and len(complete) == 3
+                and exit_status == "0" and len(reset) == 4):
             candidates.append(path)
     if len(candidates) != 1:
         raise ValueError(
@@ -236,6 +239,36 @@ def compare_aggregates(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     return comparisons
 
 
+def classify_result(comparisons: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """Apply conservative effect-size gates; three repeats do not imply significance."""
+    controls = [row for row in comparisons if str(row["comparison"]).startswith("C_HHHH")]
+    heterogeneous = [row for row in comparisons if row not in controls]
+    control_metrics = ("ttft_p99_ms", "tpot_p99_ms", "total_gpu_energy_j")
+    maximum_control_change = max(
+        abs(float(row[f"aligned_vs_original_{metric}_pct"]))
+        for row in controls for metric in control_metrics
+    )
+    maximum_heterogeneous_benefit = max(
+        float(row[f"{metric}_benefit_pct"])
+        for row in heterogeneous for metric in control_metrics
+    )
+    if maximum_control_change >= 5.0:
+        decision = "D_HHHH_CONTROL_NOT_NEUTRAL"
+    elif maximum_heterogeneous_benefit >= 5.0:
+        decision = "A_MEASURED_INTERACTION_CONFIRMED"
+    elif maximum_heterogeneous_benefit >= 1.0:
+        decision = "B_SMALL_MEASURED_EFFECT"
+    else:
+        decision = "C_NO_MEASURED_EFFECT"
+    return {
+        "decision": decision,
+        "maximum_hhhh_control_absolute_change_pct": maximum_control_change,
+        "maximum_heterogeneous_latency_or_energy_benefit_pct": maximum_heterogeneous_benefit,
+        "effect_size_gates_pct": {"material": 5.0, "small": 1.0},
+        "significance_claim": False,
+    }
+
+
 def write_figure(path: Path, aggregate: Sequence[dict[str, Any]]) -> None:
     by_id = {str(row["config_id"]): row for row in aggregate}
     panels = (
@@ -287,6 +320,11 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
     plan = json.loads((study / "experiment-plan.json").read_text(encoding="utf-8"))
     if plan.get("study") != "real_gpu_p1_group_alignment_validation":
         raise ValueError("not a Milestone L study")
+    if sha256_file(Path(plan["trace"])) != plan["trace_sha256"]:
+        raise ValueError("frozen source trace hash mismatch")
+    for placement in plan["placement_specs"].values():
+        if sha256_file(Path(placement["placement_file"])) != placement["placement_sha256"]:
+            raise ValueError(f"frozen placement hash mismatch: {placement['placement_id']}")
     rows = []
     controllers = []
     for spec in plan["configurations"]:
@@ -306,6 +344,7 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError(f"expected 21 valid runs, found {len(rows)}")
     aggregate = aggregate_runs(rows)
     comparisons = compare_aggregates(aggregate)
+    decision = classify_result(comparisons)
     write_csv(args.output_dir / "milestone_l_runs.csv", rows, list(rows[0]))
     write_csv(args.output_dir / "milestone_l_aggregate.csv", aggregate, list(aggregate[0]))
     write_csv(args.output_dir / "milestone_l_comparisons.csv", comparisons, list(comparisons[0]))
@@ -320,7 +359,7 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
         "aggregate_configurations": len(aggregate),
         "controllers": controllers,
         "comparisons": comparisons,
-        "decision": "pending_manual_interpretation",
+        "decision": decision,
         "fused_moe_timing_collected": False,
     }
     args.output_dir.mkdir(parents=True, exist_ok=True)
