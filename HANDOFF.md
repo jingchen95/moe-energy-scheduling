@@ -28,14 +28,19 @@ Attention--FFN disaggregation.
 - The unmodified-plugin `2A2F` eager smoke launcher is prepared. It uses owned
   Attention/FFN process groups, sends three fixed prompts twice, checks exact
   deterministic outputs, confirms all four GPUs are used, and resets clocks.
-  The expanded project suite passes `70` tests. No custom placement or full
-  experiment has been submitted.
+  The expanded project suite passes `70` tests.
+- Exclusive Uranus smoke job `269841` was submitted from commit `5c0d612` and
+  is pending because the node is reserved/allocated. Slurm estimated a start
+  at `2026-09-30 05:55` local cluster time. A test-only submission allowing
+  both approved L40S nodes estimated a later start, so the existing job was
+  retained. No custom placement, profiling job, or full experiment has been
+  started before this gate.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-sbatch scripts/milestone_m_afd_validation.sbatch
+squeue -j 269841
 ```
 
 ## Latest status — Milestone L real-GPU validation complete
