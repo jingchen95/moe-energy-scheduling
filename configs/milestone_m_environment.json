@@ -7,8 +7,11 @@
   "isolated_afd_env": {
     "afd_plugin_version": "0.26.0rc2.dev61+g4c2541a53",
     "cuda_userspace_version": "13.0",
+    "python_base_prefix": "/data/users/chjing/moe-energy-scheduling/.tools/uv-python/cpython-3.12-linux-x86_64-gnu",
     "python_executable": "/data/users/chjing/moe-energy-scheduling/third_party/afd-plugin/.venv/bin/python",
-    "python_version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "python_h_available": true,
+    "python_include": "/data/users/chjing/moe-energy-scheduling/.tools/uv-python/cpython-3.12-linux-x86_64-gnu/include/python3.12",
+    "python_version": "3.12.3 (main, Apr 15 2024, 18:25:56) [Clang 17.0.6 ]",
     "torch_root": "/data/users/chjing/moe-energy-scheduling/third_party/afd-plugin/.venv/lib/python3.12/site-packages/torch/__init__.py",
     "torch_version": "2.11.0+cu130",
     "vllm_root": "/data/users/chjing/moe-energy-scheduling/third_party/afd-plugin/.venv/lib/python3.12/site-packages/vllm/__init__.py",
@@ -17,7 +20,10 @@
   "protected_cuda_env": {
     "afd_plugin_version": null,
     "cuda_userspace_version": "12.8",
+    "python_base_prefix": "/data/users/chjing/miniforge3/envs/cuda-env",
     "python_executable": "/data/users/chjing/miniforge3/envs/cuda-env/bin/python",
+    "python_h_available": true,
+    "python_include": "/data/users/chjing/miniforge3/envs/cuda-env/include/python3.10",
     "python_version": "3.10.17 | packaged by conda-forge | (main, Apr 10 2025, 22:19:12) [GCC 13.3.0]",
     "torch_root": "/data/users/chjing/miniforge3/envs/cuda-env/lib/python3.10/site-packages/torch/__init__.py",
     "torch_version": "2.9.1+cu128",

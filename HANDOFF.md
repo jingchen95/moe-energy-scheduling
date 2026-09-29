@@ -30,17 +30,22 @@ Attention--FFN disaggregation.
   deterministic outputs, confirms all four GPUs are used, and resets clocks.
   The expanded project suite passes `70` tests.
 - Exclusive Uranus smoke job `269841` was submitted from commit `5c0d612` and
-  is pending because the node is reserved/allocated. Slurm estimated a start
-  at `2026-09-30 05:55` local cluster time. A test-only submission allowing
-  both approved L40S nodes estimated a later start, so the existing job was
-  retained. No custom placement, profiling job, or full experiment has been
-  started before this gate.
+  failed before service readiness. Triton's first CUDA helper JIT could not
+  find `/usr/include/python3.12/Python.h` on Uranus. This is an isolated-runtime
+  packaging failure, not a 2A2F or research result. Cleanup reset clocks, left
+  no GPU compute processes, and preserved a clean plugin checkout and the
+  vLLM 0.15.1 protected environment.
+- The AFD `.venv` has been rebuilt with fixed uv-managed CPython 3.12.3 and its
+  headers under the ignored project-local `.tools/uv-python` tree. The
+  environment check now fails if `Python.h` is unavailable. No custom
+  placement, profiling job, or full experiment has started before the smoke
+  retry passes.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-squeue -j 269841
+sbatch scripts/milestone_m_afd_validation.sbatch
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

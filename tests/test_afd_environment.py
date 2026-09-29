@@ -18,6 +18,9 @@ def _runtime(*, old: bool) -> RuntimeMetadata:
     return RuntimeMetadata(
         python_version="3.10" if old else "3.12",
         python_executable=f"{root}/bin/python",
+        python_base_prefix=root,
+        python_include=f"{root}/include/python",
+        python_h_available=True,
         vllm_version="0.15.1" if old else "0.26.0",
         vllm_root=f"{root}/lib/python/site-packages/vllm/__init__.py",
         torch_version="2.9.1" if old else "2.11.0",
@@ -55,6 +58,19 @@ def test_runtime_pair_rejects_version_or_commit_drift(old_version, afd_version, 
             afd,
             expected_plugin_commit=COMMIT,
             plugin_commit=commit,
+        )
+
+
+def test_runtime_pair_rejects_missing_afd_python_headers():
+    afd = RuntimeMetadata(
+        **{**_runtime(old=False).to_dict(), "python_h_available": False}
+    )
+    with pytest.raises(ValueError, match="development header"):
+        validate_runtime_pair(
+            _runtime(old=True),
+            afd,
+            expected_plugin_commit=COMMIT,
+            plugin_commit=COMMIT,
         )
 
 

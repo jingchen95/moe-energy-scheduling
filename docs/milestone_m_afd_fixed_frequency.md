@@ -70,3 +70,21 @@ adding the launcher passes `70` tests.
 
 Real-GPU smoke validation, placement instrumentation, profiling, and primary
 measurements are pending.
+
+### First smoke attempt
+
+Slurm job `269841` failed before either API became healthy. Both FFN ranks
+reached their first Triton FusedMoE kernel invocation, then Triton's CUDA
+driver helper compilation failed because the system-Python virtual environment
+looked for `/usr/include/python3.12/Python.h`, which was absent on Uranus. This
+was an environment construction problem, not evidence about Qwen3 2A2F,
+placement, NCCL, latency, or energy.
+
+The job exited 1 after 9 minutes 29 seconds. Cleanup reset all four graphics
+clocks, left no GPU compute processes, and did not dirty the plugin checkout.
+The protected environment remained vLLM 0.15.1.
+
+The isolated runtime was rebuilt with a fixed uv-managed CPython 3.12.3 stored
+under `.tools/uv-python`. Its `Python.h` is also on shared project storage, so
+the compute node no longer depends on host `/usr/include`. The environment
+guard now records and requires the Python include directory and header.

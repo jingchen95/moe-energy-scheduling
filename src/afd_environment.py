@@ -14,6 +14,7 @@ import importlib.metadata
 import json
 import pathlib
 import sys
+import sysconfig
 import torch
 import vllm
 
@@ -25,6 +26,9 @@ except importlib.metadata.PackageNotFoundError:
 print(json.dumps({
     "python_version": sys.version.replace("\\n", " "),
     "python_executable": str(pathlib.Path(sys.executable).absolute()),
+    "python_base_prefix": str(pathlib.Path(sys.base_prefix).absolute()),
+    "python_include": str(pathlib.Path(sysconfig.get_path("include")).absolute()),
+    "python_h_available": pathlib.Path(sysconfig.get_path("include"), "Python.h").is_file(),
     "vllm_version": vllm.__version__,
     "vllm_root": str(pathlib.Path(vllm.__file__).resolve()),
     "torch_version": torch.__version__,
@@ -39,6 +43,9 @@ print(json.dumps({
 class RuntimeMetadata:
     python_version: str
     python_executable: str
+    python_base_prefix: str
+    python_include: str
+    python_h_available: bool
     vllm_version: str
     vllm_root: str
     torch_version: str
@@ -97,6 +104,10 @@ def validate_runtime_pair(
         raise ValueError("protected and AFD environments resolve to the same vLLM package")
     if not afd.afd_plugin_version:
         raise ValueError("AFD plugin distribution is not installed in the AFD environment")
+    if not afd.python_h_available:
+        raise ValueError(
+            f"AFD Python development header is unavailable under {afd.python_include}"
+        )
     if plugin_commit != expected_plugin_commit:
         raise ValueError(
             f"AFD plugin commit {plugin_commit} does not match pin {expected_plugin_commit}"
