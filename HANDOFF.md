@@ -48,14 +48,16 @@ Attention--FFN disaggregation.
 - The launcher now sets vLLM 0.26's documented
   `VLLM_USE_FLASHINFER_SAMPLER=0` process-local switch. This selects the native
   sampler without installing CUDA or editing the pinned runtime. Greedy
-  decoding parameters are unchanged. A new unmodified-plugin smoke retry is
-  required before any placement or profiling work.
+  decoding parameters are unchanged. The fix is commit `e298db5`.
+- The next unmodified-plugin smoke retry was submitted as exclusive Uranus job
+  `269940`. Do not submit a duplicate while this job is queued or running, and
+  do not start placement or profiling work unless it passes all smoke checks.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-sbatch scripts/milestone_m_afd_validation.sbatch
+squeue -j 269940
 ```
 
 ## Latest status — Milestone L real-GPU validation complete
