@@ -1,0 +1,65 @@
+study: afd_fixed_frequency_individual_expert_placement
+
+protected_runtime:
+  conda_environment: cuda-env
+  required_vllm_version: 0.15.1
+  modification_allowed: false
+
+afd_runtime:
+  plugin_repository: https://github.com/vllm-project/afd-plugin.git
+  plugin_commit: 4c2541a53ec8ad507508073eac81ac9feecc6c9a
+  plugin_directory: third_party/afd-plugin
+  interpreter: third_party/afd-plugin/.venv/bin/python
+  vllm_version: 0.26.0
+  use_v2_model_runner: false
+  connector: P2pNcclAFDConnector
+  compute_gate_on_attention: false
+  initial_mode: eager
+  primary_mode: FULL_DECODE_ONLY
+
+model:
+  id: Qwen/Qwen3-30B-A3B
+  dtype: bfloat16
+  quantization: null
+  max_model_len: 1024
+
+topology:
+  node_count: 1
+  attention_devices: [0, 1]
+  ffn_devices: [2, 3]
+  attention_ranks: 2
+  ffn_ranks: 2
+  tensor_parallel_size: 1
+  pipeline_parallel_size: 1
+  experts_per_ffn_rank_per_layer: 64
+
+frequencies_mhz:
+  H: 2520
+  M: 1635
+  attention: [H, H]
+
+workload:
+  source: milestone_i_validated_gsm8k
+  requests: 300
+  request_rate: 16.0
+  max_output_tokens: 128
+  temperature: 0.0
+  seed: 0
+
+experiment:
+  repetitions: 3
+  randomization_seed: 20260929
+  configurations:
+    - {id: C0, placement: balanced, ffn_frequencies: [H, H]}
+    - {id: C1, placement: frequency_aware_mh, ffn_frequencies: [H, H]}
+    - {id: C2, placement: balanced, ffn_frequencies: [M, H]}
+    - {id: C3, placement: frequency_aware_mh, ffn_frequencies: [M, H]}
+    - {id: C4, placement: balanced, ffn_frequencies: [H, M]}
+    - {id: C5, placement: frequency_aware_hm, ffn_frequencies: [H, M]}
+
+stage_gates:
+  - unmodified_afd_2a2f_smoke
+  - static_placement_hh_correctness
+  - afd_routing_profile
+  - frequency_aware_mh_smoke
+  - primary_18_run_matrix

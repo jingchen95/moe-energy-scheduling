@@ -1,5 +1,43 @@
 # Handoff
 
+## Latest status — Milestone M isolated AFD runtime prepared
+
+Branch `milestone-m-afd-fixed-frequency-placement` begins a staged test of
+individual expert placement on fixed heterogeneous FFN frequencies after
+Attention--FFN disaggregation.
+
+- The protected `cuda-env` baseline is vLLM 0.15.1 and PyTorch 2.9.1+cu128.
+  Its interpreter and package roots are under
+  `/data/users/chjing/miniforge3/envs/cuda-env`; it was not modified.
+- The official `vllm-project/afd-plugin` checkout is isolated under the
+  ignored `third_party/afd-plugin` directory and pinned at commit
+  `4c2541a53ec8ad507508073eac81ac9feecc6c9a`.
+- A project-local `uv 0.12.20` bootstrap created the plugin-local `.venv` with
+  vLLM 0.26.0, PyTorch 2.11.0, and plugin version
+  `0.26.0rc2.dev61+g4c2541a53`.
+- `tools/check_milestone_m_environments.py` asserts both vLLM versions,
+  distinct interpreter/package roots, plugin installation, and the pinned
+  clean plugin commit.
+- Source inspection found generic plugin support for a `2A2F` scenario, while
+  the Qwen3 MoE E2E module currently covers only `2A1F`. Qwen3 2A2F remains an
+  explicit real-GPU smoke-test prerequisite; no placement or primary job has
+  been submitted.
+- The repository CPU suite passes `68` tests in the protected runtime. The
+  pinned plugin CPU unit suite also exits 0 when GPU/E2E/slow/NPU tests are
+  excluded.
+
+### Exact next command
+
+```bash
+cd /data/users/chjing/moe-energy-scheduling
+third_party/afd-plugin/.venv/bin/python tools/check_milestone_m_environments.py \
+  --old-python "$HOME/miniforge3/envs/cuda-env/bin/python" \
+  --afd-python "$PWD/third_party/afd-plugin/.venv/bin/python" \
+  --plugin-root "$PWD/third_party/afd-plugin" \
+  --uv "$PWD/.tools/uv-bootstrap/bin/uv" \
+  --output configs/milestone_m_environment.json
+```
+
 ## Latest status — Milestone L real-GPU validation complete
 
 Slurm array `267080` completed the 21-run original-versus-aligned P1-group

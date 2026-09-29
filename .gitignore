@@ -76,6 +76,8 @@ __pycache__/
 .venv/
 venv/
 .deps/
+.tools/
+third_party/afd-plugin/
 
 # Local configuration and editor files
 .env
