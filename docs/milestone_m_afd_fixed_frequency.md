@@ -53,5 +53,20 @@ Validation results:
 
 ## Current status
 
-Environment preparation is complete. GPU smoke validation, placement
-instrumentation, profiling, and primary measurements are pending.
+Environment preparation is complete. The unmodified-plugin smoke launcher is
+prepared as `scripts/milestone_m_afd_validation.sbatch` and intentionally does
+not contain placement or profiling changes. It launches two owned process
+groups using the isolated interpreter:
+
+- Attention API: GPUs 0--1, port 18100;
+- FFN service: GPUs 2--3, port 18101;
+- synchronous connector: port 6249.
+
+The job sends the same three fixed greedy prompts twice to the Attention API,
+requires exact generated-content/token-count equality, and samples all four
+GPUs to confirm each role used its assigned devices. Cleanup stops only the
+recorded process groups and resets graphics clocks. The project CPU suite after
+adding the launcher passes `70` tests.
+
+Real-GPU smoke validation, placement instrumentation, profiling, and primary
+measurements are pending.

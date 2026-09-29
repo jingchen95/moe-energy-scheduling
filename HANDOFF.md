@@ -25,17 +25,17 @@ Attention--FFN disaggregation.
 - The repository CPU suite passes `68` tests in the protected runtime. The
   pinned plugin CPU unit suite also exits 0 when GPU/E2E/slow/NPU tests are
   excluded.
+- The unmodified-plugin `2A2F` eager smoke launcher is prepared. It uses owned
+  Attention/FFN process groups, sends three fixed prompts twice, checks exact
+  deterministic outputs, confirms all four GPUs are used, and resets clocks.
+  The expanded project suite passes `70` tests. No custom placement or full
+  experiment has been submitted.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-third_party/afd-plugin/.venv/bin/python tools/check_milestone_m_environments.py \
-  --old-python "$HOME/miniforge3/envs/cuda-env/bin/python" \
-  --afd-python "$PWD/third_party/afd-plugin/.venv/bin/python" \
-  --plugin-root "$PWD/third_party/afd-plugin" \
-  --uv "$PWD/.tools/uv-bootstrap/bin/uv" \
-  --output configs/milestone_m_environment.json
+sbatch scripts/milestone_m_afd_validation.sbatch
 ```
 
 ## Latest status — Milestone L real-GPU validation complete
