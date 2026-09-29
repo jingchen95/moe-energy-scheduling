@@ -40,12 +40,15 @@ Attention--FFN disaggregation.
   environment check now fails if `Python.h` is unavailable. No custom
   placement, profiling job, or full experiment has started before the smoke
   retry passes.
+- The corrected unmodified-plugin smoke was submitted as exclusive Uranus job
+  `269912` from commit `5b72894`. It is pending for resources; do not submit a
+  duplicate while this job is queued or running.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-sbatch scripts/milestone_m_afd_validation.sbatch
+squeue -j 269912
 ```
 
 ## Latest status — Milestone L real-GPU validation complete
