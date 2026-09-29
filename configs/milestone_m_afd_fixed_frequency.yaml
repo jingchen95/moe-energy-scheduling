@@ -12,6 +12,7 @@ afd_runtime:
   interpreter: third_party/afd-plugin/.venv/bin/python
   vllm_version: 0.26.0
   use_v2_model_runner: false
+  use_flashinfer_sampler: false
   connector: P2pNcclAFDConnector
   compute_gate_on_attention: false
   initial_mode: eager

@@ -65,8 +65,8 @@ groups using the isolated interpreter:
 The job sends the same three fixed greedy prompts twice to the Attention API,
 requires exact generated-content/token-count equality, and samples all four
 GPUs to confirm each role used its assigned devices. Cleanup stops only the
-recorded process groups and resets graphics clocks. The project CPU suite after
-adding the launcher passes `70` tests.
+recorded process groups and resets graphics clocks. The current project CPU
+suite passes `71` tests.
 
 Real-GPU smoke validation, placement instrumentation, profiling, and primary
 measurements are pending.
@@ -88,3 +88,25 @@ The isolated runtime was rebuilt with a fixed uv-managed CPython 3.12.3 stored
 under `.tools/uv-python`. Its `Python.h` is also on shared project storage, so
 the compute node no longer depends on host `/usr/include`. The environment
 guard now records and requires the Python include directory and header.
+
+### Second smoke attempt
+
+Slurm job `269912` also failed before either API became healthy, but it
+confirmed that the project-local Python-header fix worked: both roles loaded
+far enough to exercise their CUDA paths, and the FFN role passed the prior
+Triton helper build. The Attention role then selected FlashInfer for top-k and
+top-p sampling during vLLM's memory-profile pass. FlashInfer attempted a JIT
+build and failed because Uranus has no discoverable `nvcc` or
+`/usr/local/cuda`. The FFN ranks subsequently timed out in a synchronous NCCL
+receive after 30 minutes; that timeout is a consequence of the Attention
+failure, not the initiating error.
+
+The job exited 1 after 35 minutes 5 seconds. Cleanup reset all graphics clocks
+and left no GPU compute processes. No request was served, so this remains a
+runtime-preparation failure rather than a 2A2F result.
+
+vLLM 0.26 exposes `VLLM_USE_FLASHINFER_SAMPLER=0` specifically to use its
+native sampling path. The project launcher now sets this only in owned AFD
+role processes. This avoids an undeclared CUDA-toolkit dependency without
+installing CUDA, modifying the pinned plugin/vLLM packages, or changing greedy
+decoding parameters.

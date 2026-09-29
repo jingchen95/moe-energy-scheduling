@@ -54,12 +54,13 @@ afd_start_role() {
         --shutdown-timeout 20
         --additional-config "${additional_config}"
     )
-    printf 'CUDA_VISIBLE_DEVICES=%q VLLM_USE_V2_MODEL_RUNNER=0 VLLM_PLUGINS=afd ' "${devices}" > "${command_file}"
+    printf 'CUDA_VISIBLE_DEVICES=%q VLLM_USE_V2_MODEL_RUNNER=0 VLLM_USE_FLASHINFER_SAMPLER=0 VLLM_PLUGINS=afd ' "${devices}" > "${command_file}"
     printf '%q ' "${command[@]}" >> "${command_file}"
     printf '\n' >> "${command_file}"
     env -u PYTHONPATH -u CONDA_PREFIX -u CONDA_DEFAULT_ENV -u VIRTUAL_ENV \
         CUDA_VISIBLE_DEVICES="${devices}" \
         VLLM_USE_V2_MODEL_RUNNER=0 \
+        VLLM_USE_FLASHINFER_SAMPLER=0 \
         VLLM_PLUGINS=afd \
         PYTHONUNBUFFERED=1 \
         HF_HOME="${HF_HOME:-${HOME}/.cache/huggingface}" \
