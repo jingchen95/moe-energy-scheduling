@@ -57,14 +57,15 @@ Attention--FFN disaggregation.
   receive timeout. Cleanup reset clocks and left no GPU compute processes.
 - Readiness now matches the pinned plugin's official runner: wait for Attention
   `/v1/models`, require both role processes to remain alive, and record the FFN
-  connector-loop startup line. Another unmodified-plugin smoke is required
-  before any placement or profiling work.
+  connector-loop startup line. The fix is commit `f5f83f1` and the next
+  unmodified-plugin smoke was submitted as exclusive Uranus job `270001`.
+  Do not start placement or profiling work unless this job passes.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-sbatch scripts/milestone_m_afd_validation.sbatch
+squeue -j 270001
 ```
 
 ## Latest status — Milestone L real-GPU validation complete
