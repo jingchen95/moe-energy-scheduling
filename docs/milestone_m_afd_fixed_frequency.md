@@ -66,7 +66,7 @@ The job sends the same three fixed greedy prompts twice to the Attention API,
 requires exact generated-content/token-count equality, and samples all four
 GPUs to confirm each role used its assigned devices. Cleanup stops only the
 recorded process groups and resets graphics clocks. The current project CPU
-suite passes `71` tests.
+suite passes `72` tests.
 
 Real-GPU smoke validation, placement instrumentation, profiling, and primary
 measurements are pending.
@@ -110,3 +110,19 @@ native sampling path. The project launcher now sets this only in owned AFD
 role processes. This avoids an undeclared CUDA-toolkit dependency without
 installing CUDA, modifying the pinned plugin/vLLM packages, or changing greedy
 decoding parameters.
+
+### Third smoke attempt
+
+Slurm job `269940` confirmed the native sampler setting and completed model
+initialization for both roles. The Attention API became healthy and repeatedly
+returned HTTP 200. The FFN role correctly entered its synchronous connector
+loop, which intentionally does not start an HTTP API. The project launcher
+incorrectly required an FFN `/health` response, so it never sent a request;
+after 30 idle minutes the FFN connector's NCCL receive timed out.
+
+The pinned plugin's official E2E runner waits only for the Attention
+`/v1/models` endpoint while checking that both role processes remain alive.
+The smoke launcher now follows that contract and records the FFN
+`AFD FFN EngineCore started` log line as role-readiness evidence. The failing
+FFN `/health` and `/v1/models` probes were removed. Job `269940` exited 1 after
+34 minutes 41 seconds, reset clocks, and left no GPU compute processes.

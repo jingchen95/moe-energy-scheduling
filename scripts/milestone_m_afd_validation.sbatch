@@ -80,14 +80,15 @@ afd_start_role attention 0,1 18100 Qwen/Qwen3-30B-A3B qwen3-moe-milestone-m 6249
 attention_pid="${AFD_LAST_PID}"
 printf '%s\n' "${attention_pid}" > "${run_dir}/servers/attention.pid"
 
-if ! afd_wait_healthy "${attention_pid}" "${ffn_pid}" 2400 \
-        http://127.0.0.1:18100 http://127.0.0.1:18101; then
+if ! afd_wait_attention_api "${attention_pid}" "${ffn_pid}" 2400 \
+        http://127.0.0.1:18100/v1/models; then
     tail -n 160 "${run_dir}/servers/attention.log" >&2 || true
     tail -n 160 "${run_dir}/servers/ffn.log" >&2 || true
     exit 1
 fi
 curl --fail --silent http://127.0.0.1:18100/v1/models > "${run_dir}/attention-models.json"
-curl --fail --silent http://127.0.0.1:18101/v1/models > "${run_dir}/ffn-models.json"
+grep -m1 'AFD FFN EngineCore started; workers run connector loop.' \
+    "${run_dir}/servers/ffn.log" > "${run_dir}/ffn-ready.txt"
 
 "${AFD_PYTHON}" tools/smoke_client.py \
     --url http://127.0.0.1:18100 \

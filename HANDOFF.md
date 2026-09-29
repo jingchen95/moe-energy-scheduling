@@ -28,7 +28,7 @@ Attention--FFN disaggregation.
 - The unmodified-plugin `2A2F` eager smoke launcher is prepared. It uses owned
   Attention/FFN process groups, sends three fixed prompts twice, checks exact
   deterministic outputs, confirms all four GPUs are used, and resets clocks.
-  The current project suite passes `71` tests.
+  The current project suite passes `72` tests.
 - Exclusive Uranus smoke job `269841` was submitted from commit `5c0d612` and
   failed before service readiness. Triton's first CUDA helper JIT could not
   find `/usr/include/python3.12/Python.h` on Uranus. This is an isolated-runtime
@@ -50,14 +50,21 @@ Attention--FFN disaggregation.
   sampler without installing CUDA or editing the pinned runtime. Greedy
   decoding parameters are unchanged. The fix is commit `e298db5`.
 - The next unmodified-plugin smoke retry was submitted as exclusive Uranus job
-  `269940`. Do not submit a duplicate while this job is queued or running, and
-  do not start placement or profiling work unless it passes all smoke checks.
+  `269940`. It confirmed that both roles initialize with the native sampler:
+  the Attention API returned HTTP 200 and FFN entered its synchronous connector
+  loop. The launcher then waited incorrectly for an FFN HTTP API that the
+  plugin does not provide, sent no requests, and eventually hit the FFN NCCL
+  receive timeout. Cleanup reset clocks and left no GPU compute processes.
+- Readiness now matches the pinned plugin's official runner: wait for Attention
+  `/v1/models`, require both role processes to remain alive, and record the FFN
+  connector-loop startup line. Another unmodified-plugin smoke is required
+  before any placement or profiling work.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-squeue -j 269940
+sbatch scripts/milestone_m_afd_validation.sbatch
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

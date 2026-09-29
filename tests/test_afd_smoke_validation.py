@@ -1,9 +1,13 @@
 import csv
 import json
+from pathlib import Path
 
 import pytest
 
 from tools.validate_afd_smoke import validate_gpu_samples, validate_outputs
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _response(request_id: str, content: str) -> dict:
@@ -52,3 +56,15 @@ def test_gpu_samples_require_all_four_gpus(tmp_path):
                 "power_w": 200,
             })
     assert set(validate_gpu_samples(path)) == {"0", "1", "2", "3"}
+
+
+def test_afd_readiness_matches_official_attention_api_contract():
+    common = (REPO_ROOT / "scripts" / "afd_common.sh").read_text()
+    launcher = (
+        REPO_ROOT / "scripts" / "milestone_m_afd_validation.sbatch"
+    ).read_text()
+    assert "afd_wait_attention_api()" in common
+    assert 'curl --fail --silent "${attention_models_url}"' in common
+    assert "http://127.0.0.1:18100/v1/models" in launcher
+    assert "http://127.0.0.1:18101/v1/models" not in launcher
+    assert "AFD FFN EngineCore started; workers run connector loop." in launcher

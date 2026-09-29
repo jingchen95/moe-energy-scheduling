@@ -68,27 +68,22 @@ afd_start_role() {
     AFD_LAST_PID=$!
 }
 
-afd_wait_healthy() {
+afd_wait_attention_api() {
     local attention_pid="$1"
     local ffn_pid="$2"
     local timeout_s="$3"
-    local attention_url="$4"
-    local ffn_url="$5"
+    local attention_models_url="$4"
     local deadline=$((SECONDS + timeout_s))
-    local attention_ready=0
-    local ffn_ready=0
     while (( SECONDS < deadline )); do
         kill -0 "${attention_pid}" 2>/dev/null || return 1
         kill -0 "${ffn_pid}" 2>/dev/null || return 1
-        curl --fail --silent "${attention_url}/health" >/dev/null 2>&1 && attention_ready=1 || true
-        curl --fail --silent "${ffn_url}/health" >/dev/null 2>&1 && ffn_ready=1 || true
-        if [[ "${attention_ready}" -eq 1 && "${ffn_ready}" -eq 1 ]]; then
+        if curl --fail --silent "${attention_models_url}" >/dev/null 2>&1; then
             return 0
         fi
         sleep 5
     done
-    printf 'timed out waiting for AFD services: attention=%s ffn=%s\n' \
-        "${attention_ready}" "${ffn_ready}" >&2
+    printf 'timed out waiting for Attention API: %s\n' \
+        "${attention_models_url}" >&2
     return 1
 }
 
