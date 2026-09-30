@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "afd-plugin-0.26.0-static-profile",
+  "afd_plugin_commit": "4c2541a53ec8ad507508073eac81ac9feecc6c9a",
+  "vllm_version": "0.26.0",
+  "target": "afd_plugin/model_executor/models/qwen3_moe.py",
+  "source_sha256_before": "cef1790937637cd445cac92bf8dcfaea20d7c3cfdfb0e2813a36b80a8098e2d5",
+  "source_sha256_after": "f6535a2e70561eee5199bcdc77fb47c84b4a5f634f38703f8ca8971d4fadb97b",
+  "patch_file": "afd-plugin-0.26.0-static-profile.patch",
+  "patch_sha256": "d6a62a66ddcaf17ac1b043023cf32cf18b130fe85ed731ee5c8fddde0512ceab",
+  "scope": "static FFN ownership hooks plus profiling-only logical router capture"
+}

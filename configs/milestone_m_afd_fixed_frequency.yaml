@@ -76,3 +76,16 @@ static_placement_validation:
     - balanced_round_robin
     - different_16_expert_blocks
   routing_profile_used: false
+
+routing_profile:
+  plugin_patch: patches/afd-plugin-0.26.0-static-profile.patch
+  control_environment: AFD_ROUTING_PROFILE_DIR
+  source_trace: results/raw/milestone-i-repeatability-20260901T091212Z-r16-validated/gsm8k-300-r16.jsonl
+  requests: 300
+  request_rate: 16.0
+  seed: 0
+  max_output_tokens: 128
+  placement: default_linear
+  frequencies_mhz: [2520, 2520, 2520, 2520]
+  output_shape: [48, 128]
+  performance_or_energy_result: false

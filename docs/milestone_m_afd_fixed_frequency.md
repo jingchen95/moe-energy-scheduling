@@ -241,3 +241,40 @@ vLLM 0.26.0, and unchanged protected `cuda-env` vLLM 0.15.1.
 that two distinct custom per-layer FFN ownership maps are loaded and used
 without changing deterministic model outputs. It is not a performance or
 energy result. Routing profiling and the 18-run matrix were not started.
+
+### Repaired-launcher single smoke
+
+The required minimal retry used only the balanced custom mapping rather than
+repeating the three-placement study. Uranus job `270365` completed with exit
+code 0 in 2 minutes 46 seconds. The selected configuration list contains only
+`balanced`; live ownership and deterministic outputs passed, clock cleanup ran,
+the compute-process list was empty, and the plugin returned to its clean pinned
+state. This closes the launcher-specific prerequisite for routing profiling.
+
+## AFD routing-profile design
+
+vLLM 0.26's native `BaseRouter` exposes a capture callback immediately after
+logical top-k selection and before any expert mapping. The profiling-only
+integration binds that existing callback for every FFN MoE layer. It accumulates
+logical expert IDs in a 48 x 128 CUDA counter on each of the two FFN/DP ranks;
+it does not add another router pass and does not enable EPLB.
+
+A shared atomic control file keeps model startup and benchmark warm-up outside
+the frozen profile. Transitioning to active resets counters before the measured
+trace. After all measured requests finish, transitioning to inactive causes
+each FFN rank to dump before a small uncounted flush request is routed. Offline
+validation sums the disjoint rank-local counts and retains both inputs. This
+instrumentation is isolated to the profiling run and its overhead must not be
+interpreted as a performance or energy measurement.
+
+The source-controlled composite patch preserves the already validated static
+ownership hooks and adds only the router-capture hook. Its lifecycle manager
+checks the pinned plugin commit plus exact before/after source hashes. With the
+patch applied, the pinned Qwen3 construction and weight-policy suite passes 35
+tests and the patch reverts to a clean tree.
+
+The frozen input is derived from the accepted Milestone I 300-request, 16
+request/s GSM8K trace. Prompt IDs, order, content, arrival offsets, and
+128-token limits are unchanged; the request seed is explicitly normalized to
+0 for this AFD run. The main 18-run matrix remains prohibited until the profile
+and candidate-placement opportunity analysis are complete.

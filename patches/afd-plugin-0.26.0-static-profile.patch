@@ -1,0 +1,38 @@
+diff --git a/afd_plugin/model_executor/models/qwen3_moe.py b/afd_plugin/model_executor/models/qwen3_moe.py
+index 19179e3..a84bd38 100644
+--- a/afd_plugin/model_executor/models/qwen3_moe.py
++++ b/afd_plugin/model_executor/models/qwen3_moe.py
+@@ -19,6 +19,11 @@ from vllm.platforms import current_platform
+ 
+ from afd_plugin.config import AFDConfig, parse_afd_config
+ from afd_plugin.model_executor.models.deepseek_v2 import RemoteFFNProxy
++from src.afd_routing_profile import install_runtime_routing_profiler
++from src.afd_static_placement import (
++    apply_runtime_placement,
++    dump_model_runtime_ownership,
++)
+ 
+ _ATTENTION_ROLE = frozenset(("attention",))
+ _FFN_ROLE = frozenset(("ffn",))
+@@ -163,6 +168,8 @@ class AFDQwen3MoeDecoderLayer(native.Qwen3MoeDecoderLayer):
+                     vllm_config=vllm_config,
+                     prefix=f"{prefix}.mlp",
+                 )
++                apply_runtime_placement(self.mlp, layer_idx)
++                install_runtime_routing_profiler(self.mlp, layer_idx)
+             else:
+                 self.mlp = native.Qwen3MoeMLP(
+                     hidden_size=config.hidden_size,
+@@ -317,8 +324,11 @@ class AFDQwen3MoeForCausalLM(native.Qwen3MoeForCausalLM):
+     def load_weights(self, weights: Iterable[tuple[str, torch.Tensor]]) -> set[str]:
+         # ### PATCH START: filter the checkpoint stream by AFD execution role.
+         role_weights = _iter_role_weights(weights, role=self.afd_role)
++        loaded = super().load_weights(role_weights)
++        if self.afd_role == "ffn":
++            dump_model_runtime_ownership(self)
+         # ### PATCH END: filter the checkpoint stream by AFD execution role.
+-        return super().load_weights(role_weights)
++        return loaded
+ 
+ 
+ __all__ = ["AFDQwen3MoeForCausalLM"]

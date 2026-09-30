@@ -282,6 +282,8 @@ async def warm_up(
 
 
 async def run_benchmark(args: argparse.Namespace) -> Path:
+    if args.expert_profile and args.afd_profile_control_dir:
+        raise ValueError("legacy EPLB and AFD routing profiling are mutually exclusive")
     requests = load_trace(args.trace)
     category = requests[0].category
     run_id, run_dir = create_run_directory(args.output_root, category)
@@ -313,6 +315,10 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
         "decoding": {"temperature": 0.0, "seed": 0,
                      "max_output_tokens": sorted({row.max_output_tokens for row in requests})},
         "expert_profile": args.expert_profile,
+        "afd_profile_control_dir": (
+            str(args.afd_profile_control_dir.resolve())
+            if args.afd_profile_control_dir else None
+        ),
         "placement_file": str(args.placement_file.resolve()) if args.placement_file else None,
         "placement_sha256": _sha256(args.placement_file) if args.placement_file else None,
         "trace_sha256": _sha256(args.trace),
@@ -344,6 +350,13 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
         await asyncio.sleep(args.settle_before_s)
     if args.expert_profile:
         await collective_rpc(args.base_url, "reset_expert_profile")
+    afd_profile_generation = run_id
+    if args.afd_profile_control_dir:
+        from src.afd_routing_profile import write_profile_control
+
+        write_profile_control(
+            args.afd_profile_control_dir, afd_profile_generation, True
+        )
 
     with NVMLReader(range(4)) as reader:
         monitor = FixedPeriodMonitor(reader, run_dir / "gpu_samples.csv", args.monitor_interval_s)
@@ -361,6 +374,37 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
         finally:
             end_samples = reader.sample_all()
             samples = monitor.stop()
+
+    if args.afd_profile_control_dir:
+        from src.afd_routing_profile import (
+            finalize_rank_profiles,
+            write_profile_control,
+        )
+
+        write_profile_control(
+            args.afd_profile_control_dir, afd_profile_generation, False
+        )
+        # Both DP/FFN ranks must observe the inactive transition. Four
+        # concurrent flush requests exercise both ranks; their routes are not
+        # counted because the transition dumps before layer 0 capture.
+        await warm_up(
+            requests,
+            base_url=args.base_url,
+            model=args.model,
+            tokenizer=tokenizer,
+            count=4,
+            request_timeout_s=args.request_timeout_s,
+        )
+        profile_metadata = finalize_rank_profiles(
+            args.afd_profile_control_dir,
+            afd_profile_generation,
+            run_dir,
+            timeout_s=120.0,
+        )
+        (run_dir / "routing_profile_finalize.json").write_text(
+            json.dumps(profile_metadata, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
 
     for row in rows:
         output_text = row.pop("_output_text_for_tokens", None)
@@ -421,6 +465,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--server-log", type=Path)
     parser.add_argument("--local-files-only", action="store_true")
     parser.add_argument("--expert-profile", action="store_true")
+    parser.add_argument("--afd-profile-control-dir", type=Path)
     parser.add_argument("--placement-file", type=Path)
     parser.add_argument("--vllm-patch-manifest", type=Path)
     parser.add_argument("--target-clocks", type=int, nargs=4)

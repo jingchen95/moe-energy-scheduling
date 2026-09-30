@@ -101,14 +101,29 @@ Attention--FFN disaggregation.
   and preserved vLLM 0.26.0 in the isolated environment and vLLM 0.15.1 in
   protected `cuda-env`. The static-placement H/H correctness gate passes.
 - No routing profile or 18-run experiment has been started.
+- Commit `b7b8c31` adds a selectable one-configuration correctness launcher.
+  Required balanced-only retry job `270365` completed `COMPLETED/0` in 2:46;
+  live ownership/output validation and all cleanup checks passed.
+- Profiling-only code now uses vLLM 0.26's native logical-router capture hook,
+  controlled by an explicit measurement-window file. Startup and warm-up are
+  excluded; two FFN-rank dumps are retained and summed offline. The pinned
+  plugin targeted suite passes 35 tests with the composite patch applied, and
+  the patch reverts cleanly.
+- The frozen profiling input is the existing 300-request GSM8K r16 schedule
+  (source SHA-256 `b7cd1171e53fc36bba602ecd800a2a631e3c7505b7eb7d64c3306b0c0be47453`),
+  with request seed normalized to 0. Profiling has not yet been submitted.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-third_party/afd-plugin/.venv/bin/python -m \
-  tools.validate_milestone_m_static_placement \
-  --study-dir results/raw/milestone-m-static-hh-20260930T081823Z
+study="results/raw/milestone-m-afd-profile-$(date -u +%Y%m%dT%H%M%SZ)"
+third_party/afd-plugin/.venv/bin/python -m tools.prepare_milestone_m_afd_profile \
+  --output-dir "${study}" \
+  --source-trace results/raw/milestone-i-repeatability-20260901T091212Z-r16-validated/gsm8k-300-r16.jsonl \
+  --smoke-study results/raw/milestone-m-static-hh-single-20260930T190346Z \
+  --profile-patch patches/afd-plugin-0.26.0-static-profile.patch \
+  --plugin-root third_party/afd-plugin
 ```
 
 ## Latest status — Milestone L real-GPU validation complete
