@@ -83,14 +83,32 @@ Attention--FFN disaggregation.
   remain gated on this job.
 - The preparation implementation is committed and pushed as `0bb0172`. The
   immutable H/H correctness study is
-  `results/raw/milestone-m-static-hh-20260930T081823Z`; Slurm job `270232` was
-  submitted on Uranus. Its result is pending.
+  `results/raw/milestone-m-static-hh-20260930T081823Z`; Uranus job `270232`
+  completed all three GPU configurations.
+- Default, balanced round-robin, and different-block ownership each preserved
+  48 layers, 128 experts/layer, and exactly 64 experts/rank/layer. Runtime
+  evidence reconstructed three distinct live mappings. Both custom mappings
+  matched their requested ownership exactly.
+- Every configuration completed the three fixed prompts twice with exact
+  deterministic semantic output/token equality to unmodified job `270001`.
+  All four GPUs were active and read back at 2520 MHz.
+- Slurm reports job `270232` as failed only because the final offline validator
+  was launched by file path and could not import `src`. The preserved GPU
+  artifacts validate successfully when the same tool is run as a module. The
+  launcher and a regression test are corrected; the original exit status is
+  retained in the raw study.
+- Cleanup reset clocks, left no compute processes, reverted the plugin patch,
+  and preserved vLLM 0.26.0 in the isolated environment and vLLM 0.15.1 in
+  protected `cuda-env`. The static-placement H/H correctness gate passes.
+- No routing profile or 18-run experiment has been started.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-sacct -j 270232 --format=JobID,State,ExitCode,Elapsed,NodeList
+third_party/afd-plugin/.venv/bin/python -m \
+  tools.validate_milestone_m_static_placement \
+  --study-dir results/raw/milestone-m-static-hh-20260930T081823Z
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

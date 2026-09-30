@@ -137,7 +137,7 @@ run_configuration default ""
 run_configuration balanced "${study_dir}/placements/balanced_round_robin.json"
 run_configuration different "${study_dir}/placements/different_block.json"
 
-"${AFD_PYTHON}" tools/validate_milestone_m_static_placement.py \
+"${AFD_PYTHON}" -m tools.validate_milestone_m_static_placement \
     --study-dir "${study_dir}" > "${study_dir}/validation-summary.stdout"
 
 scripts/manage_afd_static_placement_patch.sh revert --root "${AFD_PLUGIN_ROOT}" \

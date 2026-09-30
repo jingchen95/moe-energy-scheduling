@@ -199,5 +199,45 @@ Pre-GPU validation results:
 - patch lifecycle: clean before, exact applied hash, exact revert, clean after;
 - shell syntax and `git diff --check`: passed.
 
-The static-placement H/H GPU correctness result is pending. Routing profiling
-and the 18-run experiment remain prohibited until this gate passes.
+## Static placement H/H correctness result
+
+Exclusive Uranus job `270232` ran all three planned configurations using study
+directory `results/raw/milestone-m-static-hh-20260930T081823Z`. All four GPUs
+were locked to and read back at 2520 MHz for every configuration. Each case
+served the three fixed prompts twice, all requests completed, and every case
+produced the same semantic response hash as the unmodified-plugin baseline:
+`c49027c49b6a5a8d785c375530cd4a236504799cd6af31ad0bf4db5ef90bded4`.
+
+| Configuration | Requested placement SHA-256 | Actual mapping SHA-256 | Per-layer rank counts | Result |
+| --- | --- | --- | --- | --- |
+| default | native | `8471d83cd85540dc82c49316f3480017e9c1fc5379255986201dadfdf487cbd9` | 64 / 64 | pass |
+| balanced round-robin | `b32f39e7cbdca86d2448a159cb17717786ff85aaedff1b7c98afb2b648d9190d` | `f86f2ecf81bb43edcbece1130e12ffd3a429d2697d3079c13dafcd8470aec7c9` | 64 / 64 | pass |
+| different 16-expert blocks | `a7ca50ad98ff9a65fbc761d467359d761807177d197faea2890bfe83e46885ee` | `0547c8d3c2fe04ee68da3998e2a1f32317b126865395172c628d575b026a1a98` | 64 / 64 | pass |
+
+The requested and actual hashes use different canonical artifacts, so they are
+not expected to be equal. Validation compares the complete reconstructed
+48 x 128 ownership matrix, not the file hashes. Both custom rank dumps identify
+their mode as `custom`; the default dumps identify `default`. All three actual
+mappings differ, and every rank exposes dense local slots 0--63 in every layer.
+This is runtime evidence that checkpoint loading and execution used the
+requested ownership rather than merely accepting a JSON file.
+
+The Slurm allocation itself is recorded as `FAILED (exit 1)` after 8 minutes
+6 seconds. This occurred only after all three GPU cases had passed: the final
+offline validator was invoked as a file path, so Python placed `tools/` rather
+than the repository root on `sys.path` and could not import `src`. Running the
+same validator as a module over the preserved artifacts produced
+`validation-summary.json` with all three cases passing. The launcher is fixed
+to use `python -m tools.validate_milestone_m_static_placement`, with a regression
+assertion in the CPU-safe suite. The failed Slurm exit is retained rather than
+rewritten or hidden.
+
+Cleanup still ran through the job trap: graphics-clock locks were reset, the
+post-run compute-process list was empty, and the plugin patch was reverted.
+Post-hoc environment verification confirms a clean pinned plugin, isolated
+vLLM 0.26.0, and unchanged protected `cuda-env` vLLM 0.15.1.
+
+**Decision:** the static-placement H/H correctness gate passes. This proves
+that two distinct custom per-layer FFN ownership maps are loaded and used
+without changing deterministic model outputs. It is not a performance or
+energy result. Routing profiling and the 18-run matrix were not started.

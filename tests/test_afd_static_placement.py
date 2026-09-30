@@ -138,3 +138,7 @@ def test_static_validation_matrix_is_exactly_three_hh_cases():
     assert "run_configuration balanced" in launcher
     assert "run_configuration different" in launcher
     assert "routing profile" not in launcher.lower()
+    assert (
+        '"${AFD_PYTHON}" -m tools.validate_milestone_m_static_placement'
+        in launcher
+    )
