@@ -37,6 +37,8 @@ afd_start_role() {
     local afd_port="$6"
     local log_file="$7"
     local command_file="$8"
+    local placement_file="${9:-}"
+    local evidence_dir="${10:-}"
     local additional_config
     additional_config="$(printf '{\"afd\":{\"role\":\"%s\",\"connector\":\"P2pNcclAFDConnector\",\"host\":\"127.0.0.1\",\"port\":%s,\"num_attention_ranks\":2,\"num_ffn_ranks\":2,\"compute_gate_on_attention\":false}}' "${role}" "${afd_port}")"
     local command=(
@@ -54,7 +56,8 @@ afd_start_role() {
         --shutdown-timeout 20
         --additional-config "${additional_config}"
     )
-    printf 'CUDA_VISIBLE_DEVICES=%q VLLM_USE_V2_MODEL_RUNNER=0 VLLM_USE_FLASHINFER_SAMPLER=0 VLLM_PLUGINS=afd ' "${devices}" > "${command_file}"
+    printf 'CUDA_VISIBLE_DEVICES=%q VLLM_USE_V2_MODEL_RUNNER=0 VLLM_USE_FLASHINFER_SAMPLER=0 VLLM_PLUGINS=afd PYTHONPATH=%q AFD_STATIC_EXPERT_PLACEMENT_FILE=%q AFD_STATIC_EXPERT_PLACEMENT_EVIDENCE_DIR=%q ' \
+        "${devices}" "${AFD_PROJECT_ROOT}" "${placement_file}" "${evidence_dir}" > "${command_file}"
     printf '%q ' "${command[@]}" >> "${command_file}"
     printf '\n' >> "${command_file}"
     env -u PYTHONPATH -u CONDA_PREFIX -u CONDA_DEFAULT_ENV -u VIRTUAL_ENV \
@@ -62,6 +65,9 @@ afd_start_role() {
         VLLM_USE_V2_MODEL_RUNNER=0 \
         VLLM_USE_FLASHINFER_SAMPLER=0 \
         VLLM_PLUGINS=afd \
+        PYTHONPATH="${AFD_PROJECT_ROOT}" \
+        AFD_STATIC_EXPERT_PLACEMENT_FILE="${placement_file}" \
+        AFD_STATIC_EXPERT_PLACEMENT_EVIDENCE_DIR="${evidence_dir}" \
         PYTHONUNBUFFERED=1 \
         HF_HOME="${HF_HOME:-${HOME}/.cache/huggingface}" \
         setsid "${command[@]}" > "${log_file}" 2>&1 &

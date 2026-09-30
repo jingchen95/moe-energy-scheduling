@@ -154,3 +154,50 @@ This satisfies the first Milestone M GPU gate. It establishes that Qwen3
 2A2F works on the target node; it is not a placement, performance, or energy
 result. Static FFN placement work may now begin, but no profiling or primary
 matrix run has yet been submitted.
+
+## Static placement integration
+
+Source inspection of the pinned AFD Qwen3 wrapper and vLLM 0.26 shows that the
+FFN role constructs the native `Qwen3MoeSparseMoeBlock`. Its MoE runner uses
+one `ExpertMapManager` for both checkpoint loading and kernel routing:
+`RoutedExperts.weight_loader` maps every global checkpoint expert through the
+manager, and the execution kernel consumes the corresponding live expert map.
+
+The implementation therefore installs a custom global-to-local map immediately
+after each FFN MoE block is constructed and before weights are loaded. No EPLB,
+replication, router rewrite, vLLM site-package edit, or Attention change is
+used. The runtime-independent implementation is
+`src/afd_static_placement.py`; a two-hook patch against pinned plugin commit
+`4c2541a53ec8ad507508073eac81ac9feecc6c9a` calls it from the Qwen3 wrapper.
+The patch and exact before/after hashes are recorded under `patches/`, and
+`scripts/manage_afd_static_placement_patch.sh` provides idempotent
+apply/verify/revert operations.
+
+The placement schema contains a 48 x 128 `logical_to_rank` matrix with rank IDs
+0 or 1. Validation requires every logical expert exactly once and exactly 64
+experts per FFN rank in every layer. The correctness study uses no routing
+profile and fixes all four physical GPUs at 2520 MHz:
+
+1. native default linear ownership;
+2. deterministic balanced round-robin ownership,
+   `rank=(logical_expert+layer) mod 2`;
+3. a distinct valid block mapping,
+   `rank=(floor(logical_expert/16)+layer) mod 2`.
+
+After checkpoint loading, each FFN worker dumps its live 128-entry expert map
+for all 48 layers. Offline validation reconstructs physical ownership from the
+two rank dumps, checks it against the requested mapping, and hashes the actual
+ownership artifact. The H/H job also requires two identical smoke passes per
+configuration and exact semantic output/token equality with unmodified smoke
+job `270001`.
+
+Pre-GPU validation results:
+
+- project CPU-safe suite: `86 passed`;
+- pinned-plugin Qwen3 construction/weight-policy tests with the patch applied:
+  `35 passed`;
+- patch lifecycle: clean before, exact applied hash, exact revert, clean after;
+- shell syntax and `git diff --check`: passed.
+
+The static-placement H/H GPU correctness result is pending. Routing profiling
+and the 18-run experiment remain prohibited until this gate passes.

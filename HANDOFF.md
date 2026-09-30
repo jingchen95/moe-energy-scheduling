@@ -68,15 +68,29 @@ Attention--FFN disaggregation.
   vLLM 0.26.0 and 0.15.1 respectively. The raw smoke directory is
   `results/raw/milestone-m-afd-smoke-270001-20260929T214119Z`.
 - The unmodified 2A2F prerequisite is complete. Static 64-expert/rank FFN
-  placement is the next stage; routing profiling and the 18-run matrix remain
-  gated on its homogeneous-frequency correctness test.
+  placement is now implemented using vLLM 0.26's existing live
+  `ExpertMapManager`, shared by checkpoint loading and kernel routing. A small
+  source-controlled patch only connects the pinned AFD Qwen3 wrapper to the
+  project implementation; it applies and reverts cleanly without touching
+  site-packages or the protected environment.
+- Two profile-free deterministic custom maps preserve 48 layers, 128 experts,
+  and exactly 64 experts/rank/layer. Runtime evidence reconstructs ownership
+  from each rank's live expert map after checkpoint loading.
+- Project CPU tests pass `86` tests; the patched pinned-plugin Qwen3 targeted
+  suite passes `35` tests. The planned H/H gate contains only default,
+  balanced-round-robin, and deliberately different block mappings, with two
+  deterministic smoke passes each. Routing profiling and the 18-run matrix
+  remain gated on this job.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-git -C third_party/afd-plugin grep -n 'expert_map\|local_expert\|expert_id' -- \
-  afd_plugin/model_executor afd_plugin/v1
+study="results/raw/milestone-m-static-hh-$(date -u +%Y%m%dT%H%M%SZ)"
+python -m tools.prepare_milestone_m_static_placement \
+  --output-dir "${study}" \
+  --patch patches/afd-plugin-0.26.0-static-placement.patch \
+  --baseline-run results/raw/milestone-m-afd-smoke-270001-20260929T214119Z
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

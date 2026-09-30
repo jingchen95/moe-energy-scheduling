@@ -64,3 +64,15 @@ stage_gates:
   - afd_routing_profile
   - frequency_aware_mh_smoke
   - primary_18_run_matrix
+
+static_placement_validation:
+  plugin_patch: patches/afd-plugin-0.26.0-static-placement.patch
+  placement_environment: AFD_STATIC_EXPERT_PLACEMENT_FILE
+  evidence_environment: AFD_STATIC_EXPERT_PLACEMENT_EVIDENCE_DIR
+  experts_per_ffn_rank_per_layer: 64
+  frequencies_mhz: [2520, 2520, 2520, 2520]
+  configurations:
+    - default_linear
+    - balanced_round_robin
+    - different_16_expert_blocks
+  routing_profile_used: false

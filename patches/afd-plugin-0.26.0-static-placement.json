@@ -1,0 +1,15 @@
+{
+  "patch_version": 1,
+  "plugin_repository": "https://github.com/vllm-project/afd-plugin.git",
+  "plugin_commit": "4c2541a53ec8ad507508073eac81ac9feecc6c9a",
+  "plugin_version": "0.26.0rc2.dev61+g4c2541a53",
+  "vllm_version": "0.26.0",
+  "patch_file": "afd-plugin-0.26.0-static-placement.patch",
+  "patch_sha256": "846b01560e4d076837cff16288144d49ce1f03ebfdaf769683c99a41b9c323cb",
+  "files": {
+    "afd_plugin/model_executor/models/qwen3_moe.py": {
+      "before_sha256": "cef1790937637cd445cac92bf8dcfaea20d7c3cfdfb0e2813a36b80a8098e2d5",
+      "after_sha256": "74f6b6ae630c7b629d3d0c7460d72712faaef5c5e8502bd3ff9bb5fd983a75ef"
+    }
+  }
+}
