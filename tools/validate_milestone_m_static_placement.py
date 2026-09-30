@@ -19,6 +19,12 @@ from tools.validate_afd_smoke import validate_outputs
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--study-dir", type=Path, required=True)
+    parser.add_argument(
+        "--config",
+        action="append",
+        dest="configs",
+        help="validate only the named manifest configuration; repeat as needed",
+    )
     return parser.parse_args()
 
 
@@ -26,13 +32,21 @@ def main() -> int:
     args = parse_args()
     study_dir = args.study_dir.resolve()
     manifest = json.loads((study_dir / "manifest.json").read_text())
+    manifest_configs = {row["id"]: row for row in manifest["configurations"]}
+    selected_ids = args.configs or list(manifest_configs)
+    if len(selected_ids) != len(set(selected_ids)):
+        raise ValueError("configuration selection contains duplicates")
+    unknown = sorted(set(selected_ids) - set(manifest_configs))
+    if unknown:
+        raise ValueError(f"unknown manifest configurations: {unknown}")
     baseline_run = Path(manifest["baseline_run"])
     baseline_rows = validate_outputs(
         baseline_run / "responses-pass-1.jsonl",
         baseline_run / "responses-pass-2.jsonl",
     )
     results = []
-    for config in manifest["configurations"]:
+    for config_id in selected_ids:
+        config = manifest_configs[config_id]
         config_dir = study_dir / config["id"]
         responses_first = config_dir / "responses-pass-1.jsonl"
         responses_second = config_dir / "responses-pass-2.jsonl"
@@ -65,6 +79,7 @@ def main() -> int:
         "schema_version": 1,
         "status": "pass",
         "baseline_response_sha256": manifest["baseline_responses_sha256"],
+        "selected_configurations": selected_ids,
         "configurations": results,
     }
     (study_dir / "validation-summary.json").write_text(

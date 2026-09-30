@@ -134,10 +134,12 @@ def test_static_validation_matrix_is_exactly_three_hh_cases():
         REPO_ROOT / "scripts" / "milestone_m_static_placement_validation.sbatch"
     ).read_text()
     assert "2520,2520,2520,2520" in launcher
-    assert 'run_configuration default ""' in launcher
-    assert "run_configuration balanced" in launcher
-    assert "run_configuration different" in launcher
+    assert 'default) placement_file=""' in launcher
+    assert "balanced) placement_file=" in launcher
+    assert "different) placement_file=" in launcher
     assert "routing profile" not in launcher.lower()
+    assert "MILESTONE_M_STATIC_CONFIGS" in launcher
+    assert "default,balanced,different" in launcher
     assert (
         '"${AFD_PYTHON}" -m tools.validate_milestone_m_static_placement'
         in launcher

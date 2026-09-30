@@ -133,12 +133,23 @@ run_configuration() {
     printf 'PASS\n' > "${config_dir}/status.txt"
 }
 
-run_configuration default ""
-run_configuration balanced "${study_dir}/placements/balanced_round_robin.json"
-run_configuration different "${study_dir}/placements/different_block.json"
+selected_csv="${MILESTONE_M_STATIC_CONFIGS:-default,balanced,different}"
+IFS=',' read -r -a selected_configs <<< "${selected_csv}"
+[[ "${#selected_configs[@]}" -gt 0 ]] || { printf 'no configurations selected\n' >&2; exit 1; }
+validator_args=(--study-dir "${study_dir}")
+for config_id in "${selected_configs[@]}"; do
+    case "${config_id}" in
+        default) placement_file="" ;;
+        balanced) placement_file="${study_dir}/placements/balanced_round_robin.json" ;;
+        different) placement_file="${study_dir}/placements/different_block.json" ;;
+        *) printf 'unknown static placement configuration: %s\n' "${config_id}" >&2; exit 1 ;;
+    esac
+    run_configuration "${config_id}" "${placement_file}"
+    validator_args+=(--config "${config_id}")
+done
 
 "${AFD_PYTHON}" -m tools.validate_milestone_m_static_placement \
-    --study-dir "${study_dir}" > "${study_dir}/validation-summary.stdout"
+    "${validator_args[@]}" > "${study_dir}/validation-summary.stdout"
 
 scripts/manage_afd_static_placement_patch.sh revert --root "${AFD_PLUGIN_ROOT}" \
     > "${study_dir}/patch-revert.txt"
