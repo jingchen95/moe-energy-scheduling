@@ -50,6 +50,11 @@ workload:
 experiment:
   repetitions: 3
   randomization_seed: 20260929
+  execution_mode: FULL_DECODE_ONLY
+  routing_profiling: false
+  custom_kernel_timing: false
+  energy_source: nvml_total_energy_counter
+  subtract_idle_energy: false
   configurations:
     - {id: C0, placement: balanced, ffn_frequencies: [H, H]}
     - {id: C1, placement: frequency_aware_mh, ffn_frequencies: [H, H]}
@@ -57,6 +62,12 @@ experiment:
     - {id: C3, placement: frequency_aware_mh, ffn_frequencies: [M, H]}
     - {id: C4, placement: balanced, ffn_frequencies: [H, M]}
     - {id: C5, placement: frequency_aware_hm, ffn_frequencies: [H, M]}
+  decision_rule:
+    meaningful_effect_fraction: 0.03
+    weak_effect_fraction: 0.01
+    control_neutral_fraction: 0.03
+    require_both_mirrored_comparisons_for_A: true
+    require_effect_larger_than_sample_std_for_A: true
 
 stage_gates:
   - unmodified_afd_2a2f_smoke

@@ -133,14 +133,20 @@ Attention--FFN disaggregation.
   the compact profile diagnostics are tracked in `results/processed/`.
 - Decision: enough structural opportunity exists to justify an MH/HM measured
   experiment. The 18-run matrix has not been submitted.
+- The fixed six-configuration measurement controller and analyzer are
+  prepared. The next gate is one `P_MH` / FFN M,H smoke in
+  `FULL_DECODE_ONLY` mode; the matrix must not be submitted unless it passes.
+- The candidate placements and their hashes remain frozen. Routing profiling,
+  custom kernel timing, dynamic DVFS, and placement regeneration are disabled.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-third_party/afd-plugin/.venv/bin/python -m tools.validate_milestone_m_afd_profile \
-  --study-dir results/raw/milestone-m-afd-profile-20260930T191548Z \
-  --run-dir results/raw/milestone-m-afd-profile-20260930T191548Z/runs/c-math-20260930T191743.393254Z-9ad557de
+smoke_study="results/raw/milestone-m-mh-smoke-$(date -u +%Y%m%dT%H%M%SZ)"
+third_party/afd-plugin/.venv/bin/python -m tools.prepare_milestone_m_measurement smoke \
+  --output-dir "${smoke_study}" \
+  --baseline-run results/raw/milestone-m-afd-smoke-270001-20260929T214119Z
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

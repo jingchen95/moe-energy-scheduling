@@ -40,6 +40,7 @@ afd_start_role() {
     local placement_file="${9:-}"
     local evidence_dir="${10:-}"
     local routing_profile_dir="${11:-}"
+    local execution_mode="${12:-eager}"
     local additional_config
     additional_config="$(printf '{\"afd\":{\"role\":\"%s\",\"connector\":\"P2pNcclAFDConnector\",\"host\":\"127.0.0.1\",\"port\":%s,\"num_attention_ranks\":2,\"num_ffn_ranks\":2,\"compute_gate_on_attention\":false}}' "${role}" "${afd_port}")"
     local command=(
@@ -48,7 +49,6 @@ afd_start_role() {
         --data-parallel-size 2
         --tensor-parallel-size 1
         --enable-expert-parallel
-        --enforce-eager
         --dtype bfloat16
         --max-model-len 1024
         --seed 0
@@ -57,6 +57,24 @@ afd_start_role() {
         --shutdown-timeout 20
         --additional-config "${additional_config}"
     )
+    case "${execution_mode}" in
+        eager)
+            command+=(--enforce-eager)
+            ;;
+        full_decode_only)
+            command+=(
+                --max-num-seqs 64
+                --max-num-batched-tokens 64
+                --max-cudagraph-capture-size 64
+                --compilation-config
+                '{"cudagraph_mode":"FULL_DECODE_ONLY","cudagraph_capture_sizes":[64]}'
+            )
+            ;;
+        *)
+            printf 'unsupported AFD execution mode: %s\n' "${execution_mode}" >&2
+            return 1
+            ;;
+    esac
     printf 'CUDA_VISIBLE_DEVICES=%q VLLM_USE_V2_MODEL_RUNNER=0 VLLM_USE_FLASHINFER_SAMPLER=0 VLLM_PLUGINS=afd PYTHONPATH=%q AFD_STATIC_EXPERT_PLACEMENT_FILE=%q AFD_STATIC_EXPERT_PLACEMENT_EVIDENCE_DIR=%q AFD_ROUTING_PROFILE_DIR=%q ' \
         "${devices}" "${AFD_PROJECT_ROOT}" "${placement_file}" "${evidence_dir}" "${routing_profile_dir}" > "${command_file}"
     printf '%q ' "${command[@]}" >> "${command_file}"

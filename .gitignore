@@ -45,6 +45,10 @@ results/processed/*
 !results/processed/milestone_m_default_layer_rank_loads.csv
 !results/processed/milestone_m_aggregate_expert_loads.csv
 !results/processed/milestone_m_candidate_placements.csv
+!results/processed/milestone_m_runs.csv
+!results/processed/milestone_m_aggregate.csv
+!results/processed/milestone_m_comparisons.csv
+!results/processed/milestone_m_summary.json
 !results/figures/
 results/figures/*
 !results/figures/.gitkeep
@@ -59,6 +63,7 @@ results/figures/*
 !results/figures/milestone_k_mmhh_alignment.svg
 !results/figures/milestone_k_alignment_summary.svg
 !results/figures/milestone_l_alignment_validation.svg
+!results/figures/milestone_m_afd_fixed_frequency.svg
 logs/
 slurm-*.out
 slurm-*.err

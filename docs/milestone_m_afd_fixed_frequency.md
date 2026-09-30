@@ -382,3 +382,28 @@ M/H capacity while retaining exactly 64 experts per rank, and the resulting
 This is only a go/no-go decision for measurement. It does not establish a
 latency, energy, or SLO benefit. The primary 18-run matrix has not been
 submitted.
+
+## Fixed-frequency measured experiment plan
+
+The measured stage freezes the three committed candidate placements and does
+not regenerate them. A single `P_MH` / Attention H,H / FFN M,H correctness
+smoke gates the matrix. It validates the physical clock readback, canonical
+runtime ownership, exact deterministic smoke outputs, activity on both FFN
+GPUs, process cleanup, clock reset, and protected-environment identity.
+
+The smoke and all primary runs use the plugin-supported
+`FULL_DECODE_ONLY` execution mode. Eager and graph measurements will not be
+mixed. Routing capture and custom kernel timing are disabled. The primary
+matrix is exactly C0--C5 from the resolved configuration, with three repeated
+measurement windows per configuration. One recorded seed randomizes the six
+configuration groups, and a single exclusive job serializes them on Uranus.
+
+The analyzer reports individual values, mean and sample standard deviation,
+and signed `(treatment - baseline) / baseline` changes. Its conservative
+classification rule is recorded before measurement: category A requires both
+mirrored comparisons to improve TPOT p99 or total energy by at least 3%, the
+effect to exceed the larger run-level sample standard deviation, no material
+regression in the paired metrics, and an H/H control within 3%. A one-sided
+1% benefit that does not meet that complete rule is category B; otherwise the
+result is category C. These thresholds organize the decision and do not turn
+the structural load/frequency proxy into an execution-time model.
