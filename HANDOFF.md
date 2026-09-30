@@ -111,19 +111,36 @@ Attention--FFN disaggregation.
   the patch reverts cleanly.
 - The frozen profiling input is the existing 300-request GSM8K r16 schedule
   (source SHA-256 `b7cd1171e53fc36bba602ecd800a2a631e3c7505b7eb7d64c3306b0c0be47453`),
-  with request seed normalized to 0. Profiling has not yet been submitted.
+  with request seed normalized to 0.
+- Profiling-only job `270366` completed `COMPLETED/0` in 5:48. It completed
+  300/300 requests with zero failures, produced two conserving rank-local
+  dumps and a 48 x 128 combined logical count matrix, and passed clock,
+  process, patch, and protected-environment cleanup checks. Raw study:
+  `results/raw/milestone-m-afd-profile-20260930T191548Z`.
+- Frozen trace SHA-256 is `6cf46c02b3a88ace790c6f9b59dbb7b5f44a9872a5813584a3f3a232b39b1020`;
+  count SHA-256 is `36fafdc0ddf6eb8b5599ab26326a754118e2cbce94ad4cc35d0e12414448fbf0`;
+  output identity SHA-256 is `7c015e33fa6e380344f536f3634aa00ebfb3d68d416f561c1df8c1467f5ef505`.
+- The 6,144 layer-local expert instances have max/mean 13.5387 and CV 1.3407;
+  summing repeated expert indices across layers has max/mean 1.9284 and CV
+  0.3058. Default linear ownership smooths aggregate physical-rank max/mean
+  to 1.0260; mean per-layer rank max/mean is 1.0906 and its maximum is 1.2655.
+- Deterministic `P_balanced`, `P_MH`, and mirrored `P_HM` placements preserve
+  exactly 64 experts/rank/layer. `P_MH` assigns 39.3431% of predicted load to
+  the M rank and reduces the M/H capacity-normalized max/mean proxy from
+  1.2130 to 1.00015 (17.55%). This is structural evidence, not measured
+  performance.
+- Frozen candidate files are tracked in `data/placements/milestone_m/` and
+  the compact profile diagnostics are tracked in `results/processed/`.
+- Decision: enough structural opportunity exists to justify an MH/HM measured
+  experiment. The 18-run matrix has not been submitted.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-study="results/raw/milestone-m-afd-profile-$(date -u +%Y%m%dT%H%M%SZ)"
-third_party/afd-plugin/.venv/bin/python -m tools.prepare_milestone_m_afd_profile \
-  --output-dir "${study}" \
-  --source-trace results/raw/milestone-i-repeatability-20260901T091212Z-r16-validated/gsm8k-300-r16.jsonl \
-  --smoke-study results/raw/milestone-m-static-hh-single-20260930T190346Z \
-  --profile-patch patches/afd-plugin-0.26.0-static-profile.patch \
-  --plugin-root third_party/afd-plugin
+third_party/afd-plugin/.venv/bin/python -m tools.validate_milestone_m_afd_profile \
+  --study-dir results/raw/milestone-m-afd-profile-20260930T191548Z \
+  --run-dir results/raw/milestone-m-afd-profile-20260930T191548Z/runs/c-math-20260930T191743.393254Z-9ad557de
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

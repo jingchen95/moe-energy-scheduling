@@ -46,7 +46,11 @@ def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
     if not rows:
         raise ValueError(f"refusing empty CSV: {path}")
     with path.open("x", newline="", encoding="utf-8") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(
+            stream,
+            fieldnames=list(rows[0]),
+            lineterminator="\n",
+        )
         writer.writeheader()
         writer.writerows(rows)
 
@@ -93,7 +97,7 @@ def main() -> int:
     if not np.array_equal(counts, per_rank_counts.sum(axis=0)):
         raise ValueError("combined routing counts do not equal rank-local counts")
 
-    expected_default = np.asarray(linear_default_mapping(), dtype=np.int64)
+    expected_default = linear_default_mapping()
     evidence = sorted(args.ownership_dir.glob("ownership-*.json"))
     ownership = combine_runtime_evidence(evidence, expected_default)
     actual_mapping = np.asarray(ownership["actual_logical_to_rank"], dtype=np.int64)
@@ -126,6 +130,10 @@ def main() -> int:
     ])
 
     candidates = build_two_rank_candidates(counts)
+    routing_counts_sha256 = sha256(args.run_dir / "expert_counts.npz")
+    for placement in candidates.values():
+        placement.metadata["routing_counts_sha256"] = routing_counts_sha256
+        placement.metadata["routing_profile_artifact"] = "expert_counts.npz"
     placements_dir = output / "placements"
     placements_dir.mkdir()
     frequency_by_name = {
@@ -154,12 +162,26 @@ def main() -> int:
     summary = {
         "schema_version": 1,
         "routing_counts": str((args.run_dir / "expert_counts.npz").resolve()),
-        "routing_counts_sha256": sha256(args.run_dir / "expert_counts.npz"),
+        "routing_counts_sha256": routing_counts_sha256,
         "counts_shape": list(counts.shape),
         "rank_local_counts_shape": list(per_rank_counts.shape),
         "default_ownership": diagnostics,
         "candidates": candidate_diagnostics,
         "candidate_files": placement_rows,
+        "candidate_mapping_differences": {
+            "P_balanced_vs_P_MH": int(np.count_nonzero(
+                candidates["P_balanced"].logical_to_rank
+                != candidates["P_MH"].logical_to_rank
+            )),
+            "P_balanced_vs_P_HM": int(np.count_nonzero(
+                candidates["P_balanced"].logical_to_rank
+                != candidates["P_HM"].logical_to_rank
+            )),
+            "P_MH_vs_P_HM": int(np.count_nonzero(
+                candidates["P_MH"].logical_to_rank
+                != candidates["P_HM"].logical_to_rank
+            )),
+        },
         "opportunity": {
             "balanced_at_mh": balanced_mh,
             "aligned_mh": aligned_mh,

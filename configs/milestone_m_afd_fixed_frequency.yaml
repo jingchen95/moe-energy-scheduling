@@ -78,6 +78,9 @@ static_placement_validation:
   routing_profile_used: false
 
 routing_profile:
+  status: complete
+  slurm_job_id: 270366
+  study_dir: results/raw/milestone-m-afd-profile-20260930T191548Z
   plugin_patch: patches/afd-plugin-0.26.0-static-profile.patch
   control_environment: AFD_ROUTING_PROFILE_DIR
   source_trace: results/raw/milestone-i-repeatability-20260901T091212Z-r16-validated/gsm8k-300-r16.jsonl
@@ -89,3 +92,9 @@ routing_profile:
   frequencies_mhz: [2520, 2520, 2520, 2520]
   output_shape: [48, 128]
   performance_or_energy_result: false
+  trace_sha256: 6cf46c02b3a88ace790c6f9b59dbb7b5f44a9872a5813584a3f3a232b39b1020
+  routing_counts_sha256: 36fafdc0ddf6eb8b5599ab26326a754118e2cbce94ad4cc35d0e12414448fbf0
+  output_identity_sha256: 7c015e33fa6e380344f536f3634aa00ebfb3d68d416f561c1df8c1467f5ef505
+  candidate_placement_dir: data/placements/milestone_m
+  opportunity_decision: justify_mh_hm_measurement
+  primary_matrix_submitted: false

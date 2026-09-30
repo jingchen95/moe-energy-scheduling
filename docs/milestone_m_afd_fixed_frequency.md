@@ -278,3 +278,107 @@ request/s GSM8K trace. Prompt IDs, order, content, arrival offsets, and
 128-token limits are unchanged; the request seed is explicitly normalized to
 0 for this AFD run. The main 18-run matrix remains prohibited until the profile
 and candidate-placement opportunity analysis are complete.
+
+## Frozen AFD routing profile
+
+Profiling-only Uranus job `270366` completed with exit code 0 in 5 minutes
+48 seconds. It used default linear ownership, H/H Attention clocks, H/H FFN
+clocks, and the fixed 300-request GSM8K trace at 16 requests/s. The request
+seed was 0, all outputs were capped at 128 tokens, and all 300 requests
+completed with zero failures. The relevant immutable identities are:
+
+- trace SHA-256: `6cf46c02b3a88ace790c6f9b59dbb7b5f44a9872a5813584a3f3a232b39b1020`;
+- routing-count SHA-256: `36fafdc0ddf6eb8b5599ab26326a754118e2cbce94ad4cc35d0e12414448fbf0`;
+- output/token identity SHA-256: `7c015e33fa6e380344f536f3634aa00ebfb3d68d416f561c1df8c1467f5ef505`;
+- actual default ownership SHA-256: `8471d83cd85540dc82c49316f3480017e9c1fc5379255986201dadfdf487cbd9`.
+
+The two FFN-rank dumps conserve exactly to the combined 48 x 128 logical
+count matrix. Every layer contains 631,296 top-k assignments, corresponding to
+78,912 router-observed tokens at top-k 8. Both raw rank dumps, the combined
+archive, actual ownership, request-level output identities, runtime config,
+plugin commit, patch manifest, and environment checks remain in
+`results/raw/milestone-m-afd-profile-20260930T191548Z`.
+
+Instrumentation materially reduced serving throughput, so its latency and
+energy numbers are not performance results. This run exists only to freeze
+logical routing demand.
+
+### Logical expert skew
+
+Treating each `[layer, logical expert]` entry as a distinct expert instance,
+the 6,144 counts range from 0 to 66,773 assignments. Their p10, median, and
+p90 are 16.3, 2,514.5, and 12,176.7 respectively; max/mean is 13.5387 and CV
+is 1.3407. Within-layer max/mean averages 8.3968 and reaches 13.5387; mean
+within-layer CV is 1.3239.
+
+As a secondary index-level diagnostic, summing each repeated logical expert
+index over all 48 layers gives:
+
+| Statistic | Value |
+| --- | ---: |
+| minimum | 111,799 |
+| p10 | 148,471.7 |
+| median | 219,280 |
+| p90 | 339,893.8 |
+| maximum | 456,530 |
+| maximum / mean | 1.9284 |
+| coefficient of variation | 0.3058 |
+
+These are pre-placement logical routing counts, not physical-GPU load or
+execution time. In particular, an expert index in one layer is not the same
+expert instance as the equal-numbered index in another layer.
+
+### Default physical-rank loads
+
+Mapping the logical counts through the measured default linear ownership gives:
+
+| FFN rank | Aggregate expert-token load | Fraction |
+| --- | ---: | ---: |
+| FFN0 | 15,544,390 | 51.2979% |
+| FFN1 | 14,757,818 | 48.7021% |
+
+The aggregate absolute difference is 786,572 assignments and aggregate
+max/mean is only 1.0260. Per-layer rank max/mean has mean 1.0906, median
+1.0807, p90 1.1839, p99 1.2544, and maximum 1.2655. Grouping 64 experts per
+rank therefore removes about 93.16% of mean layer CV and 87.01% of mean layer
+max/mean excess relative to individual experts. The default placement is
+substantially smoother at rank level, although individual layers retain a
+measurable residual imbalance.
+
+### Frozen candidate placements
+
+The existing capacity-normalized constrained LPT plus local-swap algorithm was
+reused. No new placement algorithm was introduced after observing the counts.
+All candidates contain every logical expert exactly once, preserve 64 experts
+per rank in all 48 layers, and reproduce byte-identical hashes on regeneration.
+The immutable candidate files are tracked under
+`data/placements/milestone_m/`; compact diagnostics are tracked under
+`results/processed/` while the full profiling capture remains ignored under
+`results/raw/`.
+
+| Placement | FFN clocks | Rank load fractions | Raw max/mean | Capacity-normalized max/mean | SHA-256 |
+| --- | --- | --- | ---: | ---: | --- |
+| `P_balanced` | H/H | 50.0000% / 50.0000% | 1.0000003 | 1.0000003 | `59c33ea86a95a1c252418b4e612bd1479465941c4b0a726207a8ee362ed6710c` |
+| `P_MH` | M/H | 39.3431% / 60.6569% | 1.2131378 | 1.0001481 | `8824e967f45b322788fc0faefcc9d66e4201aed40826f5d853cd732f5b6f2f80` |
+| `P_HM` | H/M | 60.6569% / 39.3431% | 1.2131378 | 1.0001481 | `355c1d7da943fcb457feff7be8372e8e2cb9e853e0732797fe6dc4f100d76596` |
+
+For every layer, the slower rank receives no more predicted expert-token load
+than the faster rank. `P_HM` is the exact physical-rank mirror of `P_MH`.
+Relative to using `P_balanced` at M/H, `P_MH` reduces the aggregate
+capacity-normalized max/mean proxy from 1.2130 to 1.00015, a 17.55% reduction;
+the worst per-layer normalized max/mean is 1.0039. This frequency ratio is a
+placement heuristic only, not a fitted latency or service model.
+
+### Opportunity decision
+
+**Yes: the profile contains enough structural rank load/capacity opportunity
+to justify the planned MH/HM measured experiment.** Equal 64-expert groups
+strongly smooth the default raw imbalance, so merely downclocking a rank under
+default placement is not well motivated. However, individual expert placement
+can reproducibly create the approximately 39.35%/60.65% load split implied by
+M/H capacity while retaining exactly 64 experts per rank, and the resulting
+17.55% pressure-proxy reduction is large enough to test on hardware.
+
+This is only a go/no-go decision for measurement. It does not establish a
+latency, energy, or SLO benefit. The primary 18-run matrix has not been
+submitted.

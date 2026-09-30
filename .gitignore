@@ -41,6 +41,10 @@ results/processed/*
 !results/processed/milestone_l_aggregate.csv
 !results/processed/milestone_l_comparisons.csv
 !results/processed/milestone_l_summary.json
+!results/processed/milestone_m_profile_analysis.json
+!results/processed/milestone_m_default_layer_rank_loads.csv
+!results/processed/milestone_m_aggregate_expert_loads.csv
+!results/processed/milestone_m_candidate_placements.csv
 !results/figures/
 results/figures/*
 !results/figures/.gitkeep

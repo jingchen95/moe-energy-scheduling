@@ -50,6 +50,7 @@ def profile_diagnostics(
     weights = validate_counts(counts)
     if weights.shape != (48, 128):
         raise ValueError(f"expected routing counts shape (48, 128), got {weights.shape}")
+    expert_instances = weights.astype(np.float64).ravel()
     expert_aggregate = weights.sum(axis=0).astype(np.float64)
     expert_layer_mean = weights.mean(axis=1, dtype=np.float64)
     expert_layer_max = weights.max(axis=1).astype(np.float64)
@@ -79,7 +80,21 @@ def profile_diagnostics(
     rank_layer_cv = np.asarray(_cv(rank_loads, axis=1))
     return {
         "logical_expert": {
+            "instance_min": int(expert_instances.min()),
+            "instance_p10": float(np.percentile(expert_instances, 10)),
+            "instance_p50": float(np.percentile(expert_instances, 50)),
+            "instance_p90": float(np.percentile(expert_instances, 90)),
+            "instance_max": int(expert_instances.max()),
+            "instance_max_over_mean": float(
+                expert_instances.max() / expert_instances.mean()
+            ),
+            "instance_cv": _cv(expert_instances),
             "aggregate_by_expert": expert_aggregate.astype(np.int64).tolist(),
+            "aggregate_min": int(expert_aggregate.min()),
+            "aggregate_p10": float(np.percentile(expert_aggregate, 10)),
+            "aggregate_p50": float(np.percentile(expert_aggregate, 50)),
+            "aggregate_p90": float(np.percentile(expert_aggregate, 90)),
+            "aggregate_max": int(expert_aggregate.max()),
             "aggregate_max_over_mean": (
                 float(expert_aggregate.max() / expert_aggregate.mean())
                 if expert_aggregate.mean() else 0.0
@@ -111,6 +126,9 @@ def profile_diagnostics(
             "layer_cv": rank_layer_cv.tolist(),
             "layer_max_over_mean_mean": float(rank_layer_max_mean.mean()),
             "layer_max_over_mean_max": float(rank_layer_max_mean.max()),
+            "layer_max_over_mean_p50": float(np.percentile(rank_layer_max_mean, 50)),
+            "layer_max_over_mean_p90": float(np.percentile(rank_layer_max_mean, 90)),
+            "layer_max_over_mean_p99": float(np.percentile(rank_layer_max_mean, 99)),
             "layer_cv_mean": float(rank_layer_cv.mean()),
         },
         "smoothing": {
