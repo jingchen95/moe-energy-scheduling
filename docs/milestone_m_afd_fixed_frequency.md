@@ -126,3 +126,31 @@ The smoke launcher now follows that contract and records the FFN
 `AFD FFN EngineCore started` log line as role-readiness evidence. The failing
 FFN `/health` and `/v1/models` probes were removed. Job `269940` exited 1 after
 34 minutes 41 seconds, reset clocks, and left no GPU compute processes.
+
+### Verified unmodified 2A2F smoke
+
+Exclusive Uranus job `270001` completed successfully in 4 minutes 41 seconds
+using the pinned, unmodified AFD plugin. The Attention API served three fixed
+greedy prompts twice, and both passes produced identical content, token counts,
+and finish reasons. The response-set SHA-256 is
+`c49027c49b6a5a8d785c375530cd4a236504799cd6af31ad0bf4db5ef90bded4`.
+
+GPU sampling confirms all four assigned devices participated:
+
+| Physical GPU | Role | Peak memory (MiB) | Peak SM utilization |
+| --- | --- | ---: | ---: |
+| 0 | Attention | 42,597 | 98% |
+| 1 | Attention | 42,597 | 98% |
+| 2 | FFN | 30,065 | 100% |
+| 3 | FFN | 30,065 | 100% |
+
+The FFN connector-loop readiness marker was recorded, all owned processes were
+terminated, graphics-clock locks were reset, and the post-run compute-process
+list was empty. The plugin remained clean at commit
+`4c2541a53ec8ad507508073eac81ac9feecc6c9a`; the isolated runtime remained
+vLLM 0.26.0 and the protected `cuda-env` remained vLLM 0.15.1.
+
+This satisfies the first Milestone M GPU gate. It establishes that Qwen3
+2A2F works on the target node; it is not a placement, performance, or energy
+result. Static FFN placement work may now begin, but no profiling or primary
+matrix run has yet been submitted.

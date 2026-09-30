@@ -57,15 +57,26 @@ Attention--FFN disaggregation.
   receive timeout. Cleanup reset clocks and left no GPU compute processes.
 - Readiness now matches the pinned plugin's official runner: wait for Attention
   `/v1/models`, require both role processes to remain alive, and record the FFN
-  connector-loop startup line. The fix is commit `f5f83f1` and the next
-  unmodified-plugin smoke was submitted as exclusive Uranus job `270001`.
-  Do not start placement or profiling work unless this job passes.
+  connector-loop startup line. The fix is commit `f5f83f1`.
+- Exclusive Uranus job `270001` passed the unmodified Qwen3 2A2F smoke in
+  4 minutes 41 seconds. Three fixed prompts completed twice with exact output
+  equality; all four GPUs showed role-appropriate memory and SM activity. The
+  response hash is
+  `c49027c49b6a5a8d785c375530cd4a236504799cd6af31ad0bf4db5ef90bded4`.
+- Cleanup reset graphics-clock locks, left no compute processes, preserved a
+  clean pinned plugin, and confirmed the isolated/protected runtimes remain
+  vLLM 0.26.0 and 0.15.1 respectively. The raw smoke directory is
+  `results/raw/milestone-m-afd-smoke-270001-20260929T214119Z`.
+- The unmodified 2A2F prerequisite is complete. Static 64-expert/rank FFN
+  placement is the next stage; routing profiling and the 18-run matrix remain
+  gated on its homogeneous-frequency correctness test.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-squeue -j 270001
+git -C third_party/afd-plugin grep -n 'expert_map\|local_expert\|expert_id' -- \
+  afd_plugin/model_executor afd_plugin/v1
 ```
 
 ## Latest status — Milestone L real-GPU validation complete
