@@ -81,16 +81,16 @@ Attention--FFN disaggregation.
   balanced-round-robin, and deliberately different block mappings, with two
   deterministic smoke passes each. Routing profiling and the 18-run matrix
   remain gated on this job.
+- The preparation implementation is committed and pushed as `0bb0172`. The
+  immutable H/H correctness study is
+  `results/raw/milestone-m-static-hh-20260930T081823Z`; Slurm job `270232` was
+  submitted on Uranus. Its result is pending.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-study="results/raw/milestone-m-static-hh-$(date -u +%Y%m%dT%H%M%SZ)"
-python -m tools.prepare_milestone_m_static_placement \
-  --output-dir "${study}" \
-  --patch patches/afd-plugin-0.26.0-static-placement.patch \
-  --baseline-run results/raw/milestone-m-afd-smoke-270001-20260929T214119Z
+sacct -j 270232 --format=JobID,State,ExitCode,Elapsed,NodeList
 ```
 
 ## Latest status — Milestone L real-GPU validation complete
