@@ -122,11 +122,13 @@ primary_measurement:
   dynamic_dvfs_next: false
 
 stationary_repeat:
-  status: stage_1_rerun_required
+  status: stage_1_corrected_rerun_submitted_pending
   stage_1_slurm_job_id: 270688
   stage_1_study_dir: results/raw/milestone-m-rate-sweep-20261001T125021Z
   stage_1_valid_for_rate_selection: false
   stage_1_invalid_reason: request_rate_was_metadata_only_trace_offsets_remained_16_rps
+  stage_1_corrected_slurm_job_id: 270840
+  stage_1_corrected_study_dir: results/raw/milestone-m-rate-sweep-rerun-20261001T161703Z
   rates_requests_s: [2, 4, 6, 8]
   requests_per_window: 300
   repetitions_per_rate: 3

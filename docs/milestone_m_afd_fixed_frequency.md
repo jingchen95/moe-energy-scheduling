@@ -541,3 +541,6 @@ preserved as a harness validation failure and are not interpreted as capacity
 measurements. The benchmark now has an explicit `--override-arrival-rate`
 mode that preserves request content/order while replacing offsets with
 `index / request_rate`; resolved schedules are saved and validated per run.
+The corrected sweep was submitted as job `270840` with study directory
+`results/raw/milestone-m-rate-sweep-rerun-20261001T161703Z` and commit
+`39b546a`; it is pending on Uranus.

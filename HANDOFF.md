@@ -182,16 +182,15 @@ Attention--FFN disaggregation.
   arrival-rate override now rewrites only offsets to `index / request_rate`,
   saves the resolved trace, and validates every scheduled deadline. Stage 1
   must be rerun before selecting a stationary rate.
+- The corrected sweep is submitted as job `270840`, study directory
+  `results/raw/milestone-m-rate-sweep-rerun-20261001T161703Z`, from commit
+  `39b546a`. It is pending on Uranus. Do not select a rate from job `270688`.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-rate_study="results/raw/milestone-m-rate-sweep-$(date -u +%Y%m%dT%H%M%SZ)"
-third_party/afd-plugin/.venv/bin/python -m tools.prepare_milestone_m_stationary \
-  --output-dir "${rate_study}" \
-  --trace results/raw/milestone-m-primary-20261001T073935Z/trace.jsonl
-MILESTONE_M_RATE_STUDY="${rate_study}" sbatch scripts/milestone_m_rate_sweep.sbatch
+squeue -j 270840 -o '%.18i %.9T %.10M %.30R'
 ```
 
 ## Latest status — Milestone L real-GPU validation complete
