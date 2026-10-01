@@ -53,6 +53,9 @@ def _comparison(*, energy: float = 0.0, tpot: float = 0.0) -> dict[str, float]:
         row[f"{metric}_baseline_mean"] = 100.0
         row[f"{metric}_baseline_sample_std"] = 0.5
         row[f"{metric}_treatment_sample_std"] = 0.5
+        effect = energy if metric == "total_gpu_energy_j" else tpot
+        row[f"{metric}_paired_relative_change_mean"] = effect
+        row[f"{metric}_paired_relative_change_sample_std"] = 0.005
     return row
 
 

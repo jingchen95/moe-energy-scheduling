@@ -150,15 +150,28 @@ Attention--FFN disaggregation.
   FFN GPUs, clean process/clock cleanup, and unchanged environments. The
   parser now uses only the non-deprecated current-clock field; the failed Slurm
   status is retained.
+- Primary matrix job `270552` completed `COMPLETED/0` in 47:38. All 18 windows
+  completed 300/300 requests with zero failures, exact target average clocks,
+  cumulative NVML energy, valid client scheduling, one trace hash, exact
+  ownership hashes, and clean patch/process/clock/environment cleanup.
+- C3 versus C2 changes mean TPOT p99 by -5.458% but total energy by only
+  -0.227% and FFN energy by +0.309%; paired TPOT changes are +4.77%, -11.11%,
+  and -9.65%. C5 versus C4 worsens TPOT by +2.761%, total energy by +1.985%,
+  FFN energy by +2.185%, and throughput by -2.525%.
+- Alignment shifts energy off the slow FFN rank in both orientations, but the
+  fast-rank increase offsets it. The mechanism changes physical work
+  distribution without a repeatable pool/total-energy benefit.
+- Decision: **B -- weak/mixed effect**. The 16 request/s offered load exceeds
+  observed 6.0--9.7 request/s throughput and each configuration has a strong
+  repetition-order trend, so the apparent MH latency benefit is not stationary
+  or repeatable. Do not proceed to window-level dynamic DVFS.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-smoke_study="results/raw/milestone-m-mh-smoke-$(date -u +%Y%m%dT%H%M%SZ)"
-third_party/afd-plugin/.venv/bin/python -m tools.prepare_milestone_m_measurement smoke \
-  --output-dir "${smoke_study}" \
-  --baseline-run results/raw/milestone-m-afd-smoke-270001-20260929T214119Z
+cat results/processed/milestone_m_summary.json
+cat results/processed/milestone_m_comparisons.csv
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

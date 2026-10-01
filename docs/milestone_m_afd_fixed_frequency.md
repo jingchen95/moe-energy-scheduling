@@ -423,3 +423,88 @@ renders as a deprecation message. The preserved current-clock and active-sample
 fields are exact, ownership and outputs pass, and cleanup is complete. The
 validator now uses the non-deprecated current-clock field; the original Slurm
 failure remains recorded rather than being relabeled.
+
+## Primary measured results
+
+Exclusive Uranus job `270552` completed with exit code 0 in 47 minutes
+38 seconds. All 18 planned measurement windows passed: each completed 300/300
+requests with zero failures and 38,400 output tokens, used the one frozen trace
+hash, read cumulative NVML energy, and matched all four requested clocks
+exactly in the measurement-window averages. The maximum client p99 send delay
+was 4.451 ms, below the 62.5 ms arrival interval. Cleanup left no compute
+processes, reset clocks, reverted the plugin patch, and preserved vLLM 0.15.1
+in the protected environment and vLLM 0.26.0 in the isolated environment.
+
+Values below are mean +/- sample standard deviation across three repetitions.
+Energy includes all four GPUs and does not subtract idle energy.
+
+| ID | Placement | Clocks A0/A1/F0/F1 | TTFT p99 (ms) | TPOT p99 (ms) | E2E p99 (ms) | Total energy (J) | FFN energy (J) | Throughput (req/s) |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| C0 | `P_balanced` | 2520/2520/2520/2520 | 14098.08 +/- 9037.19 | 73.158 +/- 3.991 | 21109.62 +/- 8878.55 | 23680.0 +/- 4897.4 | 14468.4 +/- 2929.2 | 7.816 +/- 1.737 |
+| C1 | `P_MH` | 2520/2520/2520/2520 | 12942.66 +/- 7589.21 | 72.193 +/- 4.440 | 20247.77 +/- 7427.15 | 23390.6 +/- 4309.0 | 14340.5 +/- 2681.9 | 7.910 +/- 1.445 |
+| C2 | `P_balanced` | 2520/2520/1635/2520 | 13371.78 +/- 6719.19 | 73.476 +/- 3.122 | 20545.63 +/- 6698.46 | 21970.1 +/- 3625.8 | 12854.6 +/- 2155.3 | 7.799 +/- 1.337 |
+| C3 | `P_MH` | 2520/2520/1635/2520 | 12524.95 +/- 9165.58 | 69.466 +/- 5.421 | 19855.39 +/- 9360.42 | 21920.2 +/- 4658.9 | 12894.4 +/- 2691.7 | 8.071 +/- 1.836 |
+| C4 | `P_balanced` | 2520/2520/2520/1635 | 12231.95 +/- 7059.44 | 70.141 +/- 2.357 | 19383.47 +/- 7023.04 | 21435.6 +/- 3915.2 | 12548.6 +/- 2337.4 | 8.099 +/- 1.478 |
+| C5 | `P_HM` | 2520/2520/2520/1635 | 12725.94 +/- 6710.16 | 72.078 +/- 2.197 | 19936.94 +/- 6680.39 | 21861.2 +/- 3755.1 | 12822.8 +/- 2264.3 | 7.894 +/- 1.328 |
+
+### Required comparisons
+
+Signed changes use `(treatment mean - baseline mean) / baseline mean`; negative
+is favorable for latency and energy, while positive is favorable for
+throughput.
+
+| Comparison | TTFT p99 | TPOT p99 | Total energy | FFN energy | Throughput |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| C3 vs C2, aligned MH | -6.333% | -5.458% | -0.227% | +0.309% | +3.487% |
+| C5 vs C4, aligned HM | +4.039% | +2.761% | +1.985% | +2.185% | -2.525% |
+| C1 vs C0, H/H control | -8.196% | -1.319% | -1.222% | -0.884% | +1.195% |
+| C3 vs C0, aligned MH vs H/H | -11.158% | -5.047% | -7.432% | -10.879% | +3.257% |
+| C5 vs C0, aligned HM vs H/H | -9.733% | -1.476% | -7.681% | -11.373% | +0.998% |
+
+The three paired C3-vs-C2 TPOT changes are +4.77%, -11.11%, and -9.65%
+(mean -5.33%, sample standard deviation 8.78%). Paired total-energy changes
+are +4.71%, -3.51%, and -3.33%. Thus the favorable mean MH latency is not
+repeatable relative to its variation, and its energy is effectively unchanged.
+For the mirror, C5-vs-C4 TPOT changes are -1.28%, +7.22%, and +2.53%; total
+energy increases in every repetition by +0.87%, +2.76%, and +2.71%.
+
+The H/H control is approximately neutral in TPOT, total energy, and throughput
+at the mean level. Its -8.20% TTFT difference is not stable relative to the
+7.6--9.0 second sample deviations, so the control does not establish a
+placement-only TTFT benefit.
+
+### Mechanism check
+
+Alignment did move work toward the faster FFN rank, as the structural profile
+predicted. Under MH, slow GPU2 mean energy falls from 5,553.2 J to 5,078.3 J
+(-8.55%), while fast GPU3 rises from 7,301.4 J to 7,816.1 J (+7.05%). Under
+HM, slow GPU3 falls from 5,505.1 J to 5,127.8 J (-6.85%), while fast GPU2
+rises from 7,043.5 J to 7,695.1 J (+9.25%). The fast-rank increase therefore
+offsets the slow-rank saving: FFN-pool energy changes by +0.31% for MH and
++2.19% for HM rather than decreasing.
+
+### Repeatability limitation
+
+The fixed 16 request/s offered load exceeds the observed 6.0--9.7 request/s
+throughput of this AFD configuration. Every configuration shows a strong
+within-server order trend: the first repetition is slowest and highest-energy,
+while the third is fastest and lowest-energy. TTFT p99 sample deviations are
+6.7--9.2 seconds. Client scheduling itself remains valid, but the resulting
+queueing/warm-state variation means the three windows are not stationary
+independent samples. This limits interpretation of the apparent MH latency
+improvement and is preserved rather than averaged away.
+
+### Decision
+
+**B -- weak/mixed effect.** C3 shows a noisy TPOT improvement but essentially
+no total or FFN-pool energy benefit; the mirrored C5 comparison worsens TPOT,
+energy, and throughput. The two mirrored comparisons therefore do not provide
+repeatable evidence that frequency-aware placement improves the measured AFD
+system at identical heterogeneous frequencies. The structural load/frequency
+proxy changes the physical work distribution, but it is not sufficient to
+predict end-to-end benefit.
+
+Do not proceed to window-level dynamic DVFS from this result. Any further work
+should first establish a stationary AFD operating point with adequate warm-up
+and a request rate below measured AFD saturation, then repeat this fixed
+placement test before adding another control dimension.

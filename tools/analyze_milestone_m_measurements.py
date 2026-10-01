@@ -26,6 +26,10 @@ AGGREGATE_METRICS = (
     "throughput_requests_s", "throughput_output_tokens_s",
     "total_gpu_energy_j", "attention_pool_energy_j", "ffn_pool_energy_j",
     "joules_per_request", "client_send_delay_p99_ms",
+    *(f"gpu{gpu}_{suffix}" for gpu in range(4) for suffix in (
+        "energy_j", "avg_power_w", "avg_sm_util", "avg_memory_util",
+        "avg_sm_clock",
+    )),
 )
 COMPARISONS = (
     ("primary_mh", "C3", "C2"),
@@ -139,6 +143,7 @@ def _comparison(
     treatment_id: str,
     baseline_id: str,
     aggregates: dict[str, dict[str, Any]],
+    per_run: list[dict[str, Any]],
 ) -> dict[str, Any]:
     treatment = aggregates[treatment_id]
     baseline = aggregates[baseline_id]
@@ -155,6 +160,25 @@ def _comparison(
         row[f"{metric}_relative_change"] = _relative(treatment_mean, baseline_mean)
         row[f"{metric}_treatment_sample_std"] = treatment[f"{metric}_sample_std"]
         row[f"{metric}_baseline_sample_std"] = baseline[f"{metric}_sample_std"]
+        treatment_by_rep = {
+            int(item["repetition"]): float(item[metric])
+            for item in per_run if item["config_id"] == treatment_id
+        }
+        baseline_by_rep = {
+            int(item["repetition"]): float(item[metric])
+            for item in per_run if item["config_id"] == baseline_id
+        }
+        if set(treatment_by_rep) != {1, 2, 3} or set(baseline_by_rep) != {1, 2, 3}:
+            raise ValueError("paired comparison requires repetitions 1, 2, and 3")
+        paired = [
+            _relative(treatment_by_rep[rep], baseline_by_rep[rep])
+            for rep in (1, 2, 3)
+        ]
+        row[f"{metric}_paired_relative_change_mean"] = mean(paired)
+        row[f"{metric}_paired_relative_change_sample_std"] = stdev(paired)
+        row[f"{metric}_paired_relative_change_values"] = ";".join(
+            f"{value:.9f}" for value in paired
+        )
     return row
 
 
@@ -168,12 +192,8 @@ def classify(comparisons: dict[str, dict[str, Any]]) -> tuple[str, str]:
         )
 
     def repeatable_improvement(row: dict[str, Any], metric: str) -> bool:
-        effect = row[f"{metric}_relative_change"]
-        baseline = row[f"{metric}_baseline_mean"]
-        variability = max(
-            row[f"{metric}_treatment_sample_std"],
-            row[f"{metric}_baseline_sample_std"],
-        ) / baseline
+        effect = row[f"{metric}_paired_relative_change_mean"]
+        variability = row[f"{metric}_paired_relative_change_sample_std"]
         return effect <= -0.03 and abs(effect) > variability
 
     primary = [comparisons["primary_mh"], comparisons["primary_hm"]]
@@ -199,7 +219,8 @@ def classify(comparisons: dict[str, dict[str, Any]]) -> tuple[str, str]:
         acceptable(row)
         and (
             row["tpot_p99_ms_relative_change"] <= -0.01
-            or row["total_gpu_energy_j_relative_change"] <= -0.01
+            or row["total_gpu_energy_j_paired_relative_change_mean"] <= -0.01
+            or row["tpot_p99_ms_paired_relative_change_mean"] <= -0.01
         )
         for row in primary
     )
@@ -279,7 +300,7 @@ def main() -> int:
     ]
     aggregates = {row["config_id"]: row for row in aggregates_list}
     comparison_rows = [
-        _comparison(label, treatment, baseline, aggregates)
+        _comparison(label, treatment, baseline, aggregates, per_run)
         for label, treatment, baseline in COMPARISONS
     ]
     comparisons = {row["comparison"]: row for row in comparison_rows}
