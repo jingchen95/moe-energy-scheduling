@@ -165,13 +165,21 @@ Attention--FFN disaggregation.
   observed 6.0--9.7 request/s throughput and each configuration has a strong
   repetition-order trend, so the apparent MH latency benefit is not stationary
   or repeatable. Do not proceed to window-level dynamic DVFS.
+- A stationary-rate follow-up is prepared without changing placements or H/M
+  clocks. Stage 1 runs `P_balanced + HHHH` at 2/4/6/8 request/s for three
+  randomized 300-request windows per rate (12 total, seed `20261002`). The
+  highest clearly stable rate will be frozen from capacity/queueing evidence
+  before the existing C0--C5 matrix is repeated.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-cat results/processed/milestone_m_summary.json
-cat results/processed/milestone_m_comparisons.csv
+rate_study="results/raw/milestone-m-rate-sweep-$(date -u +%Y%m%dT%H%M%SZ)"
+third_party/afd-plugin/.venv/bin/python -m tools.prepare_milestone_m_stationary \
+  --output-dir "${rate_study}" \
+  --trace results/raw/milestone-m-primary-20261001T073935Z/trace.jsonl
+MILESTONE_M_RATE_STUDY="${rate_study}" sbatch scripts/milestone_m_rate_sweep.sbatch
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

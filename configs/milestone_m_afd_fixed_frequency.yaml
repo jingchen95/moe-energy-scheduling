@@ -120,3 +120,13 @@ primary_measurement:
   execution_mode: FULL_DECODE_ONLY
   decision: B_weak_mixed_effect
   dynamic_dvfs_next: false
+
+stationary_repeat:
+  status: stage_1_prepared
+  rates_requests_s: [2, 4, 6, 8]
+  requests_per_window: 300
+  repetitions_per_rate: 3
+  randomization_seed: 20261002
+  baseline_placement: P_balanced
+  baseline_clocks_mhz: [2520, 2520, 2520, 2520]
+  placement_and_frequency_changes: false

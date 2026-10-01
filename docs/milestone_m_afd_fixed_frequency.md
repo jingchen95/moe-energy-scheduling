@@ -508,3 +508,20 @@ Do not proceed to window-level dynamic DVFS from this result. Any further work
 should first establish a stationary AFD operating point with adequate warm-up
 and a request rate below measured AFD saturation, then repeat this fixed
 placement test before adding another control dimension.
+
+## Stationary-rate repeat plan
+
+The original 16 request/s result is preserved above. A follow-up experiment
+first tests 2, 4, 6, and 8 request/s using `P_balanced`, H/H Attention, and H/H
+FFN clocks. Each rate receives three complete 300-request windows using the
+same frozen trace. The 12 windows are serialized behind one server launch and
+permuted with seed `20261002`, so rate is not monotonically correlated with
+experiment time.
+
+Rate selection is based only on capacity and stationarity: achieved throughput
+must track offered load, all requests must complete, TTFT must not accumulate
+from the first to final third of a window, and the prior strong repetition
+trend must be absent. The highest clearly stable rate with capacity margin will
+be frozen before preparing the six-configuration repeat. Placement files and
+the 2520/1635 MHz H/M levels remain immutable. No new placement, frequency
+tuple, service model, or dynamic DVFS mechanism is introduced.

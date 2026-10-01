@@ -49,6 +49,8 @@ results/processed/*
 !results/processed/milestone_m_aggregate.csv
 !results/processed/milestone_m_comparisons.csv
 !results/processed/milestone_m_summary.json
+!results/processed/milestone_m_rate_sweep_runs.csv
+!results/processed/milestone_m_rate_sweep_aggregate.csv
 !results/figures/
 results/figures/*
 !results/figures/.gitkeep
