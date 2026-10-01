@@ -21,6 +21,9 @@ class GPUControlError(RuntimeError):
     pass
 
 
+CLOCK_READBACK_TOLERANCE_MHZ = 15
+
+
 @dataclass(frozen=True)
 class GPUClockState:
     index: int
@@ -75,19 +78,31 @@ def read_clocks(gpus: Iterable[int] = range(4)) -> list[GPUClockState]:
     return [read_clock(gpu) for gpu in gpus]
 
 
-def set_graphics_clock(gpu: int, clock_mhz: int, *, verify_timeout_s: float = 2.0) -> GPUClockState:
+def set_graphics_clock(
+    gpu: int,
+    clock_mhz: int,
+    *,
+    verify_timeout_s: float = 2.0,
+    verify_tolerance_mhz: int = CLOCK_READBACK_TOLERANCE_MHZ,
+) -> GPUClockState:
+    if verify_tolerance_mhz < 0:
+        raise ValueError("clock verification tolerance must be non-negative")
     if clock_mhz not in supported_graphics_clocks(gpu):
         raise GPUControlError(f"GPU {gpu}: {clock_mhz} MHz is not hardware-supported")
     _run(["-i", str(gpu), "-lgc", f"{clock_mhz},{clock_mhz}"], privileged=True)
     deadline = time.monotonic() + verify_timeout_s
     state = read_clock(gpu)
-    while state.graphics_clock_mhz != clock_mhz and time.monotonic() < deadline:
+    while (
+        abs(state.graphics_clock_mhz - clock_mhz) > verify_tolerance_mhz
+        and time.monotonic() < deadline
+    ):
         time.sleep(0.2)
         state = read_clock(gpu)
-    if state.graphics_clock_mhz != clock_mhz:
+    if abs(state.graphics_clock_mhz - clock_mhz) > verify_tolerance_mhz:
         reset_graphics_clocks([gpu], verify=False)
         raise GPUControlError(
-            f"GPU {gpu}: requested {clock_mhz} MHz but read {state.graphics_clock_mhz} MHz"
+            f"GPU {gpu}: requested {clock_mhz} MHz but read "
+            f"{state.graphics_clock_mhz} MHz (tolerance {verify_tolerance_mhz} MHz)"
         )
     return state
 

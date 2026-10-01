@@ -407,3 +407,11 @@ regression in the paired metrics, and an H/H control within 3%. A one-sided
 1% benefit that does not meet that complete rule is category B; otherwise the
 result is category C. These thresholds organize the decision and do not turn
 the structural load/frequency proxy into an execution-time model.
+
+The first heterogeneous smoke allocation exited before model launch because
+an immediate idle readback reported 2505 MHz after requesting the supported
+2520 MHz lock. Cleanup completed normally. The clock-control preflight now
+accepts one 15 MHz L40S clock step, while the smoke still requires active
+samples to reach the requested clock and every measured run still validates
+its measurement-window average clock. This avoids mistaking a transient idle
+readback for a failed lock without weakening the primary-run clock check.

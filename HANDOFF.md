@@ -138,6 +138,11 @@ Attention--FFN disaggregation.
   `FULL_DECODE_ONLY` mode; the matrix must not be submitted unless it passes.
 - The candidate placements and their hashes remain frozen. Routing profiling,
   custom kernel timing, dynamic DVFS, and placement regeneration are disabled.
+- Heterogeneous smoke job `270391` failed before model launch when the
+  immediate idle clock readback returned 2505 MHz for a requested 2520 MHz
+  lock. Cleanup, patch reversion, process cleanup, and both environment checks
+  passed. A one-step (15 MHz) actuation tolerance is prepared; active smoke
+  samples and measured-window average clocks remain independently validated.
 
 ### Exact next command
 
