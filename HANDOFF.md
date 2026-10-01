@@ -170,16 +170,17 @@ Attention--FFN disaggregation.
   randomized 300-request windows per rate (12 total, seed `20261002`). The
   highest clearly stable rate will be frozen from capacity/queueing evidence
   before the existing C0--C5 matrix is repeated.
+- Stage 1 is submitted as job `270688` using study directory
+  `results/raw/milestone-m-rate-sweep-20261001T125021Z`. It is pending because
+  Uranus is down/drained or reserved for a higher-priority partition; Slurm
+  reports no estimated start. Do not prepare Stage 2 until this job completes
+  and the stationary rate is selected from its data.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-rate_study="results/raw/milestone-m-rate-sweep-$(date -u +%Y%m%dT%H%M%SZ)"
-third_party/afd-plugin/.venv/bin/python -m tools.prepare_milestone_m_stationary \
-  --output-dir "${rate_study}" \
-  --trace results/raw/milestone-m-primary-20261001T073935Z/trace.jsonl
-MILESTONE_M_RATE_STUDY="${rate_study}" sbatch scripts/milestone_m_rate_sweep.sbatch
+squeue -j 270688 -o '%.18i %.9T %.10M %.30R'
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

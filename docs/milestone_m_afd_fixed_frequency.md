@@ -525,3 +525,9 @@ trend must be absent. The highest clearly stable rate with capacity margin will
 be frozen before preparing the six-configuration repeat. Placement files and
 the 2520/1635 MHz H/M levels remain immutable. No new placement, frequency
 tuple, service model, or dynamic DVFS mechanism is introduced.
+
+Stage 1 was submitted as Slurm job `270688` with study directory
+`results/raw/milestone-m-rate-sweep-20261001T125021Z`. At submission time it
+was pending because Uranus was down, drained, or reserved for a higher-priority
+partition; Slurm reported no estimated start time. The job is left queued on
+Uranus so the follow-up remains on the validated physical node.

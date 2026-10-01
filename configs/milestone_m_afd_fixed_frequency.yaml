@@ -122,7 +122,9 @@ primary_measurement:
   dynamic_dvfs_next: false
 
 stationary_repeat:
-  status: stage_1_prepared
+  status: stage_1_submitted_pending
+  stage_1_slurm_job_id: 270688
+  stage_1_study_dir: results/raw/milestone-m-rate-sweep-20261001T125021Z
   rates_requests_s: [2, 4, 6, 8]
   requests_per_window: 300
   repetitions_per_rate: 3
