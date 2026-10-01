@@ -531,3 +531,13 @@ Stage 1 was submitted as Slurm job `270688` with study directory
 was pending because Uranus was down, drained, or reserved for a higher-priority
 partition; Slurm reported no estimated start time. The job is left queued on
 Uranus so the follow-up remains on the validated physical node.
+
+Job `270688` later completed 12/12 windows with clean validation and cleanup,
+but it is **not valid for request-rate selection**. The benchmark's historical
+`--request-rate` option recorded metadata while replay continued to use the
+16 request/s offsets embedded in the trace. The decisive symptom is that the
+nominal 2 request/s windows achieved 8.21--10.62 request/s. These results are
+preserved as a harness validation failure and are not interpreted as capacity
+measurements. The benchmark now has an explicit `--override-arrival-rate`
+mode that preserves request content/order while replacing offsets with
+`index / request_rate`; resolved schedules are saved and validated per run.

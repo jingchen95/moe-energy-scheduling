@@ -14,6 +14,8 @@ def test_rate_sweep_definition_is_fixed() -> None:
     assert RATE_SWEEP_REPETITIONS == (1, 2, 3)
     assert RATE_SWEEP_RANDOMIZATION_SEED == 20261002
     assert len(RATE_SWEEP_RATES) * len(RATE_SWEEP_REPETITIONS) == 12
+    script = Path("scripts/milestone_m_rate_sweep.sbatch").read_text()
+    assert "--override-arrival-rate" in script
 
 
 def test_request_trend_detects_accumulating_ttft(tmp_path: Path) -> None:

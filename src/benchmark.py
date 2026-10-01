@@ -20,7 +20,13 @@ import yaml
 
 from src.gpu_monitor import FixedPeriodMonitor, NVMLReader, summarize_energy_window
 from src.metrics import latency_metrics, summarize_run
-from src.workload import TraceRequest, load_trace, scheduled_monotonic_times
+from src.workload import (
+    TraceRequest,
+    load_trace,
+    scheduled_monotonic_times,
+    with_constant_arrival_rate,
+    write_trace,
+)
 
 
 def _utc_now() -> str:
@@ -285,10 +291,13 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
     if args.expert_profile and args.afd_profile_control_dir:
         raise ValueError("legacy EPLB and AFD routing profiling are mutually exclusive")
     requests = load_trace(args.trace)
+    if args.override_arrival_rate:
+        requests = with_constant_arrival_rate(requests, args.request_rate)
     category = requests[0].category
     run_id, run_dir = create_run_directory(args.output_root, category)
     (run_dir / "stdout-stderr.log").touch(exist_ok=False)
     shutil.copyfile(args.trace, run_dir / "trace.jsonl")
+    write_trace(run_dir / "resolved_trace.jsonl", requests)
     if args.placement_file:
         shutil.copyfile(args.placement_file, run_dir / "expert_placement.json")
     if args.vllm_patch_manifest:
@@ -304,6 +313,9 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
         "vllm_version": _vllm_version(),
         "tokenizer": args.tokenizer,
         "request_rate": args.request_rate,
+        "arrival_schedule_source": (
+            "request_rate_override" if args.override_arrival_rate else "trace"
+        ),
         "run_label": args.run_label,
         "placement_name": args.placement_name,
         "warmup_requests": args.warmup_requests,
@@ -322,6 +334,7 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
         "placement_file": str(args.placement_file.resolve()) if args.placement_file else None,
         "placement_sha256": _sha256(args.placement_file) if args.placement_file else None,
         "trace_sha256": _sha256(args.trace),
+        "resolved_trace_sha256": _sha256(run_dir / "resolved_trace.jsonl"),
         "target_clocks_mhz": args.target_clocks,
         "store_output_token_ids": args.store_output_token_ids,
     }
@@ -454,6 +467,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model", default="qwen3-30b-a3b")
     parser.add_argument("--tokenizer", default="Qwen/Qwen3-30B-A3B")
     parser.add_argument("--request-rate", type=float, required=True)
+    parser.add_argument(
+        "--override-arrival-rate", action="store_true",
+        help="replace trace offsets with index/request-rate while preserving content order",
+    )
     parser.add_argument("--output-root", type=Path, default=Path("results/raw"))
     parser.add_argument("--warmup-requests", type=int, default=8)
     parser.add_argument("--settle-before-s", type=float, default=5.0)

@@ -175,12 +175,23 @@ Attention--FFN disaggregation.
   Uranus is down/drained or reserved for a higher-priority partition; Slurm
   reports no estimated start. Do not prepare Stage 2 until this job completes
   and the stationary rate is selected from its data.
+- Job `270688` completed 12/12 windows and cleaned up correctly, but is invalid
+  for rate selection: `--request-rate` was metadata-only and the trace retained
+  its original 16 request/s offsets (nominal 2 request/s windows achieved
+  8.21--10.62 request/s). Preserve the raw data. A source-controlled explicit
+  arrival-rate override now rewrites only offsets to `index / request_rate`,
+  saves the resolved trace, and validates every scheduled deadline. Stage 1
+  must be rerun before selecting a stationary rate.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-squeue -j 270688 -o '%.18i %.9T %.10M %.30R'
+rate_study="results/raw/milestone-m-rate-sweep-$(date -u +%Y%m%dT%H%M%SZ)"
+third_party/afd-plugin/.venv/bin/python -m tools.prepare_milestone_m_stationary \
+  --output-dir "${rate_study}" \
+  --trace results/raw/milestone-m-primary-20261001T073935Z/trace.jsonl
+MILESTONE_M_RATE_STUDY="${rate_study}" sbatch scripts/milestone_m_rate_sweep.sbatch
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

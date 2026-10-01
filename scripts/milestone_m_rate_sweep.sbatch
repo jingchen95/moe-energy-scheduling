@@ -139,6 +139,7 @@ while IFS=$'\t' read -r order rate repetition; do
         --model "${served_name}-attention" \
         --tokenizer Qwen/Qwen3-30B-A3B \
         --request-rate "${rate}" \
+        --override-arrival-rate \
         --output-root "${rep_root}" \
         --warmup-requests 8 \
         --settle-before-s 5 \

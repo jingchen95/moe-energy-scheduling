@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 
 import yaml
@@ -46,6 +47,23 @@ def validate_measured_run(
             )
     if metrics["client_send_delay_p99_ms"] >= 62.5:
         raise ValueError("client p99 send delay exceeds one arrival interval")
+    if config.get("arrival_schedule_source") == "request_rate_override":
+        request_rate = float(config["request_rate"])
+        requests = [
+            json.loads(line)
+            for line in (run_dir / "requests.jsonl").read_text().splitlines()
+            if line
+        ]
+        for index, request in enumerate(requests):
+            expected = index / request_rate
+            if not math.isclose(
+                float(request["scheduled_send_s"]), expected,
+                rel_tol=0.0, abs_tol=1e-6,
+            ):
+                raise ValueError(
+                    f"request {index} scheduled at {request['scheduled_send_s']}, "
+                    f"expected {expected} for {request_rate} request/s"
+                )
     return {
         "status": "pass",
         "run_id": metrics["run_id"],
@@ -56,6 +74,7 @@ def validate_measured_run(
         "target_clocks_mhz": target_clocks,
         "actual_average_clocks_mhz": actual,
         "client_send_delay_p99_ms": metrics["client_send_delay_p99_ms"],
+        "arrival_schedule_source": config.get("arrival_schedule_source", "trace"),
         "trace_sha256": trace_sha256,
         "placement_sha256": placement_sha256,
         "actual_mapping_sha256": mapping_sha256,

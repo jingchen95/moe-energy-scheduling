@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -122,3 +122,19 @@ def scheduled_monotonic_times(
 ) -> list[float]:
     """Return immutable open-loop deadlines derived from one replay epoch."""
     return [start_monotonic_s + request.arrival_offset_s for request in requests]
+
+
+def with_constant_arrival_rate(
+    requests: Iterable[TraceRequest], request_rate: float,
+) -> list[TraceRequest]:
+    """Preserve request content/order while replacing the open-loop schedule."""
+    if not math.isfinite(request_rate) or request_rate <= 0:
+        raise ValueError("request_rate must be finite and positive")
+    rows = list(requests)
+    validate_trace(rows)
+    scheduled = [
+        replace(request, arrival_offset_s=index / request_rate)
+        for index, request in enumerate(rows)
+    ]
+    validate_trace(scheduled)
+    return scheduled
