@@ -113,7 +113,7 @@ while IFS=$'\t' read -r order config_id placement_name placement_path \
     fi
     grep -m1 'AFD FFN EngineCore started; workers run connector loop.' \
         "${config_dir}/servers/ffn.log" > "${config_dir}/ffn-ready.txt"
-    nvidia-smi --query-gpu=index,clocks.current.sm,clocks.applications.graphics \
+    nvidia-smi --query-gpu=index,clocks.current.sm \
         --format=csv,noheader,nounits > "${config_dir}/actual-clocks-before-runs.csv"
     "${AFD_PYTHON}" -m tools.validate_milestone_m_runtime_ownership \
         --placement-file "${placement_file}" \

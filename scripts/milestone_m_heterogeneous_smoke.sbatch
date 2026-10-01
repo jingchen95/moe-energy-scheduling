@@ -115,7 +115,7 @@ if ! afd_wait_attention_api "${attention_pid}" "${ffn_pid}" 2400 \
 fi
 grep -m1 'AFD FFN EngineCore started; workers run connector loop.' \
     "${study}/servers/ffn.log" > "${study}/ffn-ready.txt"
-nvidia-smi --query-gpu=index,clocks.current.sm,clocks.applications.graphics \
+nvidia-smi --query-gpu=index,clocks.current.sm \
     --format=csv,noheader,nounits > "${study}/actual-clocks-before-client.csv"
 
 "${AFD_PYTHON}" tools/smoke_client.py \

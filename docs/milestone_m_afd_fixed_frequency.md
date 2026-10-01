@@ -415,3 +415,11 @@ accepts one 15 MHz L40S clock step, while the smoke still requires active
 samples to reach the requested clock and every measured run still validates
 its measurement-window average clock. This avoids mistaking a transient idle
 readback for a failed lock without weakening the primary-run clock check.
+
+The corrected smoke then completed model startup and both deterministic request
+passes. Slurm still recorded exit 1 because the offline validator attempted to
+parse the deprecated `clocks.applications.graphics` field, which this driver
+renders as a deprecation message. The preserved current-clock and active-sample
+fields are exact, ownership and outputs pass, and cleanup is complete. The
+validator now uses the non-deprecated current-clock field; the original Slurm
+failure remains recorded rather than being relabeled.

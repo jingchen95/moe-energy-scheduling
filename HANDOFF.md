@@ -143,6 +143,13 @@ Attention--FFN disaggregation.
   lock. Cleanup, patch reversion, process cleanup, and both environment checks
   passed. A one-step (15 MHz) actuation tolerance is prepared; active smoke
   samples and measured-window average clocks remain independently validated.
+- Corrected smoke job `270538` ran the full graph-mode smoke but Slurm recorded
+  exit 1 because the final validator parsed a deprecated application-clock
+  field. Preserved evidence shows exact `2520/2520/1635/2520` current and
+  active clocks, exact P_MH ownership, exact baseline outputs, activity on both
+  FFN GPUs, clean process/clock cleanup, and unchanged environments. The
+  parser now uses only the non-deprecated current-clock field; the failed Slurm
+  status is retained.
 
 ### Exact next command
 

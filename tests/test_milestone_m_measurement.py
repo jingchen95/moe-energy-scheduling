@@ -10,6 +10,7 @@ from tools.prepare_milestone_m_measurement import (
     RANDOMIZATION_SEED,
     canonical_mapping_sha256,
 )
+from tools.validate_milestone_m_heterogeneous_smoke import _validate_clocks
 
 
 def test_primary_matrix_is_exact_and_deterministically_ordered() -> None:
@@ -84,3 +85,22 @@ def test_full_decode_only_is_explicit_and_profile_is_disabled() -> None:
     assert "--afd-profile-control-dir" not in script
     assert "FULL_DECODE_ONLY" in common
     assert "--enforce-eager" in common
+
+
+def test_clock_validator_ignores_deprecated_application_field(tmp_path: Path) -> None:
+    readback = tmp_path / "readback.csv"
+    readback.write_text("\n".join(
+        f"{gpu}, {clock}, [Requested functionality has been deprecated]"
+        for gpu, clock in enumerate((2520, 2520, 1635, 2520))
+    ) + "\n")
+    samples = tmp_path / "samples.csv"
+    samples.write_text(
+        "gpu,sm_util_percent,sm_clock_mhz\n"
+        "0,1,2520\n1,1,2520\n2,1,1635\n3,1,2520\n"
+    )
+
+    result = _validate_clocks(
+        samples, readback, [2520, 2520, 1635, 2520]
+    )
+
+    assert result["current_clock_readback_mhz"] == [2520, 2520, 1635, 2520]

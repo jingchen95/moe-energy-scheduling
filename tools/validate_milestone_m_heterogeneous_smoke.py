@@ -18,19 +18,25 @@ def _validate_clocks(
     readback_path: Path,
     targets: list[int],
 ) -> dict[str, object]:
-    readbacks = [
-        [int(field.strip()) for field in line.split(",")]
-        for line in readback_path.read_text().splitlines()
-        if line.strip()
-    ]
+    readbacks = []
+    for line in readback_path.read_text().splitlines():
+        if not line.strip():
+            continue
+        fields = [field.strip() for field in line.split(",")]
+        if len(fields) < 2:
+            raise ValueError(f"malformed clock readback row: {line!r}")
+        readbacks.append((int(fields[0]), int(fields[1])))
     if len(readbacks) != 4:
         raise ValueError("expected four clock readback rows")
-    applications = {row[0]: row[2] for row in readbacks}
-    if [applications[gpu] for gpu in range(4)] != targets:
-        raise ValueError(f"application-clock readback mismatch: {applications}")
+    current = dict(readbacks)
+    if [current[gpu] for gpu in range(4)] != targets:
+        raise ValueError(f"current-clock readback mismatch: {current}")
 
     samples = list(csv.DictReader(samples_path.open(newline="", encoding="utf-8")))
-    result: dict[str, object] = {"target_clocks_mhz": targets}
+    result: dict[str, object] = {
+        "target_clocks_mhz": targets,
+        "current_clock_readback_mhz": [current[gpu] for gpu in range(4)],
+    }
     for gpu in range(4):
         active = [
             row for row in samples
