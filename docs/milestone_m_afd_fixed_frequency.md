@@ -578,3 +578,8 @@ condition, and was selected without considering placement or energy results.
 Stage 2 uses five repetitions per C0--C5 configuration. Each newly launched
 server first receives one complete unmeasured-for-analysis conditioning trace
 to exclude the startup transient observed above.
+
+The 30-run stationary matrix was submitted as Slurm job `271116` from commit
+`49809f0`, using study directory
+`results/raw/milestone-m-stationary-repeat-20261002T060128Z`. It is queued on
+the same exclusive Uranus node used for the rate sweep.

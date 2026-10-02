@@ -194,17 +194,15 @@ Attention--FFN disaggregation.
   stable rate without using placement or energy outcomes. The C0--C5 repeat is
   prepared for five repetitions/configuration (30 measured runs, seed
   `20261003`) with one full conditioning trace after every server launch.
+- The 30-run Stage 2 matrix is submitted as job `271116`, study directory
+  `results/raw/milestone-m-stationary-repeat-20261002T060128Z`, from commit
+  `49809f0`. It is pending on the same exclusive Uranus node.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-study="results/raw/milestone-m-stationary-repeat-$(date -u +%Y%m%dT%H%M%SZ)"
-third_party/afd-plugin/.venv/bin/python -m tools.prepare_milestone_m_stationary_repeat \
-  --output-dir "${study}" \
-  --trace results/raw/milestone-m-primary-20261001T073935Z/trace.jsonl
-MILESTONE_M_STATIONARY_STUDY="${study}" \
-  sbatch scripts/milestone_m_stationary_repeat.sbatch
+squeue -j 271116 -o '%.18i %.9T %.10M %.30R'
 ```
 
 ## Latest status — Milestone L real-GPU validation complete
