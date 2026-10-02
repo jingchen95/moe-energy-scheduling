@@ -53,6 +53,10 @@ results/processed/*
 !results/processed/milestone_m_rate_sweep_aggregate.csv
 !results/processed/milestone_m_rate_sweep_270688_invalid_runs.csv
 !results/processed/milestone_m_rate_sweep_270688_invalid_aggregate.csv
+!results/processed/milestone_m_stationary_runs.csv
+!results/processed/milestone_m_stationary_aggregate.csv
+!results/processed/milestone_m_stationary_comparisons.csv
+!results/processed/milestone_m_stationary_summary.json
 !results/figures/
 results/figures/*
 !results/figures/.gitkeep
@@ -68,6 +72,7 @@ results/figures/*
 !results/figures/milestone_k_alignment_summary.svg
 !results/figures/milestone_l_alignment_validation.svg
 !results/figures/milestone_m_afd_fixed_frequency.svg
+!results/figures/milestone_m_stationary_repetitions.svg
 logs/
 slurm-*.out
 slurm-*.err

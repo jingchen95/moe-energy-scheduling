@@ -180,17 +180,31 @@ Attention--FFN disaggregation.
   its original 16 request/s offsets (nominal 2 request/s windows achieved
   8.21--10.62 request/s). Preserve the raw data. A source-controlled explicit
   arrival-rate override now rewrites only offsets to `index / request_rate`,
-  saves the resolved trace, and validates every scheduled deadline. Stage 1
-  must be rerun before selecting a stationary rate.
-- The corrected sweep is submitted as job `270840`, study directory
+  saves the resolved trace, and validates every scheduled deadline. This
+  required the corrected rerun below before selecting a stationary rate.
+- The corrected sweep ran as job `270840`, study directory
   `results/raw/milestone-m-rate-sweep-rerun-20261001T161703Z`, from commit
-  `39b546a`. It is pending on Uranus. Do not select a rate from job `270688`.
+  `39b546a`. Do not select a rate from job `270688`.
+- Corrected job `270840` completed 12/12 windows with exact 2/4/6/8 request/s
+  schedules, zero failures, and clean cleanup. Completion-span throughput at
+  8 request/s is 8.118 +/- 0.028 request/s; TTFT p50 is 158--163 ms and
+  early-to-late TTFT changes are -0.85 to +3.52 ms. The first 6 request/s
+  window exposed a post-launch transient, while subsequent windows are stable.
+- Stage 2 rate is frozen at **8 request/s**, selected as the highest tested
+  stable rate without using placement or energy outcomes. The C0--C5 repeat is
+  prepared for five repetitions/configuration (30 measured runs, seed
+  `20261003`) with one full conditioning trace after every server launch.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-squeue -j 270840 -o '%.18i %.9T %.10M %.30R'
+study="results/raw/milestone-m-stationary-repeat-$(date -u +%Y%m%dT%H%M%SZ)"
+third_party/afd-plugin/.venv/bin/python -m tools.prepare_milestone_m_stationary_repeat \
+  --output-dir "${study}" \
+  --trace results/raw/milestone-m-primary-20261001T073935Z/trace.jsonl
+MILESTONE_M_STATIONARY_STUDY="${study}" \
+  sbatch scripts/milestone_m_stationary_repeat.sbatch
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

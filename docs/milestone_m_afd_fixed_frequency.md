@@ -543,4 +543,38 @@ mode that preserves request content/order while replacing offsets with
 `index / request_rate`; resolved schedules are saved and validated per run.
 The corrected sweep was submitted as job `270840` with study directory
 `results/raw/milestone-m-rate-sweep-rerun-20261001T161703Z` and commit
-`39b546a`; it is pending on Uranus.
+`39b546a`.
+
+### Corrected rate sweep and frozen rate
+
+Job `270840` completed 12/12 validated windows on Uranus. Each resolved trace
+has exact constant intervals of 0.5, 0.25, 0.166667, or 0.125 seconds for the
+2, 4, 6, and 8 request/s conditions, respectively. All windows completed
+300/300 requests with zero failures, valid cumulative NVML energy, and clean
+clock/process/patch cleanup.
+
+The ordinary run throughput includes the finite trace's final drain and thus
+understates its offered rate. The completion-span throughput below is measured
+from the first to final request completion and is used together with bounded
+early-to-late TTFT to assess steady operation.
+
+| Offered rate | Completion-span throughput (req/s) | TTFT p50 (ms) | TTFT p99 (ms) | TPOT p99 (ms) | Late - early TTFT (ms) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 2 | 2.000 +/- 0.002 | 172.88 | 272.93 | 54.96 | +8.20 |
+| 4 | 4.008 +/- 0.004 | 157.59 | 280.45 | 58.03 | +3.03 |
+| 6 | 6.417 +/- 0.652 | 1332.15 | 2024.02 | 80.44 | -1262.23 |
+| 8 | 8.118 +/- 0.028 | 161.26 | 273.41 | 60.78 | +0.99 |
+
+The anomalous 6 request/s aggregate is caused by the first window immediately
+after server launch: its TTFT p50 was 3.68 seconds, whereas the later two were
+161 and 159 ms. This is a startup/runtime conditioning transient rather than
+queue accumulation; the later windows are stable. The 8 request/s windows,
+which occur after that conditioning, all track the offered rate, have TTFT p50
+of 158--163 ms, and show only -0.85 to +3.52 ms early-to-late TTFT changes.
+
+**The stationary repeat rate is frozen at 8 request/s.** It is the highest
+tested clearly stable rate, remains below the known-overloaded 16 request/s
+condition, and was selected without considering placement or energy results.
+Stage 2 uses five repetitions per C0--C5 configuration. Each newly launched
+server first receives one complete unmeasured-for-analysis conditioning trace
+to exclude the startup transient observed above.

@@ -57,6 +57,14 @@ def _request_trend(path: Path) -> dict[str, float]:
     late_ttft = med(late, "ttft_ms")
     early_tpot = med(early, "tpot_ms")
     late_tpot = med(late, "tpot_ms")
+    completion_offsets = sorted(
+        float(row["actual_send_s"]) + float(row["e2e_ms"]) / 1000.0
+        for row in requests
+    )
+    completion_span_rate = (
+        (len(completion_offsets) - 1)
+        / (completion_offsets[-1] - completion_offsets[0])
+    )
     return {
         "early_ttft_median_ms": early_ttft,
         "late_ttft_median_ms": late_ttft,
@@ -67,6 +75,7 @@ def _request_trend(path: Path) -> dict[str, float]:
         "late_tpot_median_ms": late_tpot,
         "late_minus_early_tpot_ms": late_tpot - early_tpot,
         "tpot_slope_ms_per_request": slope("tpot_ms"),
+        "completion_span_throughput_requests_s": completion_span_rate,
     }
 
 
@@ -130,6 +139,7 @@ def analyze(study: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
             "late_minus_early_ttft_ms", "late_over_early_ttft",
             "ttft_slope_ms_per_request", "late_minus_early_tpot_ms",
             "tpot_slope_ms_per_request",
+            "completion_span_throughput_requests_s",
         )
         for metric in metrics:
             values = [float(row[metric]) for row in selected]
