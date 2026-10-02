@@ -152,7 +152,10 @@ stationary_repeat:
   placement_and_frequency_changes: false
 
 symmetric_ffn_sweep:
-  status: prepared
+  status: submitted
+  slurm_job_id: 271241
+  study_dir: results/raw/milestone-m-symmetric-20261002T151857Z
+  code_commit: 1664b39bf466023ecef76c434b14ad0a9ef66d04
   placement: P_balanced
   request_rate: 8.0
   requests_per_window: 300

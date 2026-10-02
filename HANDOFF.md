@@ -219,17 +219,14 @@ Attention--FFN disaggregation.
   for 15 measured runs total. The placement, trace, decoding parameters,
   execution mode, and runtime are unchanged. No placement optimization,
   routing profiling, or dynamic DVFS is enabled.
+- The immutable study is
+  `results/raw/milestone-m-symmetric-20261002T151857Z`, generated from commit
+  `1664b39`. It was submitted as exclusive Uranus job `271241`.
 
 ### Exact next command
 
 ```bash
-cd /data/users/chjing/moe-energy-scheduling
-study="results/raw/milestone-m-symmetric-$(date -u +%Y%m%dT%H%M%SZ)"
-python -m tools.prepare_milestone_m_symmetric_ffn_sweep \
-  --trace results/raw/milestone-m-stationary-repeat-20261002T060128Z/trace.jsonl \
-  --output-dir "${study}"
-MILESTONE_M_SYMMETRIC_STUDY="${study}" \
-  sbatch scripts/milestone_m_symmetric_ffn_sweep.sbatch
+squeue -j 271241 -o '%.18i %.9P %.20j %.2t %.10M %.6D %R'
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

@@ -695,3 +695,11 @@ relative to 2520 MHz for TTFT, TPOT, throughput, total energy, and FFN-pool
 energy. Energy--TPOT-p99 and energy--TTFT-p99 non-dominated points are retained
 separately. No service model or placement selection is used to construct the
 frontier.
+
+The immutable study directory is
+`results/raw/milestone-m-symmetric-20261002T151857Z`. It was generated from
+commit `1664b39`, with trace SHA-256
+`6cf46c02b3a88ace790c6f9b59dbb7b5f44a9872a5813584a3f3a232b39b1020`
+and `P_balanced` file SHA-256
+`59c33ea86a95a1c252418b4e612bd1479465941c4b0a726207a8ee362ed6710c`.
+Exclusive Uranus job `271241` runs the sweep.
