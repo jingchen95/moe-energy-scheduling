@@ -150,3 +150,18 @@ stationary_repeat:
   baseline_placement: P_balanced
   baseline_clocks_mhz: [2520, 2520, 2520, 2520]
   placement_and_frequency_changes: false
+
+symmetric_ffn_sweep:
+  status: prepared
+  placement: P_balanced
+  request_rate: 8.0
+  requests_per_window: 300
+  repetitions_per_frequency: 3
+  randomization_seed: 20261004
+  conditioning_traces_per_frequency: 1
+  attention_frequencies_mhz: [2520, 2520]
+  ffn_symmetric_frequencies_mhz: [2520, 2220, 2070, 1635, 1005]
+  expected_measured_runs: 15
+  routing_profiling: false
+  placement_changes: false
+  dynamic_dvfs: false

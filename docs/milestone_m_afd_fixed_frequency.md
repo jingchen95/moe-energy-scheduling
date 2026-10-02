@@ -667,3 +667,31 @@ Do not proceed to window-level dynamic DVFS from this placement result. Any
 future work should first explore other fixed FFN frequency tuples with a
 placement frozen independently for each tuple; it should not treat this one
 M/H test as a global joint-optimization verdict.
+
+## Symmetric FFN frequency sweep
+
+The next stage holds expert placement fixed at `P_balanced` and asks how far
+the FFN pool itself can be downclocked before serving behavior degrades
+substantially. This is a fixed-frequency characterization, not another
+placement experiment and not dynamic DVFS.
+
+Attention GPUs remain at 2520/2520 MHz. The preregistered symmetric FFN points
+are 2520, 2220, 2070, 1635, and 1005 MHz. The two intermediate values and all
+three H/M/L values are present in the saved L40S supported-clock inventory;
+memory clocks are unchanged. All points use the same frozen `P_balanced`
+mapping, 300-request GSM8K trace, greedy 128-token decoding, and corrected
+8 request/s open-loop schedule.
+
+The five frequency configurations are visited in one fixed random order using
+seed `20261004`. After each frequency change, one full trace conditions the
+server and is excluded from analysis. Three subsequent windows are measured,
+for 15 analyzed runs. Model loading remains outside all energy windows, one AFD
+server stays alive across the sweep, and each measured run retains cumulative
+NVML energy, pool/per-GPU energy and power, request-level latencies, throughput,
+client scheduling diagnostics, hashes, and actual clocks.
+
+The analysis will report mean +/- sample standard deviation and signed changes
+relative to 2520 MHz for TTFT, TPOT, throughput, total energy, and FFN-pool
+energy. Energy--TPOT-p99 and energy--TTFT-p99 non-dominated points are retained
+separately. No service model or placement selection is used to construct the
+frontier.

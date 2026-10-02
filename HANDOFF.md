@@ -209,13 +209,27 @@ Attention--FFN disaggregation.
 - TTFT p99 still has a strong negative repetition correlation (-0.84 to -0.97)
   despite conditioning. Preserve individual values and do not interpret
   absolute TTFT mean changes as placement benefit.
+- A fixed-`P_balanced` symmetric FFN frequency sweep is prepared to determine
+  how far both FFN GPUs can be downclocked before serving degradation becomes
+  substantial. Attention remains at 2520/2520 MHz. The frozen FFN points are
+  2520, 2220, 2070, 1635, and 1005 MHz; all are present in the saved L40S
+  supported-clock inventory. The randomized order uses seed `20261004`.
+- Each frequency receives one complete 300-request conditioning trace followed
+  by three independent measured windows at the frozen 8 request/s schedule,
+  for 15 measured runs total. The placement, trace, decoding parameters,
+  execution mode, and runtime are unchanged. No placement optimization,
+  routing profiling, or dynamic DVFS is enabled.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-cat results/processed/milestone_m_stationary_summary.json
-cat results/processed/milestone_m_stationary_comparisons.csv
+study="results/raw/milestone-m-symmetric-$(date -u +%Y%m%dT%H%M%SZ)"
+python -m tools.prepare_milestone_m_symmetric_ffn_sweep \
+  --trace results/raw/milestone-m-stationary-repeat-20261002T060128Z/trace.jsonl \
+  --output-dir "${study}"
+MILESTONE_M_SYMMETRIC_STUDY="${study}" \
+  sbatch scripts/milestone_m_symmetric_ffn_sweep.sbatch
 ```
 
 ## Latest status — Milestone L real-GPU validation complete
