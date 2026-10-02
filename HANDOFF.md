@@ -194,15 +194,28 @@ Attention--FFN disaggregation.
   stable rate without using placement or energy outcomes. The C0--C5 repeat is
   prepared for five repetitions/configuration (30 measured runs, seed
   `20261003`) with one full conditioning trace after every server launch.
-- The 30-run Stage 2 matrix is submitted as job `271116`, study directory
+- The 30-run Stage 2 matrix ran as job `271116`, study directory
   `results/raw/milestone-m-stationary-repeat-20261002T060128Z`, from commit
-  `49809f0`. It is pending on the same exclusive Uranus node.
+  `49809f0`, on the same exclusive Uranus node.
+- Job `271116` completed `COMPLETED/0` in 1:14:51. All 30 measured windows and
+  six conditioning traces completed 300/300 requests with zero failures;
+  clocks, hashes, cumulative NVML energy, cleanup, and both environments pass.
+- Placement effect: **C -- no measured effect**. C3 vs C2 changes TPOT p99 by
+  +4.92% and energy by +0.33%; C5 vs C4 changes TPOT by +11.44% and energy by
+  -0.96%. Slow-rank energy falls, but fast-rank energy rises and offsets it.
+- Fixed-DVFS effect: **supported at the tested pair**. Balanced MH and HM save
+  7.49% and 7.25% total energy versus HH, with +2.07% and +1.08% mean TPOT and
+  less than 0.7% throughput loss. This is not a global frequency optimum.
+- TTFT p99 still has a strong negative repetition correlation (-0.84 to -0.97)
+  despite conditioning. Preserve individual values and do not interpret
+  absolute TTFT mean changes as placement benefit.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-squeue -j 271116 -o '%.18i %.9T %.10M %.30R'
+cat results/processed/milestone_m_stationary_summary.json
+cat results/processed/milestone_m_stationary_comparisons.csv
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

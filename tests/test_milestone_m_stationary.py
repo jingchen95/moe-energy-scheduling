@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from tools.analyze_milestone_m_rate_sweep import _request_trend
+from tools.analyze_milestone_m_stationary_repeat import classify_fixed_dvfs
 from tools.prepare_milestone_m_stationary import (
     RATE_SWEEP_RANDOMIZATION_SEED,
     RATE_SWEEP_RATES,
@@ -53,3 +54,17 @@ def test_stationary_repeat_is_frozen_at_eight_requests_per_second() -> None:
     assert "--override-arrival-rate" in script
     assert "conditioning" in script
     assert "expected_runs" in script
+
+
+def test_fixed_dvfs_classification_requires_both_orientations() -> None:
+    supported = {
+        name: {
+            "total_gpu_energy_j_relative_change": -0.07,
+            "tpot_p99_ms_relative_change": 0.02,
+            "throughput_requests_s_relative_change": -0.01,
+        }
+        for name in ("fixed_dvfs_mh", "fixed_dvfs_hm")
+    }
+    assert classify_fixed_dvfs(supported)[0] == "supported_at_tested_pair"
+    supported["fixed_dvfs_hm"]["tpot_p99_ms_relative_change"] = 0.05
+    assert classify_fixed_dvfs(supported)[0] == "mixed"

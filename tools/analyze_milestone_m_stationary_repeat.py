@@ -32,6 +32,27 @@ COMPARISONS = (
 )
 
 
+def classify_fixed_dvfs(
+    comparisons: dict[str, dict[str, Any]],
+) -> tuple[str, str]:
+    rows = [comparisons["fixed_dvfs_mh"], comparisons["fixed_dvfs_hm"]]
+    supported = all(
+        row["total_gpu_energy_j_relative_change"] <= -0.05
+        and row["tpot_p99_ms_relative_change"] <= 0.03
+        and row["throughput_requests_s_relative_change"] >= -0.02
+        for row in rows
+    )
+    if supported:
+        return (
+            "supported_at_tested_pair",
+            "both physical orientations save at least 5% total energy with no more than 3% TPOT or 2% throughput regression",
+        )
+    mixed = any(row["total_gpu_energy_j_relative_change"] <= -0.02 for row in rows)
+    if mixed:
+        return "mixed", "at least one orientation saves energy, but the mirrored guardrails are not both met"
+    return "not_supported", "neither orientation saves at least 2% total energy"
+
+
 def _load_runs(study: Path, expected: int) -> list[dict[str, Any]]:
     with (study / "runs.tsv").open(newline="", encoding="utf-8") as stream:
         rows = list(csv.DictReader(stream, delimiter="\t"))
@@ -211,6 +232,7 @@ def main() -> int:
     ]
     comparisons = {row["comparison"]: row for row in comparison_rows}
     placement_decision, placement_rationale = classify(comparisons)
+    fixed_dvfs_decision, fixed_dvfs_rationale = classify_fixed_dvfs(comparisons)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     _write_csv(args.output_dir / "milestone_m_stationary_runs.csv", per_run)
     _write_csv(args.output_dir / "milestone_m_stationary_aggregate.csv", aggregate_rows)
@@ -227,7 +249,8 @@ def main() -> int:
         "comparisons": comparisons,
         "placement_effect_decision": placement_decision,
         "placement_effect_rationale": placement_rationale,
-        "fixed_dvfs_effect_decision": "requires measured-effect interpretation",
+        "fixed_dvfs_effect_decision": fixed_dvfs_decision,
+        "fixed_dvfs_effect_rationale": fixed_dvfs_rationale,
     }
     (args.output_dir / "milestone_m_stationary_summary.json").write_text(
         json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -236,6 +259,7 @@ def main() -> int:
     print(json.dumps({
         "validated_runs": len(per_run),
         "placement_effect_decision": placement_decision,
+        "fixed_dvfs_effect_decision": fixed_dvfs_decision,
         "outputs": {
             "runs": str(args.output_dir / "milestone_m_stationary_runs.csv"),
             "aggregate": str(args.output_dir / "milestone_m_stationary_aggregate.csv"),

@@ -581,5 +581,89 @@ to exclude the startup transient observed above.
 
 The 30-run stationary matrix was submitted as Slurm job `271116` from commit
 `49809f0`, using study directory
-`results/raw/milestone-m-stationary-repeat-20261002T060128Z`. It is queued on
-the same exclusive Uranus node used for the rate sweep.
+`results/raw/milestone-m-stationary-repeat-20261002T060128Z` on the same
+exclusive Uranus node used for the rate sweep.
+
+## Stationary 8 request/s results
+
+Job `271116` completed `COMPLETED/0` in 1 hour 14 minutes 51 seconds. All 30
+measured windows completed 300/300 requests with zero failures and 38,400
+output tokens. They share one trace and experiment-plan hash, use cumulative
+NVML energy, match all requested average clocks exactly, and have maximum
+client p99 send delay 3.53 ms versus the 125 ms arrival interval. All six
+conditioning traces also completed 300/300 requests. Cleanup reset clocks,
+removed owned processes, reverted the patch, and preserved vLLM 0.15.1 and
+0.26.0 in their respective environments.
+
+Values are mean +/- sample standard deviation across five repetitions. Energy
+includes all four GPUs and does not subtract idle energy.
+
+| ID | Placement | A0/A1/F0/F1 (MHz) | TTFT p99 (ms) | TPOT p99 (ms) | Energy (J) | FFN energy (J) | Throughput (req/s) |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| C0 | `P_balanced` | 2520/2520/2520/2520 | 595.6 +/- 216.9 | 63.92 +/- 5.20 | 27663.9 +/- 342.7 | 17708.0 +/- 411.8 | 6.748 +/- 0.018 |
+| C1 | `P_MH` | 2520/2520/2520/2520 | 651.5 +/- 427.9 | 65.61 +/- 5.84 | 27726.7 +/- 560.4 | 17713.5 +/- 661.4 | 6.721 +/- 0.014 |
+| C2 | `P_balanced` | 2520/2520/1635/2520 | 585.7 +/- 317.1 | 65.25 +/- 6.83 | 25592.4 +/- 359.6 | 15583.9 +/- 493.4 | 6.704 +/- 0.052 |
+| C3 | `P_MH` | 2520/2520/1635/2520 | 662.3 +/- 338.8 | 68.46 +/- 3.53 | 25677.2 +/- 70.3 | 15683.3 +/- 207.8 | 6.694 +/- 0.027 |
+| C4 | `P_balanced` | 2520/2520/2520/1635 | 493.9 +/- 138.9 | 64.62 +/- 2.57 | 25658.6 +/- 190.4 | 15654.7 +/- 249.4 | 6.712 +/- 0.029 |
+| C5 | `P_HM` | 2520/2520/2520/1635 | 730.0 +/- 247.7 | 72.01 +/- 5.17 | 25413.4 +/- 319.9 | 15429.4 +/- 308.0 | 6.697 +/- 0.036 |
+
+### Placement effect at fixed heterogeneous frequencies
+
+Signed changes use `(treatment - baseline) / baseline`; negative is favorable
+for latency and energy, while positive is favorable for throughput.
+
+| Comparison | TTFT p99 | TPOT p99 | Total energy | FFN energy | Throughput |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| C3 vs C2, aligned MH | +13.07% | +4.92% | +0.33% | +0.64% | -0.15% |
+| C5 vs C4, aligned HM | +47.79% | +11.44% | -0.96% | -1.44% | -0.22% |
+| C1 vs C0, H/H control | +9.39% | +2.64% | +0.23% | +0.03% | -0.40% |
+
+The five paired C3-vs-C2 TPOT changes are -4.43%, +6.52%, +6.38%, -0.22%,
+and +19.51%; energy changes are +2.17%, +0.22%, -0.90%, +0.92%, and -0.68%.
+The five C5-vs-C4 TPOT changes are +9.63%, +20.20%, +13.93%, +21.57%, and
+-6.54%; energy changes are -0.18%, -2.05%, -0.04%, -2.65%, and +0.16%.
+Neither orientation provides a repeatable additional placement benefit.
+
+Alignment does redistribute FFN work as intended. For MH, slow GPU2 energy
+falls 6.00% while fast GPU3 rises 5.70%; for HM, slow GPU3 falls 7.49% while
+fast GPU2 rises 3.27%. The fast-rank increase again offsets most slow-rank
+savings, leaving no consistent pool or total-energy improvement.
+
+**Placement decision: C -- no measured effect.** At the tested 1635/2520 MHz
+pair, frequency-aware individual expert placement does not provide a
+repeatable additional benefit beyond fixed FFN DVFS. This conclusion does not
+rule out other frequency tuples or constitute a global joint-optimization
+result.
+
+### Fixed-DVFS effect
+
+| Comparison | TTFT p99 | TPOT p99 | Total energy | FFN energy | Throughput |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| C2 vs C0, balanced MH vs HH | -1.67% | +2.07% | -7.49% | -12.00% | -0.65% |
+| C4 vs C0, balanced HM vs HH | -17.07% | +1.08% | -7.25% | -11.60% | -0.54% |
+
+The total-energy reduction occurs in every paired repetition: C2 saves
+6.61--8.43%, and C4 saves 5.30--8.21%. TPOT changes remain noisy but average
+only +2.07% and +1.08%, while throughput falls less than 0.7%.
+
+**Fixed-DVFS decision: supported at the tested pair.** Lowering either FFN GPU
+to 1635 MHz saves about 7.2--7.5% total energy and 11.6--12.0% FFN-pool energy
+with a small mean TPOT/throughput cost. This does not establish that M/H is the
+globally energy-optimal frequency tuple.
+
+### Residual order trend
+
+The conditioning trace removes the catastrophic first-window overload, but
+TTFT p99 still decreases strongly from repetition 1 to 5 for every
+configuration (correlations -0.84 to -0.97). Energy often increases slightly
+with repetition, while TPOT trends are smaller and configuration-dependent.
+Individual repetition values are therefore retained in the processed CSV and
+figure rather than averaged away. This residual runtime/warm-state effect
+limits interpretation of absolute TTFT differences, but it does not reverse
+the placement result: C3 TTFT is worse than C2 in all five paired repetitions,
+and C5 is worse than C4 in all five.
+
+Do not proceed to window-level dynamic DVFS from this placement result. Any
+future work should first explore other fixed FFN frequency tuples with a
+placement frozen independently for each tuple; it should not treat this one
+M/H test as a global joint-optimization verdict.

@@ -122,7 +122,7 @@ primary_measurement:
   dynamic_dvfs_next: false
 
 stationary_repeat:
-  status: stage_2_submitted_pending
+  status: complete
   stage_1_slurm_job_id: 270688
   stage_1_study_dir: results/raw/milestone-m-rate-sweep-20261001T125021Z
   stage_1_valid_for_rate_selection: false
@@ -137,6 +137,12 @@ stationary_repeat:
   stage_2_expected_runs: 30
   stage_2_slurm_job_id: 271116
   stage_2_study_dir: results/raw/milestone-m-stationary-repeat-20261002T060128Z
+  stage_2_validated_runs: 30
+  stage_2_completed_requests_per_run: 300
+  stage_2_failed_requests: 0
+  placement_effect_decision: C_no_measured_effect
+  fixed_dvfs_effect_decision: supported_at_tested_pair
+  dynamic_dvfs_next: false
   rates_requests_s: [2, 4, 6, 8]
   requests_per_window: 300
   repetitions_per_rate: 3
