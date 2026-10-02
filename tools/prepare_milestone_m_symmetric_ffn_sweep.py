@@ -71,6 +71,7 @@ def symmetric_sweep_plan(root: Path, trace: Path) -> dict[str, Any]:
         "configurations": rows,
         "repetitions": list(REPETITIONS),
         "conditioning_traces_per_configuration": 1,
+        "server_lifecycle": "restart_per_frequency_configuration",
         "expected_runs": len(rows) * len(REPETITIONS),
         "routing_profiling": False,
         "custom_kernel_timing": False,

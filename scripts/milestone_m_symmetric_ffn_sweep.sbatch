@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-server, fixed-placement symmetric FFN frequency sweep.
+# Per-frequency-server, fixed-placement symmetric FFN frequency sweep.
 # Submit with MILESTONE_M_SYMMETRIC_STUDY=<prepared-dir> sbatch <this-file>.
 #SBATCH --job-name=moe-m-afd-symmetric
 #SBATCH --partition=debug
@@ -25,6 +25,17 @@ study="$(cd "${study}" && pwd)"
 plan="${study}/manifest.json"
 trace="${study}/trace.jsonl"
 [[ -f "${plan}" && -f "${trace}" ]] || { printf 'missing symmetric-sweep inputs\n' >&2; exit 1; }
+expected_commit="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["git_commit"])' "${plan}")"
+actual_commit="$(git rev-parse HEAD)"
+[[ "${actual_commit}" == "${expected_commit}" ]] || {
+    printf 'repository commit drift: manifest=%s runtime=%s\n' \
+        "${expected_commit}" "${actual_commit}" >&2
+    exit 1
+}
+git diff --quiet && git diff --cached --quiet || {
+    printf 'refusing to run from a modified tracked worktree\n' >&2
+    exit 1
+}
 [[ ! -e "${study}/slurm-job-id.txt" ]] || { printf 'study already submitted\n' >&2; exit 1; }
 printf '%s\n' "${SLURM_JOB_ID}" > "${study}/slurm-job-id.txt"
 
@@ -74,11 +85,10 @@ placement_path="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.
 placement_sha="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["placement"]["sha256"])' "${plan}")"
 mapping_sha="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["placement"]["canonical_mapping_sha256"])' "${plan}")"
 placement_file="${PROJECT_ROOT}/${placement_path}"
-startup_clocks="2520,2520,2520,2520"
 request_rate="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["request_rate"])' "${plan}")"
 expected_runs="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["expected_runs"])' "${plan}")"
 
-mkdir -p "${study}/server" "${study}/ownership" "${study}/configurations"
+mkdir -p "${study}/configurations"
 printf 'order\tconfig_id\tfrequency_mhz\trepetition\tstatus\trun_dir\n' > "${study}/runs.tsv"
 sha256sum "${placement_file}" > "${study}/placement.sha256"
 [[ "$(sha256sum "${placement_file}" | awk '{print $1}')" == "${placement_sha}" ]] || {
@@ -86,51 +96,14 @@ sha256sum "${placement_file}" > "${study}/placement.sha256"
     exit 1
 }
 
-SUDO="${SUDO:-sudo}" "${AFD_PYTHON}" -m src.gpu_control set-all \
-    --clocks "${startup_clocks}" > "${study}/clock-set-startup.json"
-"${AFD_PYTHON}" -m src.gpu_control list > "${study}/clock-readback-startup.json"
-sleep 2
-
 api_port=18460
 ffn_api_port=18461
 afd_port=6290
-served_name="qwen3-moe-m-symmetric"
-afd_start_role ffn 2,3 "${ffn_api_port}" Qwen/Qwen3-30B-A3B "${served_name}" "${afd_port}" \
-    "${study}/server/ffn.log" "${study}/server/ffn-command.txt" \
-    "${placement_file}" "${study}/ownership" "" full_decode_only
-ffn_pid="${AFD_LAST_PID}"
-printf '%s\n' "${ffn_pid}" > "${study}/server/ffn.pid"
-sleep 5
-afd_start_role attention 0,1 "${api_port}" Qwen/Qwen3-30B-A3B "${served_name}" "${afd_port}" \
-    "${study}/server/attention.log" "${study}/server/attention-command.txt" \
-    "${placement_file}" "${study}/ownership" "" full_decode_only
-attention_pid="${AFD_LAST_PID}"
-printf '%s\n' "${attention_pid}" > "${study}/server/attention.pid"
-
-if ! afd_wait_attention_api "${attention_pid}" "${ffn_pid}" 2400 \
-        "http://127.0.0.1:${api_port}/v1/models"; then
-    tail -n 200 "${study}/server/attention.log" >&2 || true
-    tail -n 200 "${study}/server/ffn.log" >&2 || true
-    exit 1
-fi
-grep -m1 'AFD FFN EngineCore started; workers run connector loop.' \
-    "${study}/server/ffn.log" > "${study}/ffn-ready.txt"
-nvidia-smi --query-gpu=index,clocks.current.sm --format=csv,noheader,nounits \
-    > "${study}/actual-clocks-before-runs.csv"
-"${AFD_PYTHON}" -m tools.validate_milestone_m_runtime_ownership \
-    --placement-file "${placement_file}" \
-    --evidence-dir "${study}/ownership" \
-    --output "${study}/actual-ownership.json" \
-    > "${study}/ownership-validation.stdout"
-actual_mapping_sha="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["actual_mapping_sha256"])' "${study}/actual-ownership.json")"
-[[ "${actual_mapping_sha}" == "${mapping_sha}" ]] || {
-    printf 'runtime ownership hash mismatch\n' >&2
-    exit 1
-}
 
 while IFS=$'\t' read -r order config_id frequency clocks repetitions; do
     config_dir="${study}/configurations/$(printf '%02d' "${order}")-${config_id}"
-    mkdir -p "${config_dir}/conditioning" "${config_dir}/runs"
+    mkdir -p "${config_dir}/conditioning" "${config_dir}/runs" \
+        "${config_dir}/server" "${config_dir}/ownership"
     printf '%s\n' "${clocks}" > "${config_dir}/target-clocks.csv"
     IFS=',' read -r -a target_array <<< "${clocks}"
     IFS=',' read -r -a repetition_array <<< "${repetitions}"
@@ -141,6 +114,38 @@ while IFS=$'\t' read -r order config_id frequency clocks repetitions; do
     sleep 5
     nvidia-smi --query-gpu=index,clocks.current.sm --format=csv,noheader,nounits \
         > "${config_dir}/actual-clocks-before-conditioning.csv"
+
+    served_name="qwen3-moe-m-symmetric-${config_id}"
+    afd_start_role ffn 2,3 "${ffn_api_port}" Qwen/Qwen3-30B-A3B "${served_name}" "${afd_port}" \
+        "${config_dir}/server/ffn.log" "${config_dir}/server/ffn-command.txt" \
+        "${placement_file}" "${config_dir}/ownership" "" full_decode_only
+    ffn_pid="${AFD_LAST_PID}"
+    printf '%s\n' "${ffn_pid}" > "${config_dir}/server/ffn.pid"
+    sleep 5
+    afd_start_role attention 0,1 "${api_port}" Qwen/Qwen3-30B-A3B "${served_name}" "${afd_port}" \
+        "${config_dir}/server/attention.log" "${config_dir}/server/attention-command.txt" \
+        "${placement_file}" "${config_dir}/ownership" "" full_decode_only
+    attention_pid="${AFD_LAST_PID}"
+    printf '%s\n' "${attention_pid}" > "${config_dir}/server/attention.pid"
+
+    if ! afd_wait_attention_api "${attention_pid}" "${ffn_pid}" 2400 \
+            "http://127.0.0.1:${api_port}/v1/models"; then
+        tail -n 200 "${config_dir}/server/attention.log" >&2 || true
+        tail -n 200 "${config_dir}/server/ffn.log" >&2 || true
+        exit 1
+    fi
+    grep -m1 'AFD FFN EngineCore started; workers run connector loop.' \
+        "${config_dir}/server/ffn.log" > "${config_dir}/ffn-ready.txt"
+    "${AFD_PYTHON}" -m tools.validate_milestone_m_runtime_ownership \
+        --placement-file "${placement_file}" \
+        --evidence-dir "${config_dir}/ownership" \
+        --output "${config_dir}/actual-ownership.json" \
+        > "${config_dir}/ownership-validation.stdout"
+    actual_mapping_sha="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["actual_mapping_sha256"])' "${config_dir}/actual-ownership.json")"
+    [[ "${actual_mapping_sha}" == "${mapping_sha}" ]] || {
+        printf 'runtime ownership hash mismatch for %s\n' "${config_id}" >&2
+        exit 1
+    }
 
     conditioning_root="${config_dir}/conditioning"
     "${AFD_PYTHON}" -m src.benchmark \
@@ -163,7 +168,7 @@ while IFS=$'\t' read -r order config_id frequency clocks repetitions; do
         --target-clocks "${target_array[@]}" \
         --run-label "${config_id}-${frequency}-conditioning" \
         --placement-name P_balanced \
-        --server-log "${study}/server/attention.log" \
+        --server-log "${config_dir}/server/attention.log" \
         > "${config_dir}/conditioning.log" 2>&1
     mapfile -t conditioning_runs < <(find "${conditioning_root}" -mindepth 1 -maxdepth 1 -type d | sort)
     [[ "${#conditioning_runs[@]}" -eq 1 ]] || {
@@ -202,15 +207,15 @@ PY
             --store-output-token-ids \
             --run-label "${config_id}-${frequency}-rep${repetition}" \
             --placement-name P_balanced \
-            --server-log "${study}/server/attention.log" \
+            --server-log "${config_dir}/server/attention.log" \
             > "${benchmark_log}" 2>&1
         mapfile -t run_dirs < <(find "${rep_root}" -mindepth 1 -maxdepth 1 -type d | sort)
         [[ "${#run_dirs[@]}" -eq 1 ]] || { printf 'expected one run directory\n' >&2; exit 1; }
         run_dir="${run_dirs[0]}"
         cp "${benchmark_log}" "${run_dir}/stdout-stderr.log"
-        cp "${study}/actual-ownership.json" "${run_dir}/runtime-ownership.json"
+        cp "${config_dir}/actual-ownership.json" "${run_dir}/runtime-ownership.json"
         "${AFD_PYTHON}" -m tools.record_milestone_m_run_metadata \
-            --plan "${plan}" --ownership "${study}/actual-ownership.json" \
+            --plan "${plan}" --ownership "${config_dir}/actual-ownership.json" \
             --config-id "${config_id}" --repetition "${repetition}" \
             --output "${run_dir}/experiment_metadata.json"
         "${AFD_PYTHON}" -m tools.validate_live_run "${run_dir}" \
@@ -226,6 +231,18 @@ PY
             "${order}" "${config_id}" "${frequency}" "${repetition}" "${run_dir}" \
             >> "${study}/runs.tsv"
     done
+
+    afd_stop_process_group "${attention_pid}"
+    attention_pid=""
+    afd_stop_process_group "${ffn_pid}"
+    ffn_pid=""
+    sleep 5
+    nvidia-smi --query-compute-apps=pid,gpu_uuid,used_memory \
+        --format=csv,noheader > "${config_dir}/compute-apps-after.csv"
+    [[ ! -s "${config_dir}/compute-apps-after.csv" ]] || {
+        printf 'GPU compute processes remain after %s shutdown\n' "${config_id}" >&2
+        exit 1
+    }
 done < <("${AFD_PYTHON}" - "${plan}" <<'PY'
 import json, sys
 plan = json.load(open(sys.argv[1]))

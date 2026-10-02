@@ -214,19 +214,30 @@ Attention--FFN disaggregation.
   substantial. Attention remains at 2520/2520 MHz. The frozen FFN points are
   2520, 2220, 2070, 1635, and 1005 MHz; all are present in the saved L40S
   supported-clock inventory. The randomized order uses seed `20261004`.
-- Each frequency receives one complete 300-request conditioning trace followed
-  by three independent measured windows at the frozen 8 request/s schedule,
-  for 15 measured runs total. The placement, trace, decoding parameters,
-  execution mode, and runtime are unchanged. No placement optimization,
-  routing profiling, or dynamic DVFS is enabled.
-- The immutable study is
-  `results/raw/milestone-m-symmetric-20261002T151857Z`, generated from commit
-  `1664b39`. It was submitted as exclusive Uranus job `271241`.
+- Each frequency uses a fresh AFD server lifecycle: start, one complete
+  300-request conditioning trace, three independent measured windows at the
+  frozen 8 request/s schedule, then owned-process shutdown. This prevents the
+  long-term server warm-state/order drift observed previously from being
+  confounded with frequency. There are 15 measured runs total.
+- The launcher rejects a runtime `HEAD` that differs from the manifest commit
+  and rejects tracked worktree modifications. Placement, trace, decoding,
+  and execution mode remain unchanged. No placement optimization, routing
+  profiling, or dynamic DVFS is enabled.
+- Pending job `271241` and its unused study
+  `results/raw/milestone-m-symmetric-20261002T151857Z` were cancelled before
+  allocation (0 seconds runtime) because they used one server for all five
+  frequencies. They must not be analyzed or resumed.
 
 ### Exact next command
 
 ```bash
-squeue -j 271241 -o '%.18i %.9P %.20j %.2t %.10M %.6D %R'
+cd /data/users/chjing/moe-energy-scheduling
+study="results/raw/milestone-m-symmetric-restart-$(date -u +%Y%m%dT%H%M%SZ)"
+python -m tools.prepare_milestone_m_symmetric_ffn_sweep \
+  --trace results/raw/milestone-m-stationary-repeat-20261002T060128Z/trace.jsonl \
+  --output-dir "${study}"
+MILESTONE_M_SYMMETRIC_STUDY="${study}" \
+  sbatch scripts/milestone_m_symmetric_ffn_sweep.sbatch
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

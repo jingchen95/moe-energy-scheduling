@@ -26,6 +26,12 @@ def test_launcher_conditions_each_frequency_and_keeps_placement_fixed() -> None:
     assert "--placement-name P_balanced" in script
     assert "src.gpu_control set-all" in script
     assert "expected_runs" in script
+    assert "repository commit drift" in script
+    assert "git diff --quiet" in script
+    assert '"${config_dir}/server/ffn.log"' in script
+    assert '"${study}/server/attention.log"' not in script
+    assert 'afd_stop_process_group "${attention_pid}"' in script
+    assert 'afd_stop_process_group "${ffn_pid}"' in script
     assert "P_MH" not in script
     assert "P_HM" not in script
 

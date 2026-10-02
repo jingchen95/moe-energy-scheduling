@@ -683,12 +683,14 @@ mapping, 300-request GSM8K trace, greedy 128-token decoding, and corrected
 8 request/s open-loop schedule.
 
 The five frequency configurations are visited in one fixed random order using
-seed `20261004`. After each frequency change, one full trace conditions the
-server and is excluded from analysis. Three subsequent windows are measured,
-for 15 analyzed runs. Model loading remains outside all energy windows, one AFD
-server stays alive across the sweep, and each measured run retains cumulative
-NVML energy, pool/per-GPU energy and power, request-level latencies, throughput,
-client scheduling diagnostics, hashes, and actual clocks.
+seed `20261004`. Every frequency uses an independent server lifecycle: launch
+the two AFD roles, run one full conditioning trace excluded from analysis,
+measure three windows, then stop only those owned process groups. This design
+prevents the known long-term server warm-state/order drift from being assigned
+to whichever frequency happens to run early or late. There are 15 analyzed
+runs. Model loading remains outside all energy windows, and each measured run
+retains cumulative NVML energy, pool/per-GPU energy and power, request-level
+latencies, throughput, client scheduling diagnostics, hashes, and clocks.
 
 The analysis will report mean +/- sample standard deviation and signed changes
 relative to 2520 MHz for TTFT, TPOT, throughput, total energy, and FFN-pool
@@ -696,10 +698,9 @@ energy. Energy--TPOT-p99 and energy--TTFT-p99 non-dominated points are retained
 separately. No service model or placement selection is used to construct the
 frontier.
 
-The immutable study directory is
-`results/raw/milestone-m-symmetric-20261002T151857Z`. It was generated from
-commit `1664b39`, with trace SHA-256
-`6cf46c02b3a88ace790c6f9b59dbb7b5f44a9872a5813584a3f3a232b39b1020`
-and `P_balanced` file SHA-256
-`59c33ea86a95a1c252418b4e612bd1479465941c4b0a726207a8ee362ed6710c`.
-Exclusive Uranus job `271241` runs the sweep.
+The first prepared study, `results/raw/milestone-m-symmetric-20261002T151857Z`,
+and pending job `271241` used one server for all frequencies. The job was
+cancelled before allocation (0 seconds runtime), and that study is invalidated
+before producing data. The corrected launcher also enforces exact equality
+between runtime `HEAD` and the manifest's commit and refuses tracked worktree
+changes. A new manifest must be created from the final corrected commit.

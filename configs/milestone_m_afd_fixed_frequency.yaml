@@ -152,16 +152,17 @@ stationary_repeat:
   placement_and_frequency_changes: false
 
 symmetric_ffn_sweep:
-  status: submitted
-  slurm_job_id: 271241
-  study_dir: results/raw/milestone-m-symmetric-20261002T151857Z
-  code_commit: 1664b39bf466023ecef76c434b14ad0a9ef66d04
+  status: prepared_for_resubmission
+  cancelled_slurm_job_id: 271241
+  cancelled_study_dir: results/raw/milestone-m-symmetric-20261002T151857Z
+  cancellation_reason: avoid_frequency_server_age_confound
   placement: P_balanced
   request_rate: 8.0
   requests_per_window: 300
   repetitions_per_frequency: 3
   randomization_seed: 20261004
   conditioning_traces_per_frequency: 1
+  server_lifecycle: restart_per_frequency_configuration
   attention_frequencies_mhz: [2520, 2520]
   ffn_symmetric_frequencies_mhz: [2520, 2220, 2070, 1635, 1005]
   expected_measured_runs: 15
