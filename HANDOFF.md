@@ -227,17 +227,29 @@ Attention--FFN disaggregation.
   `results/raw/milestone-m-symmetric-20261002T151857Z` were cancelled before
   allocation (0 seconds runtime) because they used one server for all five
   frequencies. They must not be analyzed or resumed.
+- Corrected job `271243` completed `COMPLETED/0` in 53:25 using study
+  `results/raw/milestone-m-symmetric-restart-20261002T152801Z`. All 15 runs
+  completed 300/300 requests with zero failures and 38,400 output tokens;
+  trace, placement, plan, NVML energy, clocks, scheduling, five independent
+  server shutdowns, patch reversion, and both environment checks pass.
+- With both FFN GPUs at 2070 MHz, total energy falls 12.57% and FFN-pool
+  energy falls 19.84% relative to 2520 MHz, while mean TPOT p99 changes
+  -0.99% and throughput -0.32%. At 1635 MHz, total/FFN energy fall
+  14.39%/22.84% while TPOT p99 rises 2.50% and throughput falls 0.64%.
+- At 1005 MHz, total energy improves only to -16.04%, while TPOT p99 rises
+  10.27%, TTFT p99 rises 19.46%, and throughput falls 1.72%. Therefore 1635
+  MHz is the approximate practical knee, while 2070 MHz is the conservative
+  low-latency sweet spot. This is fixed-placement, fixed-frequency evidence.
+- TTFT p99 remains noisy and generally decreases across the three windows
+  within a fresh server lifecycle. Report individual runs and sample standard
+  deviations; do not treat the mean TTFT ordering as a significance result.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-study="results/raw/milestone-m-symmetric-restart-$(date -u +%Y%m%dT%H%M%SZ)"
-python -m tools.prepare_milestone_m_symmetric_ffn_sweep \
-  --trace results/raw/milestone-m-stationary-repeat-20261002T060128Z/trace.jsonl \
-  --output-dir "${study}"
-MILESTONE_M_SYMMETRIC_STUDY="${study}" \
-  sbatch scripts/milestone_m_symmetric_ffn_sweep.sbatch
+cat results/processed/milestone_m_symmetric_relative.csv
+cat results/processed/milestone_m_symmetric_frontier.csv
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

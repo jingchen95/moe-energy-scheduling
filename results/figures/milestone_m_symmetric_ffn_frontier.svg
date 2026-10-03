@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="620" viewBox="0 0 1160 620">
+<rect width="100%" height="100%" fill="white"/>
+<text x="55" y="38" font-family="sans-serif" font-size="23" font-weight="bold">Symmetric FFN frequency frontier at 8 requests/s</text>
+<text x="55" y="64" font-family="sans-serif" font-size="14">P_balanced; Attention GPUs fixed at 2520 MHz; points are three-run means.</text>
+<text x="325.0" y="95" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold">Total energy vs TPOT p99</text>
+<line x1="75" y1="515" x2="575" y2="515" stroke="#333"/>
+<line x1="75" y1="115" x2="75" y2="515" stroke="#333"/>
+<text x="325.0" y="570" text-anchor="middle" font-family="sans-serif" font-size="13">TPOT p99 (ms)</text>
+<text x="27" y="315.0" transform="rotate(-90 27 315.0)" text-anchor="middle" font-family="sans-serif" font-size="13">Total GPU energy (kJ)</text>
+<circle cx="517.31" cy="468.85" r="7" fill="#4c78a8"/>
+<text x="526.31" y="459.85" font-family="sans-serif" font-size="11">1005 MHz</text>
+<circle cx="251.68" cy="437.22" r="7" fill="#4c78a8"/>
+<text x="260.68" y="428.22" font-family="sans-serif" font-size="11">1635 MHz</text>
+<circle cx="132.69" cy="402.24" r="7" fill="#4c78a8"/>
+<text x="141.69" y="393.24" font-family="sans-serif" font-size="11">2070 MHz</text>
+<circle cx="208.35" cy="337.96" r="7" fill="#4c78a8"/>
+<text x="217.35" y="328.96" font-family="sans-serif" font-size="11">2220 MHz</text>
+<circle cx="166.38" cy="161.15" r="7" fill="#4c78a8"/>
+<text x="175.38" y="152.15" font-family="sans-serif" font-size="11">2520 MHz</text>
+<text x="75" y="540" font-family="sans-serif" font-size="10">63.9</text>
+<text x="575" y="540" text-anchor="end" font-family="sans-serif" font-size="10">73.5</text>
+<text x="67" y="515" text-anchor="end" font-family="sans-serif" font-size="10">22.3</text>
+<text x="67" y="123" text-anchor="end" font-family="sans-serif" font-size="10">28.0</text>
+<text x="885.0" y="95" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold">Total energy vs TTFT p99</text>
+<line x1="635" y1="515" x2="1135" y2="515" stroke="#333"/>
+<line x1="635" y1="115" x2="635" y2="515" stroke="#333"/>
+<text x="885.0" y="570" text-anchor="middle" font-family="sans-serif" font-size="13">TTFT p99 (ms)</text>
+<text x="587" y="315.0" transform="rotate(-90 587 315.0)" text-anchor="middle" font-family="sans-serif" font-size="13">Total GPU energy (kJ)</text>
+<circle cx="1077.31" cy="468.85" r="7" fill="#4c78a8"/>
+<text x="1086.31" y="459.85" font-family="sans-serif" font-size="11">1005 MHz</text>
+<circle cx="790.58" cy="437.22" r="7" fill="#4c78a8"/>
+<text x="799.58" y="428.22" font-family="sans-serif" font-size="11">1635 MHz</text>
+<circle cx="692.69" cy="402.24" r="7" fill="#4c78a8"/>
+<text x="701.69" y="393.24" font-family="sans-serif" font-size="11">2070 MHz</text>
+<circle cx="970.41" cy="337.96" r="7" fill="#4c78a8"/>
+<text x="979.41" y="328.96" font-family="sans-serif" font-size="11">2220 MHz</text>
+<circle cx="741.41" cy="161.15" r="7" fill="#4c78a8"/>
+<text x="750.41" y="152.15" font-family="sans-serif" font-size="11">2520 MHz</text>
+<text x="635" y="540" font-family="sans-serif" font-size="10">622.6</text>
+<text x="1135" y="540" text-anchor="end" font-family="sans-serif" font-size="10">814.9</text>
+<text x="627" y="515" text-anchor="end" font-family="sans-serif" font-size="10">22.3</text>
+<text x="627" y="123" text-anchor="end" font-family="sans-serif" font-size="10">28.0</text>
+</svg>

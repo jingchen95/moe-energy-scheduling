@@ -704,3 +704,58 @@ cancelled before allocation (0 seconds runtime), and that study is invalidated
 before producing data. The corrected launcher also enforces exact equality
 between runtime `HEAD` and the manifest's commit and refuses tracked worktree
 changes. A new manifest must be created from the final corrected commit.
+
+### Symmetric sweep results
+
+Corrected exclusive Uranus job `271243` completed in 53 minutes 25 seconds.
+All 15 measured windows completed 300/300 requests with zero failures and
+38,400 output tokens. All runs share one trace, placement, and experiment-plan
+hash; cumulative NVML energy is available; p99 client send delay is at most
+3.08 ms; and measured average clocks match targets with 0 MHz maximum error.
+Each of the five server lifecycles shut down without residual GPU processes.
+Final cleanup reset clocks, reverted the patch, kept the pinned plugin clean,
+and preserved vLLM 0.15.1 and 0.26.0 in their separate environments.
+
+Values are mean +/- sample standard deviation across three repetitions. Signed
+changes are relative to symmetric FFN H/H at 2520 MHz; Attention remains at
+2520/2520 MHz. Energy includes all four GPUs and does not subtract idle energy.
+
+| FFN MHz | TTFT p99 (ms) | TPOT p99 (ms) | Throughput (req/s) | Total energy (J) | FFN energy (J) | Total energy vs H | TPOT vs H |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2520 | 663.55 +/- 249.34 | 65.69 +/- 2.24 | 6.735 +/- 0.012 | 27,329.6 +/- 287.3 | 17,383.7 +/- 390.3 | reference | reference |
+| 2220 | 751.60 +/- 167.01 | 66.49 +/- 1.00 | 6.734 +/- 0.022 | 24,810.7 +/- 160.0 | 14,861.0 +/- 228.7 | -9.22% | +1.23% |
+| 2070 | 644.82 +/- 195.73 | 65.04 +/- 0.88 | 6.714 +/- 0.036 | 23,894.9 +/- 82.4 | 13,934.1 +/- 122.1 | -12.57% | -0.99% |
+| 1635 | 682.46 +/- 155.23 | 67.33 +/- 2.12 | 6.692 +/- 0.016 | 23,396.6 +/- 37.8 | 13,414.0 +/- 135.8 | -14.39% | +2.50% |
+| 1005 | 792.71 +/- 136.90 | 72.43 +/- 4.17 | 6.619 +/- 0.019 | 22,946.0 +/- 218.3 | 12,909.5 +/- 120.7 | -16.04% | +10.27% |
+
+The Attention-pool energy remains approximately 9.95--10.04 kJ across the
+sweep. The reduction comes from the FFN pool: -14.51% at 2220 MHz, -19.84% at
+2070 MHz, -22.84% at 1635 MHz, and -25.74% at 1005 MHz. Mean FFN-GPU power
+falls from approximately 191--197 W at 2520 MHz to 154--156 W at 2070 MHz,
+148--150 W at 1635 MHz, and 141--142 W at 1005 MHz.
+
+Using measured mean total energy and p99 latency, 2070, 1635, and 1005 MHz are
+non-dominated for both the TPOT and TTFT views. The 2520 and 2220 MHz means are
+dominated by 2070 MHz, although three repetitions do not justify a statistical
+claim about their small latency differences.
+
+**Practical interpretation:** both FFN GPUs can be reduced to 1635 MHz before
+mean generation-latency or throughput degradation becomes substantial. At
+1635 MHz, total energy is 14.39% lower, FFN-pool energy is 22.84% lower, TPOT
+p99 is 2.50% higher, and throughput is 0.64% lower than H/H. Reducing further
+to 1005 MHz saves only another 1.93% total energy relative to 1635 MHz, while
+TPOT p99 rises another 7.58% and TTFT becomes worse. Thus 1635 MHz is the
+approximate practical knee; 2070 MHz is the more conservative low-latency
+sweet spot.
+
+TTFT p99 remains highly variable and generally decreases from repetition 1 to
+3 within each fresh server. The independent server lifecycle removes frequency
+versus long-term server-age confounding, but it does not eliminate within-server
+warm-state behavior or p99 sampling noise. Individual run values are retained
+in `results/processed/milestone_m_symmetric_runs.csv`; conclusions rely more
+heavily on the consistent energy and TPOT/throughput trends than on small TTFT
+mean differences.
+
+This stage changes neither expert placement nor frequency during a run. It
+establishes a useful fixed symmetric FFN operating range, not evidence for
+frequency-aware placement or dynamic DVFS.
