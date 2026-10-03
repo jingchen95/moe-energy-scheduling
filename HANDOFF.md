@@ -243,13 +243,34 @@ Attention--FFN disaggregation.
 - TTFT p99 remains noisy and generally decreases across the three windows
   within a fresh server lifecycle. Report individual runs and sample standard
   deviations; do not treat the mean TTFT ordering as a significance result.
+- A heterogeneous fixed-frequency target-split motivation experiment is
+  prepared. It uses FFN `1635/2070` MHz and the mirrored `2070/1635` control,
+  with direct slow-rank routed-token targets of 50%, 47.5%, 45%, 42.5%, and
+  40%. The construction does not use `frequency/H` or a learned capacity
+  model.
+- Ten frozen mappings preserve exactly 64 experts/rank/layer and no
+  replication. Across all layers, each achieved slow-rank fraction is within
+  `3.17e-6` absolute fraction of its requested target; aggregate fractions are
+  likewise effectively exact. Primary and mirrored mappings have immutable
+  file and canonical-mapping hashes in
+  `results/processed/milestone_m_target_split_placements.csv`.
+- The planned matrix contains 10 randomized configurations, each with a fresh
+  AFD server, one excluded conditioning trace, and three measured windows at
+  8 request/s, for 30 runs. The analysis compares the combined measured points
+  against the existing symmetric 2070/2070 and 1635/1635 frontier; merely
+  winning among heterogeneous placements is not evidence of a Joint benefit.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-cat results/processed/milestone_m_symmetric_relative.csv
-cat results/processed/milestone_m_symmetric_frontier.csv
+study="results/raw/milestone-m-target-splits-$(date -u +%Y%m%dT%H%M%SZ)"
+python -m tools.prepare_milestone_m_target_split_sweep \
+  --trace results/raw/milestone-m-stationary-repeat-20261002T060128Z/trace.jsonl \
+  --placement-summary results/processed/milestone_m_target_split_placements.csv \
+  --output-dir "${study}"
+MILESTONE_M_TARGET_SPLIT_STUDY="${study}" \
+  sbatch scripts/milestone_m_target_split_sweep.sbatch
 ```
 
 ## Latest status — Milestone L real-GPU validation complete

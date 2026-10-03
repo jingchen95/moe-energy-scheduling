@@ -62,6 +62,13 @@ results/processed/*
 !results/processed/milestone_m_symmetric_relative.csv
 !results/processed/milestone_m_symmetric_frontier.csv
 !results/processed/milestone_m_symmetric_summary.json
+!results/processed/milestone_m_target_split_placements.csv
+!results/processed/milestone_m_target_split_placements.json
+!results/processed/milestone_m_target_split_runs.csv
+!results/processed/milestone_m_target_split_aggregate.csv
+!results/processed/milestone_m_target_split_comparisons.csv
+!results/processed/milestone_m_target_split_frontier.csv
+!results/processed/milestone_m_target_split_summary.json
 !results/figures/
 results/figures/*
 !results/figures/.gitkeep
@@ -79,6 +86,7 @@ results/figures/*
 !results/figures/milestone_m_afd_fixed_frequency.svg
 !results/figures/milestone_m_stationary_repetitions.svg
 !results/figures/milestone_m_symmetric_ffn_frontier.svg
+!results/figures/milestone_m_target_split_frontier.svg
 logs/
 slurm-*.out
 slurm-*.err

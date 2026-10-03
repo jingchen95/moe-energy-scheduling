@@ -759,3 +759,40 @@ mean differences.
 This stage changes neither expert placement nor frequency during a run. It
 establishes a useful fixed symmetric FFN operating range, not evidence for
 frequency-aware placement or dynamic DVFS.
+
+## Heterogeneous target-split motivation experiment
+
+The next stage asks whether fixed heterogeneous FFN clocks plus a controlled
+expert-load split add a measured non-dominated point beyond the symmetric
+frontier. Attention remains at 2520/2520 MHz. The primary FFN orientation is
+1635/2070 MHz, with 2070/1635 MHz as a physical-rank mirror control. This is a
+mechanism experiment, not a final mapping optimizer or scheduler.
+
+Placements are constructed directly from the frozen AFD routed-token profile.
+Starting from `P_balanced`, a deterministic per-layer pair-swap search minimizes
+absolute error to slow-rank targets of 50%, 47.5%, 45%, 42.5%, and 40%. It
+does not use `frequency/H`, a learned capacity model, or measured latency.
+Every mapping retains 48 layers, 128 experts/layer, exactly 64 experts/rank,
+and no replication. The mirrored mappings are exact physical-rank complements.
+
+| Requested slow-rank fraction | Achieved aggregate fraction | Per-layer min | Per-layer max | Maximum absolute layer error |
+| ---: | ---: | ---: | ---: | ---: |
+| 50.0% | 49.999993% | 49.999683% | 50.000158% | 0.000317% |
+| 47.5% | 47.500050% | 47.499747% | 47.500222% | 0.000253% |
+| 45.0% | 44.999985% | 44.999810% | 45.000285% | 0.000285% |
+| 42.5% | 42.500022% | 42.499715% | 42.500190% | 0.000285% |
+| 40.0% | 39.999963% | 39.999937% | 40.000253% | 0.000253% |
+
+The experiment contains ten configurations: five targets in each frequency
+orientation. A fixed seed randomizes configuration order. Every configuration
+uses a fresh AFD server lifecycle, one complete excluded conditioning trace,
+and three measured 300-request windows at 8 request/s, for 30 measured runs.
+The same trace, decoding, energy method, ownership evidence, clock validation,
+commit guard, and cleanup rules used by the symmetric sweep remain in force.
+
+The primary analysis combines these points with the already measured symmetric
+frontier, especially 2070/2070 and 1635/1635. A heterogeneous point supports
+the mechanism only if it becomes non-dominated in measured energy--TPOT or
+energy--TTFT space; being the best heterogeneous split alone is insufficient.
+The analysis also retains TPOT versus target split to test whether excessive
+skew makes the fast FFN rank the straggler.

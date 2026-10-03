@@ -177,3 +177,25 @@ symmetric_ffn_sweep:
   routing_profiling: false
   placement_changes: false
   dynamic_dvfs: false
+
+heterogeneous_target_split:
+  status: prepared
+  attention_frequencies_mhz: [2520, 2520]
+  ffn_orientations_mhz:
+    MH: [1635, 2070]
+    HM: [2070, 1635]
+  target_slow_rank_load_fractions: [0.50, 0.475, 0.45, 0.425, 0.40]
+  placement_constraint: exactly_64_experts_per_rank_per_layer
+  placement_construction: direct_target_routed_token_split
+  frequency_derived_capacity_model: false
+  request_rate: 8.0
+  requests_per_window: 300
+  repetitions_per_configuration: 3
+  configurations: 10
+  expected_measured_runs: 30
+  randomization_seed: 20261005
+  conditioning_traces_per_configuration: 1
+  server_lifecycle: restart_per_configuration
+  symmetric_reference: results/processed/milestone_m_symmetric_aggregate.csv
+  routing_profiling: false
+  dynamic_dvfs: false
