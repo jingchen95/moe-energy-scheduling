@@ -227,6 +227,22 @@ def main() -> int:
         "energy_ttft_p99_pareto": row["point"] in ttft_frontier,
     } for row in combined]
     comparisons = comparison_rows(aggregates, symmetric)
+    primary_criterion_points = sorted(
+        row["point"] for row in comparisons
+        if row["lower_energy_than_symmetric_2070"]
+        and row["tpot_closer_to_symmetric_2070_than_1635"]
+    )
+    tpot_by_split = {
+        orientation: [
+            {
+                "target_slow_fraction": row["target_slow_fraction"],
+                "tpot_p99_ms_mean": row["tpot_p99_ms_mean"],
+                "total_gpu_energy_j_mean": row["total_gpu_energy_j_mean"],
+            }
+            for row in aggregates if row["orientation"] == orientation
+        ]
+        for orientation in ("MH", "HM")
+    }
     args.output_dir.mkdir(parents=True, exist_ok=True)
     _write_csv(args.output_dir / "milestone_m_target_split_runs.csv", per_run)
     _write_csv(args.output_dir / "milestone_m_target_split_aggregate.csv", aggregates)
@@ -244,6 +260,8 @@ def main() -> int:
         "heterogeneous_tpot_frontier_points": sorted(
             point for point in tpot_frontier if not point.startswith("symmetric_")
         ),
+        "primary_criterion_points": primary_criterion_points,
+        "tpot_and_energy_by_target_split": tpot_by_split,
         "interpretation_boundary": "measured motivation experiment; no learned capacity model or dynamic DVFS",
     }
     (args.output_dir / "milestone_m_target_split_summary.json").write_text(
@@ -254,6 +272,7 @@ def main() -> int:
     print(json.dumps({
         "validated_runs": len(per_run),
         "heterogeneous_tpot_frontier_points": summary["heterogeneous_tpot_frontier_points"],
+        "primary_criterion_points": primary_criterion_points,
         "tpot_frontier": summary["tpot_frontier"],
     }, indent=2, sort_keys=True))
     return 0

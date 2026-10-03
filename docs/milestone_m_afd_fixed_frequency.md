@@ -796,3 +796,72 @@ the mechanism only if it becomes non-dominated in measured energy--TPOT or
 energy--TTFT space; being the best heterogeneous split alone is insufficient.
 The analysis also retains TPOT versus target split to test whether excessive
 skew makes the fast FFN rank the straggler.
+
+### Heterogeneous target-split results
+
+Job `271339` completed on exclusive Uranus in 1 hour 36 minutes 43 seconds.
+All 30 measured windows completed 300/300 requests with zero failures and
+38,400 output tokens. The runs use one trace and plan hash, ten distinct
+validated placement/ownership hashes, cumulative NVML energy, and exact target
+average clocks. Maximum client p99 send delay is 3.28 ms. All ten server
+lifecycles shut down without residual GPU processes; final cleanup reset
+clocks, reverted the patch, kept the plugin clean, and preserved the protected
+vLLM 0.15.1 and isolated vLLM 0.26.0 environments.
+
+Values below are mean +/- sample standard deviation across three repetitions.
+Energy is total four-GPU energy without idle subtraction. The target is the
+fraction of routed-token load assigned to the slower FFN rank.
+
+| Orientation | Slow-load target | TPOT p99 (ms) | TTFT p99 (ms) | Energy (J) | FFN energy (J) | Throughput (req/s) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| HM | 50.0% | 68.16 +/- 2.21 | 708.2 +/- 306.2 | 23,807.9 +/- 209.8 | 13,728.7 | 6.698 |
+| HM | 47.5% | 67.54 +/- 2.74 | 748.2 +/- 172.3 | 23,735.8 +/- 97.0 | 13,732.9 | 6.700 |
+| HM | 45.0% | 69.09 +/- 7.36 | 829.3 +/- 459.1 | 23,499.2 +/- 326.4 | 13,478.7 | 6.676 |
+| HM | 42.5% | 68.54 +/- 1.06 | 703.5 +/- 135.9 | 23,711.1 +/- 99.7 | 13,683.4 | 6.683 |
+| HM | 40.0% | 62.43 +/- 1.26 | 556.7 +/- 141.6 | 24,075.9 +/- 59.5 | 14,016.5 | 6.702 |
+| MH | 50.0% | 66.59 +/- 4.36 | 627.8 +/- 151.8 | 23,706.5 +/- 202.8 | 13,682.7 | 6.691 |
+| MH | 47.5% | 70.08 +/- 2.55 | 679.6 +/- 98.9 | 23,585.5 +/- 24.4 | 13,607.1 | 6.716 |
+| MH | 45.0% | 71.24 +/- 5.05 | 942.8 +/- 587.3 | 23,499.1 +/- 420.9 | 13,517.5 | 6.680 |
+| MH | 42.5% | 67.26 +/- 2.62 | 705.6 +/- 155.7 | 23,698.5 +/- 130.4 | 13,686.6 | 6.702 |
+| MH | 40.0% | 66.65 +/- 3.69 | 611.6 +/- 183.0 | 23,805.6 +/- 190.0 | 13,773.8 | 6.685 |
+
+The preregistered primary question has a negative answer. Nine of ten
+heterogeneous points use 0.36--1.66% less energy than symmetric 2070/2070, but
+their mean TPOT is closer to symmetric 1635/1635 than to 2070/2070. `HM40` is
+closer to and faster than 2070/2070, but consumes 0.76% more energy. Therefore
+no point simultaneously provides lower energy than 2070/2070 and latency
+closer to that reference than to 1635/1635.
+
+On the literal three-run mean frontier, three heterogeneous points are newly
+non-dominated:
+
+- `MH50` uses 0.79% less energy with 2.39% higher TPOT than 2070/2070; versus
+  1635/1635 it uses 1.32% more energy with 1.09% lower TPOT.
+- `MH42p5` uses 0.82% less energy with 3.41% higher TPOT than 2070/2070; it is
+  only 0.10% faster in TPOT and 1.29% higher in energy than 1635/1635.
+- `HM40` uses 0.76% more energy while reducing TPOT by 4.01% versus 2070/2070.
+
+These are strict mean-based tradeoff points, but none dominates a symmetric
+configuration. Their 0.1--1.3% margins near 1635/1635 are comparable to the
+observed run variability, and only three repetitions are available. They are
+therefore a **weak/inconclusive extension of the measured discrete frontier**,
+not evidence of a practically meaningful Joint advantage. An unmeasured
+intermediate symmetric frequency could also occupy the narrow gap.
+
+Increasing placement skew does not monotonically worsen TPOT. Both orientations
+worsen around the 45% target and then improve again at 40%; the 40% HM point
+has the lowest TPOT of the entire experiment. Strong skew does increase the
+fast-rank power: from the 50% to 40% target it rises from 154.7 to 160.6 W in
+HM and from 155.5 to 159.1 W in MH, while total energy turns upward after the
+45% target. Thus the energy cost of loading the fast rank is visible, but the
+hypothesized fast-rank TPOT straggler is not demonstrated.
+
+TTFT remains noisy and generally falls from the first to third measured window
+within a server lifecycle. The per-run CSV preserves those values. Conclusions
+should rely on the combined energy/TPOT pattern and effect sizes, not small
+TTFT mean differences.
+
+This motivation experiment does not justify implementing a learned mapping
+optimizer or dynamic DVFS controller. A stronger claim would first require
+repeatability of the narrow selected frontier points and denser symmetric
+frequency controls around 1635--2070 MHz.

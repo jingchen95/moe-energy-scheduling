@@ -179,7 +179,16 @@ symmetric_ffn_sweep:
   dynamic_dvfs: false
 
 heterogeneous_target_split:
-  status: prepared
+  status: complete
+  slurm_job_id: 271339
+  study_dir: results/raw/milestone-m-target-splits-20261003T072138Z
+  code_commit: b64b6eb330ac370ffd4b81d04b08adacef6921bd
+  validated_runs: 30
+  completed_requests_per_run: 300
+  failed_requests: 0
+  primary_criterion_satisfied: false
+  strict_mean_heterogeneous_tpot_frontier_points: [HM40, MH50, MH42p5]
+  interpretation: weak_inconclusive_frontier_extension
   attention_frequencies_mhz: [2520, 2520]
   ffn_orientations_mhz:
     MH: [1635, 2070]

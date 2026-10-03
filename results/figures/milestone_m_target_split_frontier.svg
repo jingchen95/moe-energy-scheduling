@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="620" viewBox="0 0 920 620">
+<rect width="100%" height="100%" fill="white"/>
+<text x="50" y="37" font-family="sans-serif" font-size="22" font-weight="bold">Heterogeneous target splits vs symmetric FFN DVFS</text>
+<text x="50" y="62" font-family="sans-serif" font-size="13">Three-run means; outlined points are on the measured energy--TPOT-p99 frontier.</text>
+<line x1="90" y1="525" x2="850" y2="525" stroke="#333"/>
+<line x1="90" y1="85" x2="90" y2="525" stroke="#333"/>
+<text x="470.0" y="580" text-anchor="middle" font-family="sans-serif" font-size="14">TPOT p99 (ms)</text>
+<text x="30" y="305.0" transform="rotate(-90 30 305.0)" text-anchor="middle" font-family="sans-serif" font-size="14">Total GPU energy (kJ)</text>
+<circle cx="363.00" cy="127.58" r="6" fill="#4c78a8" stroke="none" stroke-width="0"/>
+<text x="371.00" y="120.58" font-family="sans-serif" font-size="9">symmetric_2520</text>
+<circle cx="412.45" cy="331.47" r="6" fill="#4c78a8" stroke="none" stroke-width="0"/>
+<text x="420.45" y="324.47" font-family="sans-serif" font-size="9">symmetric_2220</text>
+<circle cx="323.31" cy="405.61" r="6" fill="#4c78a8" stroke="#111" stroke-width="2"/>
+<text x="331.31" y="398.61" font-family="sans-serif" font-size="9">symmetric_2070</text>
+<circle cx="463.50" cy="445.94" r="6" fill="#4c78a8" stroke="#111" stroke-width="2"/>
+<text x="471.50" y="438.94" font-family="sans-serif" font-size="9">symmetric_1635</text>
+<circle cx="776.45" cy="482.42" r="6" fill="#4c78a8" stroke="#111" stroke-width="2"/>
+<text x="784.45" y="475.42" font-family="sans-serif" font-size="9">symmetric_1005</text>
+<circle cx="514.43" cy="412.65" r="6" fill="#54a24b" stroke="none" stroke-width="0"/>
+<text x="522.43" y="405.65" font-family="sans-serif" font-size="9">HM50</text>
+<circle cx="476.64" cy="418.48" r="6" fill="#54a24b" stroke="none" stroke-width="0"/>
+<text x="484.64" y="411.48" font-family="sans-serif" font-size="9">HM47p5</text>
+<circle cx="571.68" cy="437.64" r="6" fill="#54a24b" stroke="none" stroke-width="0"/>
+<text x="579.68" y="430.64" font-family="sans-serif" font-size="9">HM45</text>
+<circle cx="537.82" cy="420.49" r="6" fill="#54a24b" stroke="none" stroke-width="0"/>
+<text x="545.82" y="413.49" font-family="sans-serif" font-size="9">HM42p5</text>
+<circle cx="163.55" cy="390.96" r="6" fill="#54a24b" stroke="#111" stroke-width="2"/>
+<text x="171.55" y="383.96" font-family="sans-serif" font-size="9">HM40</text>
+<circle cx="418.40" cy="420.85" r="6" fill="#e45756" stroke="#111" stroke-width="2"/>
+<text x="426.40" y="413.85" font-family="sans-serif" font-size="9">MH50</text>
+<circle cx="632.04" cy="430.66" r="6" fill="#e45756" stroke="none" stroke-width="0"/>
+<text x="640.04" y="423.66" font-family="sans-serif" font-size="9">MH47p5</text>
+<circle cx="703.04" cy="437.64" r="6" fill="#e45756" stroke="none" stroke-width="0"/>
+<text x="711.04" y="430.64" font-family="sans-serif" font-size="9">MH45</text>
+<circle cx="459.32" cy="421.51" r="6" fill="#e45756" stroke="#111" stroke-width="2"/>
+<text x="467.32" y="414.51" font-family="sans-serif" font-size="9">MH42p5</text>
+<circle cx="422.13" cy="412.84" r="6" fill="#e45756" stroke="none" stroke-width="0"/>
+<text x="430.13" y="405.84" font-family="sans-serif" font-size="9">MH40</text>
+<rect x="610" y="32" width="10" height="10" fill="#4c78a8"/><text x="625" y="41" font-family="sans-serif" font-size="11">symmetric</text>
+<rect x="700" y="32" width="10" height="10" fill="#e45756"/><text x="715" y="41" font-family="sans-serif" font-size="11">MH</text>
+<rect x="755" y="32" width="10" height="10" fill="#54a24b"/><text x="770" y="41" font-family="sans-serif" font-size="11">HM</text>
+</svg>

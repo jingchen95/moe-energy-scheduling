@@ -259,18 +259,34 @@ Attention--FFN disaggregation.
   8 request/s, for 30 runs. The analysis compares the combined measured points
   against the existing symmetric 2070/2070 and 1635/1635 frontier; merely
   winning among heterogeneous placements is not evidence of a Joint benefit.
+- Job `271339` completed `COMPLETED/0` in 1:36:43. All 30 measured windows
+  completed 300/300 requests with zero failures and 38,400 output tokens;
+  ten placement/mapping hashes, one trace/plan hash, cumulative NVML energy,
+  exact average clocks, scheduling, ten server shutdowns, patch reversion,
+  and both environment checks pass.
+- No heterogeneous point both uses less energy than symmetric 2070/2070 and
+  has TPOT p99 closer to 2070/2070 than to 1635/1635. The preregistered primary
+  criterion is therefore not satisfied.
+- On three-run means, `HM40`, `MH50`, and `MH42p5` are strict new energy--TPOT
+  Pareto points. The gaps are small: `MH50` trades -0.79% energy for +2.39%
+  TPOT versus 2070/2070 and +1.32% energy for -1.09% TPOT versus 1635/1635;
+  `MH42p5` is within 1.3% energy and 0.1% TPOT of 1635/1635. `HM40` improves
+  TPOT by 4.01% versus 2070/2070 but uses 0.76% more energy.
+- Classification: **weak/inconclusive measured frontier extension**. None of
+  the heterogeneous points dominates a symmetric point, and the small strict
+  frontier gaps are comparable to run variability. This is not sufficient to
+  claim a meaningful Joint advantage or proceed directly to a scheduler.
+- Increasing skew does not monotonically worsen TPOT in either orientation;
+  40% slow-rank load improves TPOT relative to intermediate splits. Fast-rank
+  power rises at the strongest skew and total energy turns upward, but the
+  hypothesized fast-rank latency straggler is not demonstrated.
 
 ### Exact next command
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-study="results/raw/milestone-m-target-splits-$(date -u +%Y%m%dT%H%M%SZ)"
-python -m tools.prepare_milestone_m_target_split_sweep \
-  --trace results/raw/milestone-m-stationary-repeat-20261002T060128Z/trace.jsonl \
-  --placement-summary results/processed/milestone_m_target_split_placements.csv \
-  --output-dir "${study}"
-MILESTONE_M_TARGET_SPLIT_STUDY="${study}" \
-  sbatch scripts/milestone_m_target_split_sweep.sbatch
+cat results/processed/milestone_m_target_split_comparisons.csv
+cat results/processed/milestone_m_target_split_frontier.csv
 ```
 
 ## Latest status — Milestone L real-GPU validation complete
