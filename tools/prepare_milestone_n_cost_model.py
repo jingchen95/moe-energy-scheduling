@@ -86,8 +86,8 @@ def build_plan(root: Path, trace: Path) -> tuple[dict[str, Any], dict[str, Any]]
             _record(root, root / "docs/milestone_g_load_frequency_model.md"),
         ],
         "missing_before_this_study": [
-            "per-invocation logical routing histogram",
-            "AFD vLLM 0.26 rank-local FFN CUDA-event latency",
+            "same-invocation logical routing histogram and local FFN timing",
+            "AFD vLLM 0.26 local and full-service CUDA-event latency",
             "held-out lifecycle timing repeat at 1635 and 2070 MHz",
         ],
         "prohibited_reuse": (
@@ -121,10 +121,23 @@ def build_plan(root: Path, trace: Path) -> tuple[dict[str, Any], dict[str, Any]]
                 "lifecycle": "heldout_skew",
                 "placement": placement,
             })
-    order = list(range(len(definitions)))
-    random.Random(RANDOMIZATION_SEED).shuffle(order)
+    # The first lifecycle is a mandatory balanced@HH same-run alignment gate.
+    # Only after it passes do we enter the deterministic randomized remainder.
+    gate_index = next(
+        index
+        for index, row in enumerate(definitions)
+        if row["config_id"] == "balanced-f2520-primary"
+    )
+    remaining = [index for index in range(len(definitions)) if index != gate_index]
+    random.Random(RANDOMIZATION_SEED).shuffle(remaining)
+    order = [gate_index, *remaining]
     configurations = [
-        {"order": index, **definitions[source]} for index, source in enumerate(order)
+        {
+            "order": index,
+            "mandatory_alignment_gate": index == 0,
+            **definitions[source],
+        }
+        for index, source in enumerate(order)
     ]
     plan = {
         "schema_version": 1,
@@ -140,20 +153,21 @@ def build_plan(root: Path, trace: Path) -> tuple[dict[str, Any], dict[str, Any]]
         "request_rate": 8.0,
         "max_output_tokens": 128,
         "attention_clocks_mhz": [2520, 2520],
-        "routing_stage": {
-            "placement": balanced,
-            "ffn_clocks_mhz": [2520, 2520],
-            "separate_from_timing": True,
+        "routing_and_timing": {
+            "same_invocation": True,
+            "cross_run_join": False,
+            "routing_source": "logical topk_ids snapshot after full timing interval",
+            "extra_gpu_bincount_inside_timed_region": False,
         },
-        "timing_boundary": (
-            "AFDQwen3MoeDecoderLayer.compute_ffn_output entry immediately before "
-            "native Qwen3MoeSparseMoeBlock through returned output"
+        "local_timing_boundary": (
+            "FusedMoEKernelModularImpl._fused_experts: local workspace, expert "
+            "assignment/permutation and expert kernels, excluding EP dispatch/combine"
         ),
-        "timing_boundary_includes": [
-            "internal routing", "EP dispatch/all-to-all", "routed experts",
-            "shared expert", "combine", "CUDA dependencies returning to caller stream",
-        ],
-        "timing_boundary_excludes": ["AFD input receive", "AFD output send"],
+        "full_timing_boundary": (
+            "per-layer Qwen3MoeSparseMoeBlock including router, EP dispatch, "
+            "local experts, combine, and stream dependencies"
+        ),
+        "mandatory_first_gate": "balanced-f2520-primary",
         "randomization_seed": RANDOMIZATION_SEED,
         "configuration_order": [row["config_id"] for row in configurations],
         "configurations": configurations,

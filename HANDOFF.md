@@ -1,6 +1,6 @@
 # Handoff
 
-## Latest status — Milestone N AFD FFN cost characterization prepared
+## Latest status — Milestone N timing design corrected before GPU execution
 
 - Work continues from Milestone M commit `1cd98f4` on branch
   `milestone-n-afd-ffn-cost-model`.
@@ -9,25 +9,37 @@
 - Existing uninstrumented symmetric and target-split runs are frozen as the
   primary power/energy dataset. Milestone G vLLM 0.15.1 data are explicitly
   excluded from AFD model training.
-- The timed boundary is the AFD decoder-layer FFN call around the native Qwen3
-  MoE block. It includes router, EP dispatch/all-to-all, routed/shared expert
-  work, combine, and return-stream dependencies; it excludes outer AFD P2P
-  transport. The result is FFN/MoE service time, not expert GEMM time.
-- Routing histograms and CUDA-event timing use separate measured runs. The
-  timing path performs no routed-load calculation or per-call synchronize.
-- One exclusive Uranus job is prepared with a fail-fast routing stage followed
-  by eleven randomized, fresh-server timing lifecycles: five frequency anchors,
-  lifecycle repeats at 1635/2070 MHz, and four existing 40/60 distribution
-  checks. Attention remains at 2520/2520 MHz.
+- Commit `305dc6f` prepared an unsafe cross-run routing/timing join and a full
+  MoE boundary mislabeled as rank-local cost. Slurm job `271475` was canceled
+  while pending; it used zero GPU time and produced no measurements.
+- The pinned AFD source also confirmed that `FULL_DECODE_ONLY` replay bypasses
+  Python model hooks. The corrected patch instruments CUDA graph capture and
+  resolves graph-owned records on subsequent worker steps after the worker's
+  existing synchronization.
+- Every timing lifecycle now captures its own logical `topk_ids` metadata and
+  CUDA timings. FFN ranks align only within that same run using exact
+  `(step_sequence, stage, layer)` keys; there is no cross-run join.
+- The local model boundary is vLLM modular `_fused_experts`: local workspace,
+  assignment/permutation, and expert kernels, excluding EP dispatch/combine.
+  A separate full per-layer MoE boundary retains router, communication,
+  local compute, and combine for residual/critical-path validation.
+- The routing snapshot is enqueued after both measured intervals and converted
+  to a histogram on CPU. No extra GPU `bincount` or synchronization is inside
+  the local timing interval; no per-call synchronization is added.
+- The first lifecycle is forced to `P_balanced@2520/2520` as a fail-fast
+  same-run alignment gate. Only the remaining ten fresh-server lifecycles are
+  deterministically randomized. Frequencies, placements, workload, repeats,
+  and the existing uninstrumented energy reuse are otherwise unchanged.
 - Offline analysis builds physical-rank-specific binned `C[g,f](n)` tables,
   validates on held-out server lifecycles, inspects distribution/layer
   residuals, and fits an interpretable 1635/2070 power model using only
   uninstrumented NVML runs.
-- Preparation is not yet submitted. Before submission, run the complete CPU
-  suite, verify the pinned plugin patch apply/revert cycle, commit and push,
-  prepare the immutable study directory, and submit exactly one Slurm job.
+- The old prepared directory
+  `results/raw/milestone-n-afd-cost-20261003T190724Z` is invalidated and must
+  not be reused. A new immutable study must be prepared after the corrective
+  commit.
 
-Exact next command after the preparation commit is created:
+Exact next command after the corrective commit is created:
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling

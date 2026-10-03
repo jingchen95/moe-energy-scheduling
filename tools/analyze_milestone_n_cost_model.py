@@ -16,9 +16,9 @@ import numpy as np
 from src.afd_cost_model import (
     fit_binned_curve,
     fit_linear_power,
-    join_timing_run,
+    join_same_run_cost_profile,
     leave_one_group_out_power,
-    load_routing_trace,
+    load_same_run_cost_profile,
     prediction_metrics,
     write_csv,
 )
@@ -63,9 +63,6 @@ def build_latency_analysis(
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     plan = json.loads((study / "manifest.json").read_text())
     run_rows = _read_runs(study / "runs.tsv")
-    routing_row = next(row for row in run_rows if row["stage"] == "routing")
-    routing_path = Path(routing_row["run_dir"]) / "routing_trace.npz"
-    routing = load_routing_trace(routing_path)
     by_config = {row["config_id"]: row for row in plan["configurations"]}
     joined: list[dict[str, Any]] = []
     for row in run_rows:
@@ -73,15 +70,15 @@ def build_latency_analysis(
             continue
         definition = by_config[row["config_id"]]
         run_dir = Path(row["run_dir"])
-        timing_paths = sorted(run_dir.glob("ffn-timing-rank-*.npz"))
+        profile = load_same_run_cost_profile(
+            run_dir / "afd_same_run_cost_profile.npz"
+        )
         placement = root / definition["placement"]["path"]
-        current, _ = join_timing_run(
-            routing,
-            timing_paths,
+        current, _ = join_same_run_cost_profile(
+            profile,
             placement,
             config_id=row["config_id"],
             lifecycle=row["lifecycle"],
-            frequency_mhz=int(row["frequency_mhz"]),
         )
         joined.extend(current)
     expected_configs = int(plan["expected_timing_runs"])
@@ -103,7 +100,7 @@ def build_latency_analysis(
             ]
             curve = fit_binned_curve(
                 np.asarray([row["n"] for row in subset]),
-                np.asarray([row["elapsed_ms"] for row in subset]),
+                np.asarray([row["local_elapsed_ms"] for row in subset]),
             )
             curves[(rank, frequency)] = curve
             for index, (center, value, count) in enumerate(
@@ -130,7 +127,7 @@ def build_latency_analysis(
                     row for row in rows
                     if row["physical_ffn_rank"] == rank and row["frequency_mhz"] == frequency
                 ]
-                actual = np.asarray([row["elapsed_ms"] for row in subset])
+                actual = np.asarray([row["local_elapsed_ms"] for row in subset])
                 predicted = curves[(rank, frequency)].predict(
                     np.asarray([row["n"] for row in subset])
                 )
@@ -172,7 +169,7 @@ def build_latency_analysis(
         medians = []
         for rank in (0, 1):
             values = [
-                row["elapsed_ms"] for row in train
+                row["local_elapsed_ms"] for row in train
                 if row["frequency_mhz"] == frequency
                 and row["physical_ffn_rank"] == rank
             ]
@@ -184,16 +181,77 @@ def build_latency_analysis(
             "gpu3_minus_gpu2_percent": (medians[1] - medians[0]) / medians[0] * 100,
         })
     write_csv(processed / "milestone_n_rank_comparison.csv", rank_comparison)
+    boundary_rows: list[dict[str, Any]] = []
+    for lifecycle in sorted({str(row["lifecycle"]) for row in joined}):
+        for rank in (0, 1):
+            for frequency in (1005, 1635, 2070, 2220, 2520):
+                subset = [
+                    row for row in joined
+                    if row["lifecycle"] == lifecycle
+                    and row["physical_ffn_rank"] == rank
+                    and row["frequency_mhz"] == frequency
+                ]
+                if not subset:
+                    continue
+                local = np.asarray([row["local_elapsed_ms"] for row in subset])
+                full = np.asarray([row["full_elapsed_ms"] for row in subset])
+                residual = full - local
+                boundary_rows.append({
+                    "lifecycle": lifecycle,
+                    "physical_ffn_rank": rank,
+                    "physical_gpu": rank + 2,
+                    "frequency_mhz": frequency,
+                    "samples": len(subset),
+                    "local_median_ms": float(np.median(local)),
+                    "full_median_ms": float(np.median(full)),
+                    "full_minus_local_median_ms": float(np.median(residual)),
+                    "full_minus_local_p95_ms": float(np.percentile(residual, 95)),
+                })
+    write_csv(processed / "milestone_n_timing_boundaries.csv", boundary_rows)
+
+    paired: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    for row in joined:
+        key = (
+            row["config_id"], row["lifecycle"], row["frequency_mhz"],
+            row["step_sequence"], row["stage"], row["layer"],
+        )
+        paired.setdefault(key, []).append(row)
+    critical_path_rows: list[dict[str, Any]] = []
+    for key, pair in paired.items():
+        if len(pair) != 2 or {row["physical_ffn_rank"] for row in pair} != {0, 1}:
+            raise ValueError(f"incomplete physical-rank invocation pair: {key}")
+        local_max = max(float(row["local_elapsed_ms"]) for row in pair)
+        full_max = max(float(row["full_elapsed_ms"]) for row in pair)
+        critical_path_rows.append({
+            "config_id": key[0],
+            "lifecycle": key[1],
+            "frequency_mhz": key[2],
+            "step_sequence": key[3],
+            "stage": key[4],
+            "layer": key[5],
+            "max_local_elapsed_ms": local_max,
+            "max_full_elapsed_ms": full_max,
+            "communication_sync_residual_ms": full_max - local_max,
+        })
+    _write_gzip_csv(
+        processed / "milestone_n_critical_path_validation.csv.gz",
+        critical_path_rows,
+    )
     result = {
-        "routing_trace": str(routing_path),
-        "routing_trace_sha256": _sha256(routing_path),
-        "routing_records": int(len(routing["layers"])),
+        "routing_source": "same-run profile for every timing configuration",
+        "cross_run_join": False,
         "joined_rows": len(joined),
         "joined_dataset": str(joined_path),
         "joined_dataset_sha256": _sha256(joined_path),
         "validation": validations,
         "residual_correlations": residual_rows,
         "rank_comparison": rank_comparison,
+        "timing_boundaries": boundary_rows,
+        "critical_path_rows": len(critical_path_rows),
+        "full_boundary_role": (
+            "communication/synchronization residual and later composition validation; "
+            "not fitted as independent C[g,f](n_g)"
+        ),
     }
     return result, joined
 
@@ -330,12 +388,12 @@ def make_plots(
                 row for row in primary
                 if row["physical_ffn_rank"] == rank and row["frequency_mhz"] == frequency
             ][::20]
-            axis.scatter([row["n"] for row in rows], [row["elapsed_ms"] for row in rows],
+            axis.scatter([row["n"] for row in rows], [row["local_elapsed_ms"] for row in rows],
                          s=5, alpha=0.35, label=str(frequency))
         axis.set_title(f"Physical GPU {rank + 2}")
         axis.set_xlabel("Local routed assignments n")
         axis.grid(alpha=0.2)
-    axes[0].set_ylabel("FFN boundary elapsed (ms)")
+    axes[0].set_ylabel("Local fused-expert boundary elapsed (ms)")
     axes[1].legend(title="MHz", fontsize=8)
     figure.tight_layout()
     figure.savefig(figures / "milestone_n_latency_vs_load.pdf")

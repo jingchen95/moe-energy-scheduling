@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-allocation routing and CUDA-event characterization for the AFD FFN pool.
+# One-allocation same-run routing and CUDA-event characterization for AFD FFN.
 # Submit with MILESTONE_N_STUDY=<prepared-dir> sbatch <this-file>.
 #SBATCH --job-name=moe-n-afd-cost
 #SBATCH --partition=debug
@@ -124,57 +124,8 @@ run_conditioning() {
 
 printf 'stage\torder\tconfig_id\tlifecycle\tfrequency_mhz\tstatus\trun_dir\n' > "${study}/runs.tsv"
 
-# Stage A: one routing-only lifecycle. Profiling is enabled only for the measured trace.
-routing_dir="${study}/stage-a-routing"
-mkdir -p "${routing_dir}/server" "${routing_dir}/ownership" \
-    "${routing_dir}/profile-control" "${routing_dir}/conditioning" "${routing_dir}/runs"
-"${AFD_PYTHON}" -c \
-    'from pathlib import Path; from src.afd_routing_profile import write_profile_control; import sys; write_profile_control(Path(sys.argv[1]), "startup", False)' \
-    "${routing_dir}/profile-control"
-SUDO="${SUDO:-sudo}" "${AFD_PYTHON}" -m src.gpu_control set-all \
-    --clocks 2520,2520,2520,2520 > "${routing_dir}/clock-set.json"
-model_name="qwen3-moe-n-routing"
-afd_start_role ffn 2,3 "${ffn_api_port}" Qwen/Qwen3-30B-A3B "${model_name}" "${afd_port}" \
-    "${routing_dir}/server/ffn.log" "${routing_dir}/server/ffn-command.txt" \
-    "${balanced}" "${routing_dir}/ownership" "${routing_dir}/profile-control" full_decode_only
-ffn_pid="${AFD_LAST_PID}"
-sleep 5
-afd_start_role attention 0,1 "${api_port}" Qwen/Qwen3-30B-A3B "${model_name}" "${afd_port}" \
-    "${routing_dir}/server/attention.log" "${routing_dir}/server/attention-command.txt" \
-    "${balanced}" "${routing_dir}/ownership" "" full_decode_only
-attention_pid="${AFD_LAST_PID}"
-afd_wait_attention_api "${attention_pid}" "${ffn_pid}" 2400 \
-    "http://127.0.0.1:${api_port}/v1/models" || exit 1
-validate_ownership "${balanced}" "${routing_dir}/ownership" "${routing_dir}/runtime-ownership.json"
-run_conditioning "${routing_dir}/conditioning" "${model_name}" "${balanced}" \
-    2520,2520,2520,2520 "${routing_dir}/server/attention.log"
-"${AFD_PYTHON}" -m src.benchmark \
-    --trace "${trace}" --base-url "http://127.0.0.1:${api_port}" \
-    --model "${model_name}-attention" --tokenizer Qwen/Qwen3-30B-A3B \
-    --request-rate 8 --override-arrival-rate --output-root "${routing_dir}/runs" \
-    --warmup-requests 8 --settle-before-s 5 --settle-after-s 5 \
-    --monitor-interval-s 0.2 --max-concurrency 256 --request-timeout-s 900 \
-    --local-files-only --placement-file "${balanced}" \
-    --vllm-patch-manifest patches/afd-plugin-0.26.0-cost-model.json \
-    --afd-profile-control-dir "${routing_dir}/profile-control" \
-    --target-clocks 2520 2520 2520 2520 --store-output-token-ids \
-    --run-label routing-trace --placement-name P_balanced \
-    --server-log "${routing_dir}/server/attention.log" > "${routing_dir}/benchmark.log" 2>&1
-routing_run="$(find "${routing_dir}/runs" -mindepth 1 -maxdepth 1 -type d | head -1)"
-[[ -f "${routing_run}/routing_trace.npz" ]] || { printf 'routing trace missing\n' >&2; exit 1; }
-"${AFD_PYTHON}" - "${routing_run}/routing_trace.npz" <<'PY'
-import sys
-from pathlib import Path
-from src.afd_cost_model import load_routing_trace
-r = load_routing_trace(Path(sys.argv[1]))
-assert set(r["layers"].tolist()) == set(range(48))
-assert len(r["layers"]) % 48 == 0
-PY
-printf 'routing\t0\tP_balanced-hh\trouting\t2520\tcomplete\t%s\n' "${routing_run}" >> "${study}/runs.tsv"
-printf '%s\n' "${routing_run}" > "${study}/routing-run-dir.txt"
-stop_server "${routing_dir}/compute-apps-after.csv"
-
-# Stages B/C: each timing configuration receives a fresh server and conditioning lifecycle.
+# Each configuration captures routing and both timing boundaries in the same
+# server lifecycle.  Order 0 is the mandatory balanced@HH alignment gate.
 mkdir -p "${study}/timing-configurations"
 while IFS=$'\t' read -r order config_id stage lifecycle frequency placement_path placement_sha mapping_sha; do
     config_dir="${study}/timing-configurations/$(printf '%02d' "${order}")-${config_id}"
@@ -228,7 +179,7 @@ while IFS=$'\t' read -r order config_id stage lifecycle frequency placement_path
     run_dir="$(find "${config_dir}/runs" -mindepth 1 -maxdepth 1 -type d | head -1)"
     "${AFD_PYTHON}" -m tools.validate_live_run "${run_dir}" > "${run_dir}/live-validation.json"
     "${AFD_PYTHON}" -m tools.validate_milestone_n_cost_timing \
-        --routing-trace "${routing_run}/routing_trace.npz" --timing-run "${run_dir}" \
+        --timing-run "${run_dir}" \
         --placement "${placement}" --config-id "${config_id}" \
         --lifecycle "${lifecycle}" --frequency-mhz "${frequency}" \
         > "${run_dir}/cost-timing-validation.json"
@@ -251,7 +202,7 @@ expected="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1
 [[ "${complete}" -eq "${expected}" ]] || { printf 'timing completion mismatch\n' >&2; exit 1; }
 "${AFD_PYTHON}" - "${study}/result.json" "${complete}" <<'PY'
 import json, sys
-json.dump({"status": "complete", "routing_runs": 1, "timing_runs": int(sys.argv[2])},
+json.dump({"status": "complete", "same_run_cost_profiles": int(sys.argv[2])},
           open(sys.argv[1], "w"), indent=2)
 PY
 printf 'PASS\n' > "${study}/status.txt"

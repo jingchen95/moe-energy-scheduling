@@ -291,7 +291,9 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
     if args.expert_profile and args.afd_profile_control_dir:
         raise ValueError("legacy EPLB and AFD routing profiling are mutually exclusive")
     if args.afd_profile_control_dir and args.afd_timing_control_dir:
-        raise ValueError("AFD routing and timing instrumentation must use separate runs")
+        raise ValueError(
+            "legacy AFD routing-only and same-run cost profiling are mutually exclusive"
+        )
     requests = load_trace(args.trace)
     if args.override_arrival_rate:
         requests = with_constant_arrival_rate(requests, args.request_rate)
@@ -431,7 +433,7 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
             encoding="utf-8",
         )
     if args.afd_timing_control_dir:
-        from src.afd_ffn_timing import finalize_timing_profiles
+        from src.afd_ffn_cost_profile import finalize_same_run_cost_profiles
         from src.afd_routing_profile import write_profile_control
 
         write_profile_control(
@@ -445,13 +447,13 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
             count=4,
             request_timeout_s=args.request_timeout_s,
         )
-        timing_metadata = finalize_timing_profiles(
+        timing_metadata = finalize_same_run_cost_profiles(
             args.afd_timing_control_dir,
             afd_profile_generation,
             run_dir,
             timeout_s=120.0,
         )
-        (run_dir / "ffn_timing_finalize.json").write_text(
+        (run_dir / "afd_same_run_cost_finalize.json").write_text(
             json.dumps(timing_metadata, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )

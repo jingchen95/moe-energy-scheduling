@@ -98,6 +98,49 @@ def load_routing_trace(path: Path) -> dict[str, np.ndarray]:
     return result
 
 
+def load_same_run_cost_profile(path: Path) -> dict[str, np.ndarray]:
+    """Load routing features and both timing boundaries from one run."""
+    with np.load(path, allow_pickle=False) as archive:
+        result = {key: np.asarray(archive[key]) for key in archive.files}
+    required = {
+        "step_sequences",
+        "stages",
+        "layers",
+        "expert_histograms",
+        "per_source_rank_expert_histograms",
+        "token_rows_by_source_rank",
+        "local_elapsed_ms_by_rank",
+        "full_elapsed_ms_by_rank",
+        "frequency_mhz_by_rank",
+    }
+    if not required.issubset(result):
+        raise ValueError(
+            f"same-run cost profile missing: {sorted(required - set(result))}"
+        )
+    records = len(result["layers"])
+    if result["expert_histograms"].shape != (records, 128):
+        raise ValueError("same-run profile must contain 128-expert histograms")
+    for key in (
+        "per_source_rank_expert_histograms",
+        "token_rows_by_source_rank",
+        "local_elapsed_ms_by_rank",
+        "full_elapsed_ms_by_rank",
+    ):
+        expected = (2, records, 128) if key == "per_source_rank_expert_histograms" else (2, records)
+        if result[key].shape != expected:
+            raise ValueError(f"invalid {key} shape: {result[key].shape}")
+    keys = np.stack(
+        [result["step_sequences"], result["stages"], result["layers"]], axis=1
+    )
+    if len(np.unique(keys, axis=0)) != records:
+        raise ValueError("same-run profile contains duplicate invocation keys")
+    if np.any(result["local_elapsed_ms_by_rank"] <= 0) or np.any(
+        result["full_elapsed_ms_by_rank"] <= 0
+    ):
+        raise ValueError("same-run profile contains non-positive timing")
+    return result
+
+
 def placement_features(
     routing: dict[str, np.ndarray], mapping: np.ndarray
 ) -> dict[int, dict[str, np.ndarray]]:
@@ -202,6 +245,60 @@ def join_timing_run(
         seen_ranks.add(rank)
     if seen_ranks != {0, 1}:
         raise ValueError(f"missing timing ranks: {seen_ranks}")
+    return rows, histograms
+
+
+def join_same_run_cost_profile(
+    profile: dict[str, np.ndarray],
+    placement_path: Path,
+    *,
+    config_id: str,
+    lifecycle: str,
+) -> tuple[list[dict[str, Any]], dict[int, np.ndarray]]:
+    """Build invocation rows without any cross-run timing/routing join."""
+    mapping, _, placement_name = load_placement(str(placement_path))
+    routing = {
+        "layers": profile["layers"],
+        "expert_histograms": profile["expert_histograms"],
+    }
+    features = placement_features(routing, np.asarray(mapping, dtype=np.int64))
+    rows: list[dict[str, Any]] = []
+    histograms: dict[int, np.ndarray] = {}
+    for rank in range(2):
+        rank_features = features[rank]
+        histograms[rank] = rank_features["local_expert_histograms"]
+        frequency = int(profile["frequency_mhz_by_rank"][rank])
+        for index in range(len(profile["layers"])):
+            rows.append({
+                "config_id": config_id,
+                "lifecycle": lifecycle,
+                "placement": placement_name,
+                "physical_ffn_rank": rank,
+                "physical_gpu": rank + 2,
+                "frequency_mhz": frequency,
+                "step_sequence": int(profile["step_sequences"][index]),
+                "stage": int(profile["stages"][index]),
+                "layer": int(profile["layers"][index]),
+                "token_rows": int(
+                    profile["token_rows_by_source_rank"][rank, index]
+                ),
+                "n": int(rank_features["n"][index]),
+                "active_local_experts": int(
+                    rank_features["active_local_experts"][index]
+                ),
+                "max_tokens_per_local_expert": int(
+                    rank_features["max_tokens_per_local_expert"][index]
+                ),
+                "routing_concentration": float(
+                    rank_features["routing_concentration"][index]
+                ),
+                "local_elapsed_ms": float(
+                    profile["local_elapsed_ms_by_rank"][rank, index]
+                ),
+                "full_elapsed_ms": float(
+                    profile["full_elapsed_ms_by_rank"][rank, index]
+                ),
+            })
     return rows, histograms
 
 

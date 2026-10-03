@@ -18,11 +18,15 @@ clocks_mhz:
   attention: [2520, 2520]
   symmetric_ffn: [1005, 1635, 2070, 2220, 2520]
 instrumentation:
-  routing_and_timing_are_separate: true
+  routing_and_timing_same_invocation: true
+  cross_run_routing_timing_join: false
   cuda_events: true
-  per_call_cuda_synchronize: false
-  timing_boundary: AFD decoder-layer FFN call
-  routing_chunk_records: 256
+  per_call_cuda_synchronize_added: false
+  local_timing_boundary: FusedMoE modular _fused_experts excluding EP dispatch and combine
+  full_timing_boundary: per-layer Qwen3 MoE block including communication
+  routing_snapshot: existing logical topk IDs copied after both timed intervals
+  routing_chunk_records: 1024
+  mandatory_first_gate: balanced-f2520-primary
 modeling:
   latency: rank_and_frequency_specific_binned_interpolation
   energy: rank_specific_linear_power_vs_routed_assignment_rate
