@@ -41,17 +41,22 @@
 - Corrective commit `5420505` passed `133` project CPU tests and `63` focused
   pinned-plugin tests, and is pushed to GitHub. Patch apply/revert verification
   leaves the pinned plugin checkout clean.
-- Replacement study
-  `results/raw/milestone-n-afd-cost-20261003T210102Z` is pinned to full commit
-  `5420505f3ced400740f820b7b273a0ca5d8e3f4b`. Exclusive Uranus job `271511`
-  is submitted and currently pending. The forced HH gate must pass before any
-  of the remaining ten configurations runs.
+- Replacement attempt
+  `results/raw/milestone-n-afd-cost-20261003T210102Z` and pending job `271511`
+  were canceled before GPU allocation. Recording that submission created a
+  documentation commit after manifest preparation, so the strict runtime-HEAD
+  guard would have rejected it. The next study must be prepared only after
+  this handoff update, and the branch must then remain unchanged while queued.
 
 Exact next command:
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-sacct -j 271511 --format=JobID,State,Elapsed,NodeList,ExitCode -n -P
+study="results/raw/milestone-n-afd-cost-$(date -u +%Y%m%dT%H%M%SZ)"
+third_party/afd-plugin/.venv/bin/python -m tools.prepare_milestone_n_cost_model \
+  --output-dir "$study" \
+  --trace results/raw/milestone-m-stationary-repeat-20261002T060128Z/trace.jsonl
+MILESTONE_N_STUDY="$study" sbatch scripts/milestone_n_afd_ffn_cost_model.sbatch
 ```
 
 ## Latest status — Milestone M isolated AFD runtime prepared
