@@ -1,5 +1,42 @@
 # Handoff
 
+## Latest status — Milestone N AFD FFN cost characterization prepared
+
+- Work continues from Milestone M commit `1cd98f4` on branch
+  `milestone-n-afd-ffn-cost-model`.
+- This is model characterization only. No joint placement search, scheduler,
+  learned optimizer, or dynamic DVFS is implemented.
+- Existing uninstrumented symmetric and target-split runs are frozen as the
+  primary power/energy dataset. Milestone G vLLM 0.15.1 data are explicitly
+  excluded from AFD model training.
+- The timed boundary is the AFD decoder-layer FFN call around the native Qwen3
+  MoE block. It includes router, EP dispatch/all-to-all, routed/shared expert
+  work, combine, and return-stream dependencies; it excludes outer AFD P2P
+  transport. The result is FFN/MoE service time, not expert GEMM time.
+- Routing histograms and CUDA-event timing use separate measured runs. The
+  timing path performs no routed-load calculation or per-call synchronize.
+- One exclusive Uranus job is prepared with a fail-fast routing stage followed
+  by eleven randomized, fresh-server timing lifecycles: five frequency anchors,
+  lifecycle repeats at 1635/2070 MHz, and four existing 40/60 distribution
+  checks. Attention remains at 2520/2520 MHz.
+- Offline analysis builds physical-rank-specific binned `C[g,f](n)` tables,
+  validates on held-out server lifecycles, inspects distribution/layer
+  residuals, and fits an interpretable 1635/2070 power model using only
+  uninstrumented NVML runs.
+- Preparation is not yet submitted. Before submission, run the complete CPU
+  suite, verify the pinned plugin patch apply/revert cycle, commit and push,
+  prepare the immutable study directory, and submit exactly one Slurm job.
+
+Exact next command after the preparation commit is created:
+
+```bash
+cd /data/users/chjing/moe-energy-scheduling
+study="results/raw/milestone-n-afd-cost-$(date -u +%Y%m%dT%H%M%SZ)"
+third_party/afd-plugin/.venv/bin/python -m tools.prepare_milestone_n_cost_model \
+  --output-dir "$study" \
+  --trace results/raw/milestone-m-stationary-repeat-20261002T060128Z/trace.jsonl
+```
+
 ## Latest status — Milestone M isolated AFD runtime prepared
 
 Branch `milestone-m-afd-fixed-frequency-placement` begins a staged test of

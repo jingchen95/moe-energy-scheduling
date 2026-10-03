@@ -41,6 +41,8 @@ afd_start_role() {
     local evidence_dir="${10:-}"
     local routing_profile_dir="${11:-}"
     local execution_mode="${12:-eager}"
+    local ffn_timing_dir="${13:-}"
+    local ffn_clocks_mhz="${14:-}"
     local additional_config
     additional_config="$(printf '{\"afd\":{\"role\":\"%s\",\"connector\":\"P2pNcclAFDConnector\",\"host\":\"127.0.0.1\",\"port\":%s,\"num_attention_ranks\":2,\"num_ffn_ranks\":2,\"compute_gate_on_attention\":false}}' "${role}" "${afd_port}")"
     local command=(
@@ -75,8 +77,9 @@ afd_start_role() {
             return 1
             ;;
     esac
-    printf 'CUDA_VISIBLE_DEVICES=%q VLLM_USE_V2_MODEL_RUNNER=0 VLLM_USE_FLASHINFER_SAMPLER=0 VLLM_PLUGINS=afd PYTHONPATH=%q AFD_STATIC_EXPERT_PLACEMENT_FILE=%q AFD_STATIC_EXPERT_PLACEMENT_EVIDENCE_DIR=%q AFD_ROUTING_PROFILE_DIR=%q ' \
-        "${devices}" "${AFD_PROJECT_ROOT}" "${placement_file}" "${evidence_dir}" "${routing_profile_dir}" > "${command_file}"
+    printf 'CUDA_VISIBLE_DEVICES=%q VLLM_USE_V2_MODEL_RUNNER=0 VLLM_USE_FLASHINFER_SAMPLER=0 VLLM_PLUGINS=afd PYTHONPATH=%q AFD_STATIC_EXPERT_PLACEMENT_FILE=%q AFD_STATIC_EXPERT_PLACEMENT_EVIDENCE_DIR=%q AFD_ROUTING_PROFILE_DIR=%q AFD_FFN_TIMING_DIR=%q AFD_FFN_CLOCKS_MHZ=%q AFD_FFN_PHYSICAL_GPUS=2,3 ' \
+        "${devices}" "${AFD_PROJECT_ROOT}" "${placement_file}" "${evidence_dir}" \
+        "${routing_profile_dir}" "${ffn_timing_dir}" "${ffn_clocks_mhz}" > "${command_file}"
     printf '%q ' "${command[@]}" >> "${command_file}"
     printf '\n' >> "${command_file}"
     env -u PYTHONPATH -u CONDA_PREFIX -u CONDA_DEFAULT_ENV -u VIRTUAL_ENV \
@@ -88,6 +91,9 @@ afd_start_role() {
         AFD_STATIC_EXPERT_PLACEMENT_FILE="${placement_file}" \
         AFD_STATIC_EXPERT_PLACEMENT_EVIDENCE_DIR="${evidence_dir}" \
         AFD_ROUTING_PROFILE_DIR="${routing_profile_dir}" \
+        AFD_FFN_TIMING_DIR="${ffn_timing_dir}" \
+        AFD_FFN_CLOCKS_MHZ="${ffn_clocks_mhz}" \
+        AFD_FFN_PHYSICAL_GPUS=2,3 \
         PYTHONUNBUFFERED=1 \
         HF_HOME="${HF_HOME:-${HOME}/.cache/huggingface}" \
         setsid "${command[@]}" > "${log_file}" 2>&1 &

@@ -132,9 +132,17 @@ def upstream_balanced_placement(
         weight_argument: Any = torch.from_numpy(weights)
     else:
         weight_argument = weights
-    physical, _, _ = policy(
+    policy_result = policy(
         weight_argument, weights.shape[1], num_groups, 1, num_ranks,
     )
+    # vLLM 0.15 returns mapping metadata as a tuple, while 0.26 returns the
+    # physical-to-logical tensor directly when replication is disabled.
+    if isinstance(policy_result, tuple):
+        if len(policy_result) not in (2, 3):
+            raise ValueError("unsupported vLLM DefaultEplbPolicy return signature")
+        physical = policy_result[0]
+    else:
+        physical = policy_result
     if hasattr(physical, "cpu"):
         physical = physical.cpu().numpy()
     return physical_to_rank_placement(

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "afd-plugin-0.26.0-cost-model",
+  "afd_plugin_commit": "4c2541a53ec8ad507508073eac81ac9feecc6c9a",
+  "vllm_version": "0.26.0",
+  "target": "afd_plugin/model_executor/models/qwen3_moe.py",
+  "source_sha256_before": "cef1790937637cd445cac92bf8dcfaea20d7c3cfdfb0e2813a36b80a8098e2d5",
+  "source_sha256_after": "f9c55b46929feb66a0cd4d4446885216b73db4b5a51258df24136f775b14ca2d",
+  "patch_file": "afd-plugin-0.26.0-cost-model.patch",
+  "patch_sha256": "01bf00cb2b5a4af270af661155983dc46281a305f73cbd79629af4625bec12fc",
+  "scope": "static FFN ownership, routing-only per-call trace, and separate CUDA-event FFN timing"
+}

@@ -1,0 +1,31 @@
+study: milestone_n_afd_ffn_cost_model
+model: Qwen/Qwen3-30B-A3B
+runtime:
+  vllm_version: 0.26.0
+  afd_plugin_commit: 4c2541a53ec8ad507508073eac81ac9feecc6c9a
+  execution_mode: FULL_DECODE_ONLY
+  topology: 2A2F
+  attention_gpus: [0, 1]
+  ffn_gpus: [2, 3]
+workload:
+  category: math
+  requests: 300
+  request_rate: 8.0
+  max_output_tokens: 128
+  temperature: 0.0
+  seed: 0
+clocks_mhz:
+  attention: [2520, 2520]
+  symmetric_ffn: [1005, 1635, 2070, 2220, 2520]
+instrumentation:
+  routing_and_timing_are_separate: true
+  cuda_events: true
+  per_call_cuda_synchronize: false
+  timing_boundary: AFD decoder-layer FFN call
+  routing_chunk_records: 256
+modeling:
+  latency: rank_and_frequency_specific_binned_interpolation
+  energy: rank_specific_linear_power_vs_routed_assignment_rate
+  primary_energy_source: existing_uninstrumented_nvml_runs
+  restricted_load_frequency_region_mhz: [1635, 2070]
+randomization_seed: 20261007

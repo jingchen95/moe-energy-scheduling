@@ -17,6 +17,7 @@ PROFILE_DIR_ENV = "AFD_ROUTING_PROFILE_DIR"
 EXPECTED_LAYERS = 48
 EXPECTED_EXPERTS = 128
 EXPECTED_RANKS = 2
+TRACE_CHUNK_RECORDS = 256
 
 
 def _sha256(path: Path) -> str:
@@ -77,6 +78,14 @@ class RuntimeRoutingProfiler:
         self.capture_calls = np.zeros(EXPECTED_LAYERS, dtype=np.int64)
         self.valid_assignments = np.zeros(EXPECTED_LAYERS, dtype=np.int64)
         self.dumped_generations: set[str] = set()
+        self.call_sequence = np.zeros(EXPECTED_LAYERS, dtype=np.int64)
+        self.trace_histograms: list[Any] = []
+        self.trace_layers: list[int] = []
+        self.trace_call_sequences: list[int] = []
+        self.trace_token_rows: list[int] = []
+        self.trace_topk_assignments: list[int] = []
+        self.trace_chunks: list[Path] = []
+        self.next_chunk = 0
 
     def _reset(self, topk_ids: Any) -> None:
         import torch
@@ -88,12 +97,57 @@ class RuntimeRoutingProfiler:
         )
         self.capture_calls.fill(0)
         self.valid_assignments.fill(0)
+        self.call_sequence.fill(0)
+        self.trace_histograms.clear()
+        self.trace_layers.clear()
+        self.trace_call_sequences.clear()
+        self.trace_token_rows.clear()
+        self.trace_topk_assignments.clear()
+        self.trace_chunks.clear()
+        self.next_chunk = 0
+
+    def _flush_trace_chunk(self) -> None:
+        if not self.trace_histograms:
+            return
+        if self.generation is None:
+            raise RuntimeError("cannot flush a trace without a generation")
+        self.directory.mkdir(parents=True, exist_ok=True)
+        import torch
+
+        histograms = torch.stack(self.trace_histograms).detach().cpu().numpy()
+        target = self.directory / (
+            f"routing-trace-rank-{self.ep_rank}-pid-{os.getpid()}-"
+            f"chunk-{self.next_chunk:06d}-{self.generation}.npz"
+        )
+        temporary = target.with_name(target.name + ".tmp.npz")
+        np.savez_compressed(
+            temporary,
+            expert_histograms=histograms.astype(np.int64, copy=False),
+            layers=np.asarray(self.trace_layers, dtype=np.int16),
+            call_sequences=np.asarray(self.trace_call_sequences, dtype=np.int32),
+            token_rows=np.asarray(self.trace_token_rows, dtype=np.int32),
+            topk_assignments=np.asarray(
+                self.trace_topk_assignments, dtype=np.int32
+            ),
+            ep_rank=np.asarray(self.ep_rank, dtype=np.int64),
+            generation=np.asarray(self.generation),
+            chunk_index=np.asarray(self.next_chunk, dtype=np.int64),
+        )
+        os.replace(temporary, target)
+        self.trace_chunks.append(target)
+        self.next_chunk += 1
+        self.trace_histograms.clear()
+        self.trace_layers.clear()
+        self.trace_call_sequences.clear()
+        self.trace_token_rows.clear()
+        self.trace_topk_assignments.clear()
 
     def _dump(self) -> Path:
         if self.generation is None or self.counts is None:
             raise RuntimeError("cannot dump an uninitialized routing profile")
         if self.generation in self.dumped_generations:
             raise RuntimeError(f"profile generation already dumped: {self.generation}")
+        self._flush_trace_chunk()
         self.directory.mkdir(parents=True, exist_ok=True)
         counts = self.counts.detach().cpu().numpy().astype(np.int64, copy=False)
         target = self.directory / (
@@ -108,6 +162,7 @@ class RuntimeRoutingProfiler:
             generation=np.asarray(self.generation),
             capture_calls=self.capture_calls,
             valid_assignments=self.valid_assignments,
+            trace_chunk_count=np.asarray(len(self.trace_chunks), dtype=np.int64),
         )
         os.replace(temporary, target)
         self.dumped_generations.add(self.generation)
@@ -147,11 +202,18 @@ class RuntimeRoutingProfiler:
         logical_ids = logical_ids[
             (logical_ids >= 0) & (logical_ids < EXPECTED_EXPERTS)
         ]
-        self.counts[layer_idx].add_(
-            torch.bincount(logical_ids, minlength=EXPECTED_EXPERTS)
-        )
+        histogram = torch.bincount(logical_ids, minlength=EXPECTED_EXPERTS)
+        self.counts[layer_idx].add_(histogram)
+        self.trace_histograms.append(histogram)
+        self.trace_layers.append(layer_idx)
+        self.trace_call_sequences.append(int(self.call_sequence[layer_idx]))
+        self.trace_token_rows.append(int(topk_ids.shape[0]))
+        self.trace_topk_assignments.append(int(logical_ids.numel()))
         self.capture_calls[layer_idx] += 1
         self.valid_assignments[layer_idx] += int(logical_ids.numel())
+        self.call_sequence[layer_idx] += 1
+        if len(self.trace_histograms) >= TRACE_CHUNK_RECORDS:
+            self._flush_trace_chunk()
 
 
 _RUNTIME_PROFILERS: dict[tuple[str, int], RuntimeRoutingProfiler] = {}
@@ -255,6 +317,113 @@ def combine_rank_profiles(
     return combined, per_rank, metadata
 
 
+def _load_rank_trace_chunks(
+    directory: Path, generation: str, rank: int
+) -> dict[str, np.ndarray]:
+    pattern = f"routing-trace-rank-{rank}-pid-*-chunk-*-{generation}.npz"
+    paths = sorted(directory.glob(pattern))
+    if not paths:
+        raise ValueError(f"no routing trace chunks for rank {rank}")
+    arrays: dict[str, list[np.ndarray]] = {
+        "expert_histograms": [],
+        "layers": [],
+        "call_sequences": [],
+        "token_rows": [],
+        "topk_assignments": [],
+    }
+    expected_chunk = 0
+    for path in paths:
+        with np.load(path, allow_pickle=False) as archive:
+            observed_rank = int(archive["ep_rank"])
+            observed_generation = str(archive["generation"])
+            chunk_index = int(archive["chunk_index"])
+            if observed_rank != rank or observed_generation != generation:
+                raise ValueError(f"{path}: routing trace identity mismatch")
+            if chunk_index != expected_chunk:
+                raise ValueError(
+                    f"rank {rank}: expected trace chunk {expected_chunk}, "
+                    f"found {chunk_index}"
+                )
+            for key in arrays:
+                arrays[key].append(np.asarray(archive[key]))
+        expected_chunk += 1
+    result = {key: np.concatenate(values, axis=0) for key, values in arrays.items()}
+    records = result["layers"].shape[0]
+    if result["expert_histograms"].shape != (records, EXPECTED_EXPERTS):
+        raise ValueError(f"rank {rank}: invalid routing histogram shape")
+    for key in ("call_sequences", "token_rows", "topk_assignments"):
+        if result[key].shape != (records,):
+            raise ValueError(f"rank {rank}: invalid {key} shape")
+    if not np.array_equal(
+        result["expert_histograms"].sum(axis=1), result["topk_assignments"]
+    ):
+        raise ValueError(f"rank {rank}: trace assignment totals do not match")
+    return result
+
+
+def combine_rank_routing_traces(
+    directory: Path, generation: str
+) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
+    """Combine synchronized source-rank routes into one global call trace."""
+    ranks = [
+        _load_rank_trace_chunks(directory, generation, rank)
+        for rank in range(EXPECTED_RANKS)
+    ]
+    canonical_orders: list[np.ndarray] = []
+    ordered: list[dict[str, np.ndarray]] = []
+    for rank, values in enumerate(ranks):
+        order = np.lexsort((values["layers"], values["call_sequences"]))
+        sorted_values = {key: array[order] for key, array in values.items()}
+        keys = np.stack(
+            [sorted_values["call_sequences"], sorted_values["layers"]], axis=1
+        )
+        if len(np.unique(keys, axis=0)) != len(keys):
+            raise ValueError(f"rank {rank}: duplicate layer/call trace keys")
+        canonical_orders.append(keys)
+        ordered.append(sorted_values)
+    if not np.array_equal(canonical_orders[0], canonical_orders[1]):
+        raise ValueError("FFN source ranks do not have identical layer/call keys")
+
+    keys = canonical_orders[0]
+    expected_layers = np.tile(np.arange(EXPECTED_LAYERS), len(keys) // EXPECTED_LAYERS)
+    if len(keys) % EXPECTED_LAYERS or not np.array_equal(keys[:, 1], expected_layers):
+        raise ValueError("routing calls are not complete ordered 48-layer steps")
+    for layer in range(EXPECTED_LAYERS):
+        sequences = keys[keys[:, 1] == layer, 0]
+        if not np.array_equal(sequences, np.arange(len(sequences))):
+            raise ValueError(f"layer {layer}: non-contiguous call sequence")
+
+    per_source_histograms = np.stack(
+        [values["expert_histograms"] for values in ordered], axis=0
+    )
+    token_rows = np.stack([values["token_rows"] for values in ordered], axis=0)
+    topk_assignments = np.stack(
+        [values["topk_assignments"] for values in ordered], axis=0
+    )
+    combined_histograms = per_source_histograms.sum(axis=0)
+    result = {
+        "layers": keys[:, 1].astype(np.int16),
+        "call_sequences": keys[:, 0].astype(np.int32),
+        "expert_histograms": combined_histograms.astype(np.int64),
+        "per_source_rank_expert_histograms": per_source_histograms.astype(np.int64),
+        "token_rows_by_source_rank": token_rows.astype(np.int32),
+        "topk_assignments_by_source_rank": topk_assignments.astype(np.int32),
+    }
+    metadata = {
+        "schema_version": 1,
+        "generation": generation,
+        "records": int(len(keys)),
+        "steps_per_layer": int(len(keys) // EXPECTED_LAYERS),
+        "logical_experts": EXPECTED_EXPERTS,
+        "source_ranks": EXPECTED_RANKS,
+        "aggregation": (
+            "source-rank histograms summed by exact layer/call sequence; "
+            "source-rank arrays retained"
+        ),
+    }
+    return result, metadata
+
+
 def finalize_rank_profiles(
     directory: Path,
     generation: str,
@@ -278,6 +447,24 @@ def finalize_rank_profiles(
         expert_counts=combined,
         per_rank_expert_counts=per_rank,
     )
+    trace, trace_metadata = combine_rank_routing_traces(directory, generation)
+    if not np.array_equal(trace["expert_histograms"].sum(axis=0), combined.sum(axis=0)):
+        raise ValueError("routing trace totals do not reconstruct aggregate counts")
+    trace_path = output_directory / "routing_trace.npz"
+    np.savez_compressed(trace_path, **trace)
+    metadata["routing_trace"] = {
+        **trace_metadata,
+        "path": str(trace_path.resolve()),
+        "sha256": _sha256(trace_path),
+    }
+    for rank in range(EXPECTED_RANKS):
+        chunk_paths = sorted(
+            directory.glob(
+                f"routing-trace-rank-{rank}-pid-*-chunk-*-{generation}.npz"
+            )
+        )
+        for path in chunk_paths:
+            shutil.copy2(path, output_directory / path.name)
     metadata["expert_counts"] = str(counts_path.resolve())
     metadata["expert_counts_sha256"] = _sha256(counts_path)
     metadata_path = output_directory / "routing_profile.json"

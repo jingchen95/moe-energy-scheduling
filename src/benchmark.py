@@ -290,6 +290,8 @@ async def warm_up(
 async def run_benchmark(args: argparse.Namespace) -> Path:
     if args.expert_profile and args.afd_profile_control_dir:
         raise ValueError("legacy EPLB and AFD routing profiling are mutually exclusive")
+    if args.afd_profile_control_dir and args.afd_timing_control_dir:
+        raise ValueError("AFD routing and timing instrumentation must use separate runs")
     requests = load_trace(args.trace)
     if args.override_arrival_rate:
         requests = with_constant_arrival_rate(requests, args.request_rate)
@@ -331,6 +333,10 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
             str(args.afd_profile_control_dir.resolve())
             if args.afd_profile_control_dir else None
         ),
+        "afd_timing_control_dir": (
+            str(args.afd_timing_control_dir.resolve())
+            if args.afd_timing_control_dir else None
+        ),
         "placement_file": str(args.placement_file.resolve()) if args.placement_file else None,
         "placement_sha256": _sha256(args.placement_file) if args.placement_file else None,
         "trace_sha256": _sha256(args.trace),
@@ -369,6 +375,12 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
 
         write_profile_control(
             args.afd_profile_control_dir, afd_profile_generation, True
+        )
+    if args.afd_timing_control_dir:
+        from src.afd_routing_profile import write_profile_control
+
+        write_profile_control(
+            args.afd_timing_control_dir, afd_profile_generation, True
         )
 
     with NVMLReader(range(4)) as reader:
@@ -416,6 +428,31 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
         )
         (run_dir / "routing_profile_finalize.json").write_text(
             json.dumps(profile_metadata, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    if args.afd_timing_control_dir:
+        from src.afd_ffn_timing import finalize_timing_profiles
+        from src.afd_routing_profile import write_profile_control
+
+        write_profile_control(
+            args.afd_timing_control_dir, afd_profile_generation, False
+        )
+        await warm_up(
+            requests,
+            base_url=args.base_url,
+            model=args.model,
+            tokenizer=tokenizer,
+            count=4,
+            request_timeout_s=args.request_timeout_s,
+        )
+        timing_metadata = finalize_timing_profiles(
+            args.afd_timing_control_dir,
+            afd_profile_generation,
+            run_dir,
+            timeout_s=120.0,
+        )
+        (run_dir / "ffn_timing_finalize.json").write_text(
+            json.dumps(timing_metadata, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
 
@@ -483,6 +520,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--local-files-only", action="store_true")
     parser.add_argument("--expert-profile", action="store_true")
     parser.add_argument("--afd-profile-control-dir", type=Path)
+    parser.add_argument("--afd-timing-control-dir", type=Path)
     parser.add_argument("--placement-file", type=Path)
     parser.add_argument("--vllm-patch-manifest", type=Path)
     parser.add_argument("--target-clocks", type=int, nargs=4)
