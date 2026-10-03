@@ -38,15 +38,20 @@
   `results/raw/milestone-n-afd-cost-20261003T190724Z` is invalidated and must
   not be reused. A new immutable study must be prepared after the corrective
   commit.
+- Corrective commit `5420505` passed `133` project CPU tests and `63` focused
+  pinned-plugin tests, and is pushed to GitHub. Patch apply/revert verification
+  leaves the pinned plugin checkout clean.
+- Replacement study
+  `results/raw/milestone-n-afd-cost-20261003T210102Z` is pinned to full commit
+  `5420505f3ced400740f820b7b273a0ca5d8e3f4b`. Exclusive Uranus job `271511`
+  is submitted and currently pending. The forced HH gate must pass before any
+  of the remaining ten configurations runs.
 
-Exact next command after the corrective commit is created:
+Exact next command:
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling
-study="results/raw/milestone-n-afd-cost-$(date -u +%Y%m%dT%H%M%SZ)"
-third_party/afd-plugin/.venv/bin/python -m tools.prepare_milestone_n_cost_model \
-  --output-dir "$study" \
-  --trace results/raw/milestone-m-stationary-repeat-20261002T060128Z/trace.jsonl
+sacct -j 271511 --format=JobID,State,Elapsed,NodeList,ExitCode -n -P
 ```
 
 ## Latest status — Milestone M isolated AFD runtime prepared
