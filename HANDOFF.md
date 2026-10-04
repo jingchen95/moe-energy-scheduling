@@ -63,6 +63,18 @@
   `model_loader.load_model()` returns. CPU tests explicitly reject installing
   before modular-kernel initialization and verify idempotent model-wide
   installation across all 48 layers. A replacement GPU gate is required.
+- Replacement job `271609` used the corrected profiler commit `659bfe4` but
+  failed after 21 seconds, before server launch. `nvidia-smi -lgc` accepted the
+  2520 MHz lock, while an immediate idle-state read returned 2475 MHz on GPU0;
+  the generic one-clock-step verifier incorrectly treated this transient
+  current clock as evidence that the lock failed. No request or measurement
+  ran, and cleanup again reset clocks, reverted the patch, and preserved both
+  environments.
+- Milestone N now explicitly defers instantaneous current-clock equality at
+  setup while retaining supported-clock validation and the `nvidia-smi`
+  command result. Each completed measured window instead fails closed unless
+  all four average actual SM clocks match `[2520,2520,f,f]` within 5 MHz. The
+  default immediate verification behavior remains unchanged for other callers.
 
 Exact next command after committing and preparing a fresh immutable study:
 

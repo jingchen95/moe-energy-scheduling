@@ -140,7 +140,8 @@ while IFS=$'\t' read -r order config_id stage lifecycle frequency placement_path
         'from pathlib import Path; from src.afd_routing_profile import write_profile_control; import sys; write_profile_control(Path(sys.argv[1]), "startup", False)' \
         "${config_dir}/timing-control"
     SUDO="${SUDO:-sudo}" "${AFD_PYTHON}" -m src.gpu_control set-all \
-        --clocks "${clocks}" > "${config_dir}/clock-set.json"
+        --clocks "${clocks}" --defer-current-verification \
+        > "${config_dir}/clock-set.json"
     "${AFD_PYTHON}" -m src.gpu_control list > "${config_dir}/clock-readback.json"
     sleep 5
     nvidia-smi --query-gpu=index,clocks.current.sm --format=csv,noheader,nounits \

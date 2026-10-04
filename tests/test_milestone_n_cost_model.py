@@ -21,6 +21,7 @@ from src.afd_ffn_cost_profile import (
 )
 from src.afd_routing_profile import combine_rank_routing_traces
 from src.afd_static_placement import sha256_file
+from tools.validate_milestone_n_cost_timing import validate_average_clocks
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -157,6 +158,7 @@ def test_patch_manifest_and_one_job_scope_are_reproducible():
     assert "balanced-f2520-primary" in (
         ROOT / "tools/prepare_milestone_n_cost_model.py"
     ).read_text()
+    assert "--defer-current-verification" in launcher
     assert "manage_afd_cost_model_patch.sh revert" in launcher
     assert "pkill" not in launcher
     assert "killall" not in launcher
@@ -266,3 +268,19 @@ def test_same_run_join_uses_own_histogram_and_local_boundary(tmp_path):
 def test_graph_routing_rows_exclude_fixed_buffer_padding():
     assert valid_routing_rows(64, 0, [17, 23]) == 17
     assert valid_routing_rows(64, 1, [17, 23]) == 23
+
+
+def test_milestone_n_validates_average_clocks_under_measured_load():
+    metrics = {
+        "gpu0_avg_sm_clock": 2519.5,
+        "gpu1_avg_sm_clock": 2520.0,
+        "gpu2_avg_sm_clock": 1635.2,
+        "gpu3_avg_sm_clock": 1634.8,
+    }
+    targets, actual = validate_average_clocks(metrics, 1635)
+    assert targets == [2520, 2520, 1635, 1635]
+    assert actual == [2519.5, 2520.0, 1635.2, 1634.8]
+
+    metrics["gpu2_avg_sm_clock"] = 1629.0
+    with np.testing.assert_raises_regex(ValueError, "GPU 2 average clock"):
+        validate_average_clocks(metrics, 1635)

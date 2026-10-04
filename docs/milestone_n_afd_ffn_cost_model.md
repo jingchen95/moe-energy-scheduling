@@ -102,6 +102,16 @@ environments.
 
 GPU validation and offline analysis remain pending a fresh replacement study.
 
+A second replacement, job `271609`, failed before server launch because the
+clock-control helper compared an idle instantaneous SM clock against the lock
+target. GPU0 reported 2475 MHz immediately after a successful 2520 MHz
+`nvidia-smi -lgc` command. This is a setup-verification false negative rather
+than a timing result; no requests ran. Milestone N now records that idle
+readback but defers equality validation to the measured window, where the
+average actual clock for every GPU must match its target within 5 MHz. Other
+users of the generic clock-control API retain immediate verification by
+default.
+
 ## Decision gate
 
 The next milestone may construct an offline `(placement, frequency)` oracle

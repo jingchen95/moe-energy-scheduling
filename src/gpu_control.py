@@ -84,12 +84,15 @@ def set_graphics_clock(
     *,
     verify_timeout_s: float = 2.0,
     verify_tolerance_mhz: int = CLOCK_READBACK_TOLERANCE_MHZ,
+    verify_current_clock: bool = True,
 ) -> GPUClockState:
     if verify_tolerance_mhz < 0:
         raise ValueError("clock verification tolerance must be non-negative")
     if clock_mhz not in supported_graphics_clocks(gpu):
         raise GPUControlError(f"GPU {gpu}: {clock_mhz} MHz is not hardware-supported")
     _run(["-i", str(gpu), "-lgc", f"{clock_mhz},{clock_mhz}"], privileged=True)
+    if not verify_current_clock:
+        return read_clock(gpu)
     deadline = time.monotonic() + verify_timeout_s
     state = read_clock(gpu)
     while (
@@ -107,14 +110,18 @@ def set_graphics_clock(
     return state
 
 
-def set_graphics_clocks(clocks_mhz: Sequence[int]) -> list[GPUClockState]:
+def set_graphics_clocks(
+    clocks_mhz: Sequence[int], *, verify_current_clock: bool = True,
+) -> list[GPUClockState]:
     if len(clocks_mhz) != 4:
         raise ValueError("exactly four per-GPU clocks are required")
     changed: list[int] = []
     try:
         states = []
         for gpu, clock in enumerate(clocks_mhz):
-            states.append(set_graphics_clock(gpu, int(clock)))
+            states.append(set_graphics_clock(
+                gpu, int(clock), verify_current_clock=verify_current_clock
+            ))
             changed.append(gpu)
         return states
     except BaseException:
@@ -176,8 +183,10 @@ def main() -> None:
     set_parser = subparsers.add_parser("set")
     set_parser.add_argument("--gpu", type=int, required=True)
     set_parser.add_argument("--clock", type=int, required=True)
+    set_parser.add_argument("--defer-current-verification", action="store_true")
     all_parser = subparsers.add_parser("set-all")
     all_parser.add_argument("--clocks", required=True)
+    all_parser.add_argument("--defer-current-verification", action="store_true")
     max_parser = subparsers.add_parser("set-max")
     max_parser.add_argument("--gpus", default="0,1,2,3")
     reset_parser = subparsers.add_parser("reset")
@@ -189,12 +198,18 @@ def main() -> None:
         _print([{"state": asdict(read_clock(gpu)),
                  "supported_graphics_mhz": supported_graphics_clocks(gpu)} for gpu in gpus])
     elif args.command == "set":
-        _print(asdict(set_graphics_clock(args.gpu, args.clock)))
+        _print(asdict(set_graphics_clock(
+            args.gpu,
+            args.clock,
+            verify_current_clock=not args.defer_current_verification,
+        )))
     elif args.command == "set-all":
         values = [int(value) for value in args.clocks.split(",")]
         if len(values) == 1:
             values *= 4
-        _print([asdict(state) for state in set_graphics_clocks(values)])
+        _print([asdict(state) for state in set_graphics_clocks(
+            values, verify_current_clock=not args.defer_current_verification
+        )])
     elif args.command == "set-max":
         gpus = [int(value) for value in args.gpus.split(",")]
         if gpus != list(range(4)):
