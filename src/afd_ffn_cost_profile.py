@@ -53,6 +53,14 @@ def _graph_key_text(graph_key: object) -> str:
     return repr(graph_key)
 
 
+def _cuda_timing_event(*, graph_capture: bool) -> Any:
+    import torch
+
+    # Internal events become graph-only cross-stream dependencies and do not
+    # retain timestamps that elapsed_time() can query after replay.
+    return torch.cuda.Event(enable_timing=True, external=graph_capture)
+
+
 def _stage_index() -> int:
     from vllm.forward_context import get_forward_context
 
@@ -181,13 +189,11 @@ class RuntimeAFDCostProfiler:
     def begin_full(self, layer: int, hidden_states: Any) -> _Invocation | None:
         if self.mode not in {"capture", "eager"}:
             return None
-        import torch
-
         invocation = _Invocation(
             layer=int(layer),
             stage=_stage_index(),
             token_rows=int(hidden_states.shape[0]),
-            full_start=torch.cuda.Event(enable_timing=True),
+            full_start=_cuda_timing_event(graph_capture=self.mode == "capture"),
         )
         invocation.full_start.record()
         self.invocation_stack.append(invocation)
@@ -225,10 +231,9 @@ class RuntimeAFDCostProfiler:
         invocation = self.invocation_stack[-1]
         if invocation.local_start is not None:
             raise RuntimeError("multiple local expert calls in one FFN invocation")
-        import torch
-
-        invocation.local_start = torch.cuda.Event(enable_timing=True)
-        invocation.local_end = torch.cuda.Event(enable_timing=True)
+        graph_capture = self.mode == "capture"
+        invocation.local_start = _cuda_timing_event(graph_capture=graph_capture)
+        invocation.local_end = _cuda_timing_event(graph_capture=graph_capture)
         invocation.local_start.record()
         output = function(*args, **kwargs)
         invocation.local_end.record()
@@ -241,9 +246,9 @@ class RuntimeAFDCostProfiler:
             raise RuntimeError("AFD FFN invocation stack mismatch")
         if invocation.topk_ids is None:
             raise RuntimeError("missing same-invocation routing metadata")
-        import torch
-
-        invocation.full_end = torch.cuda.Event(enable_timing=True)
+        invocation.full_end = _cuda_timing_event(
+            graph_capture=self.mode == "capture"
+        )
         invocation.full_end.record()
         # This copy is outside both measured intervals and avoids an extra
         # bincount/profiling kernel in the local expert interval.

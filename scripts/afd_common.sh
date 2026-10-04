@@ -123,11 +123,17 @@ afd_stop_process_group() {
     local pid="${1:-}"
     [[ "${pid}" =~ ^[0-9]+$ ]] || return 0
     kill -0 "${pid}" 2>/dev/null || { wait "${pid}" 2>/dev/null || true; return 0; }
-    local owner command
+    local owner command pgid state
     owner="$(ps -o user= -p "${pid}" | tr -d ' ')"
     command="$(ps -o command= -p "${pid}")"
-    if [[ "${owner}" != "${USER}" || "${command}" != *"${AFD_PLUGIN_ROOT}/.venv"* ]]; then
+    pgid="$(ps -o pgid= -p "${pid}" | tr -d ' ')"
+    state="$(ps -o stat= -p "${pid}" | tr -d ' ')"
+    if [[ "${owner}" != "${USER}" || "${pgid}" != "${pid}" ]]; then
         printf 'refusing to stop unrecognized process %s: %s\n' "${pid}" "${command}" >&2
+        return 1
+    fi
+    if [[ "${state}" != Z* && "${command}" != *"${AFD_PLUGIN_ROOT}/.venv"* ]]; then
+        printf 'refusing to stop unexpected live process %s: %s\n' "${pid}" "${command}" >&2
         return 1
     fi
     kill -TERM -- "-${pid}" 2>/dev/null || kill -TERM "${pid}" 2>/dev/null || true

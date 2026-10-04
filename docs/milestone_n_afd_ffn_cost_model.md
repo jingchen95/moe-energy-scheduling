@@ -112,6 +112,16 @@ average actual clock for every GPU must match its target within 5 MHz. Other
 users of the generic clock-control API retain immediate verification by
 default.
 
+Job `271652` progressed further: the AFD services and runtime ownership passed,
+and its full 300-request conditioning trace completed with all four measured
+average clocks at 2520 MHz. The first measured-window replay then failed on
+both FFN ranks when `elapsed_time()` queried timing events captured in default
+internal mode. PyTorch documents internal captured events as graph
+cross-stream dependencies; the corrected profiler creates external timing
+events during graph capture so the replay contains queryable event-record
+nodes. Eager timing events remain internal/default. The failed job contributes
+no model data.
+
 ## Decision gate
 
 The next milestone may construct an offline `(placement, frequency)` oracle

@@ -75,6 +75,20 @@
   command result. Each completed measured window instead fails closed unless
   all four average actual SM clocks match `[2520,2520,f,f]` within 5 MHz. The
   default immediate verification behavior remains unchanged for other callers.
+- Job `271652` passed clock setup, static ownership validation, and a complete
+  300-request conditioning trace at 2520 MHz on all GPUs. It then failed on the
+  first measured-window graph replay because CUDA timing events created during
+  capture used PyTorch's default internal-event mode. Those events express
+  graph dependencies but have no externally queryable timestamp, so
+  `elapsed_time()` returned `cudaErrorInvalidValue` on both FFN ranks.
+- Captured local/full timing events now use `external=True`, which makes
+  PyTorch emit CUDA graph event-record nodes; eager events retain the default
+  behavior. No completed measured run from `271652` is retained as data.
+- Cleanup found the Attention group leader already in zombie state and refused
+  it because its command line was empty. The stored `setsid` PID is now also
+  validated by same-user ownership and `PGID == PID`; a zombie leader can then
+  safely have its owned process group terminated. Slurm cgroup cleanup removed
+  the two reported workers after `271652`, and no GPU processes remain.
 
 Exact next command after committing and preparing a fresh immutable study:
 

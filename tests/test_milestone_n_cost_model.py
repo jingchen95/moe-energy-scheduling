@@ -1,5 +1,6 @@
 import hashlib
 import json
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -14,6 +15,7 @@ from src.afd_cost_model import (
     prediction_metrics,
 )
 from src.afd_ffn_cost_profile import (
+    _cuda_timing_event,
     finalize_same_run_cost_profiles,
     install_model_runtime_cost_profilers,
     install_runtime_cost_profiler,
@@ -25,6 +27,22 @@ from tools.validate_milestone_n_cost_timing import validate_average_clocks
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_cuda_graph_timing_uses_external_event_nodes(monkeypatch):
+    calls = []
+    fake_torch = SimpleNamespace(
+        cuda=SimpleNamespace(Event=lambda **kwargs: calls.append(kwargs) or object())
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+
+    _cuda_timing_event(graph_capture=True)
+    _cuda_timing_event(graph_capture=False)
+
+    assert calls == [
+        {"enable_timing": True, "external": True},
+        {"enable_timing": True, "external": False},
+    ]
 
 
 class _FakeRouter:
@@ -162,6 +180,9 @@ def test_patch_manifest_and_one_job_scope_are_reproducible():
     assert "manage_afd_cost_model_patch.sh revert" in launcher
     assert "pkill" not in launcher
     assert "killall" not in launcher
+    common = (ROOT / "scripts/afd_common.sh").read_text()
+    assert '"${pgid}" != "${pid}"' in common
+    assert '"${state}" != Z*' in common
 
 
 def test_config_has_same_run_local_and_full_instrumentation_and_no_optimizer():
