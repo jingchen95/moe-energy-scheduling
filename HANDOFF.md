@@ -1,6 +1,6 @@
 # Handoff
 
-## Latest status — Milestone N timing design corrected before GPU execution
+## Latest status — Milestone N first corrected GPU attempt failed before data
 
 - Work continues from Milestone M commit `1cd98f4` on branch
   `milestone-n-afd-ffn-cost-model`.
@@ -47,8 +47,24 @@
   documentation commit after manifest preparation, so the strict runtime-HEAD
   guard would have rejected it. The next study must be prepared only after
   this handoff update, and the branch must then remain unchanged while queued.
+- The resulting immutable study
+  `results/raw/milestone-n-afd-cost-20261003T210209Z` was submitted as job
+  `271512`. It failed after 2 minutes 37 seconds during the first forced
+  `P_balanced@2520/2520` server startup, before the service became healthy or
+  any request/measurement completed. The FFN stack trace showed that the cost
+  profiler was installed during layer construction and accessed the obsolete
+  `MoERunner.quant_method.impl` path. In pinned vLLM 0.26 the loaded modular
+  boundary is available only after weight processing as
+  `MoERunner._quant_method.moe_kernel.impl._fused_experts`.
+- Job `271512` produced no research data. Its fail-fast behavior was correct;
+  patch revert, process cleanup, graphics-clock reset, and both environment
+  integrity checks succeeded.
+- The profiler installation is now deferred until
+  `model_loader.load_model()` returns. CPU tests explicitly reject installing
+  before modular-kernel initialization and verify idempotent model-wide
+  installation across all 48 layers. A replacement GPU gate is required.
 
-Exact next command:
+Exact next command after committing and preparing a fresh immutable study:
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling

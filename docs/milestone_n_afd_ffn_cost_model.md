@@ -85,7 +85,22 @@ derived per-call surrogate, never as direct NVML call energy.
 
 ## Results
 
-Pending the consolidated GPU job and offline analysis.
+The first corrected consolidated attempt, Slurm job `271512` using study
+`milestone-n-afd-cost-20261003T210209Z`, failed during the mandatory first
+HH gate after 2 minutes 37 seconds. No server became healthy, no request was
+sent, and no timing or energy result was produced.
+
+The failure was an instrumentation lifecycle error, not a model result. The
+profiler tried to access `MoERunner.quant_method.impl` while Qwen layers were
+still being constructed. Pinned vLLM 0.26 exposes its modular local-expert
+boundary after weight processing through
+`MoERunner._quant_method.moe_kernel.impl._fused_experts`. Profiler installation
+is therefore deferred until the FFN model loader returns, while routing and
+full-layer hooks remain unchanged. Cleanup reverted the AFD patch, reset GPU
+clocks, left no completed run entry, and preserved both isolated and protected
+environments.
+
+GPU validation and offline analysis remain pending a fresh replacement study.
 
 ## Decision gate
 

@@ -441,7 +441,7 @@ def _profiler_for_rank(rank: int) -> RuntimeAFDCostProfiler | None:
 
 
 def install_runtime_cost_profiler(moe_block: Any, layer_idx: int) -> bool:
-    """Attach routing observation and local-expert timing to one MoE layer."""
+    """Attach routing observation and local-expert timing to one loaded layer."""
     if not os.environ.get(PROFILE_DIR_ENV, "").strip():
         return False
     profiler = _profiler_for_rank(int(moe_block.ep_rank))
@@ -449,20 +449,54 @@ def install_runtime_cost_profiler(moe_block: Any, layer_idx: int) -> bool:
         return False
     if int(moe_block.ep_size) != EXPECTED_RANKS:
         raise ValueError(f"AFD cost profiling requires EP={EXPECTED_RANKS}")
-    router = moe_block.experts.router
+    runner = moe_block.experts
+    router = runner.router
     router.set_capture_fn(
         lambda topk_ids, _layer=layer_idx, _profiler=profiler: (
             _profiler.observe_topk(_layer, topk_ids)
         )
     )
-    kernel_impl = moe_block.experts.quant_method.impl
+    quant_method = runner._quant_method
+    moe_kernel = getattr(quant_method, "moe_kernel", None)
+    kernel_impl = getattr(moe_kernel, "impl", None)
+    if kernel_impl is None or not hasattr(kernel_impl, "_fused_experts"):
+        raise RuntimeError(
+            "AFD cost profiler must be installed after MoE weights and the "
+            "modular kernel are initialized"
+        )
+    if getattr(kernel_impl, "_afd_cost_profiler_installed", False):
+        return False
     original_apply = kernel_impl._fused_experts
 
     def profiled_apply(*args: Any, **kwargs: Any) -> Any:
         return profiler.run_local(original_apply, *args, **kwargs)
 
     kernel_impl._fused_experts = profiled_apply
+    kernel_impl._afd_cost_profiler_installed = True
     return True
+
+
+def install_model_runtime_cost_profilers(model: Any) -> int:
+    """Install cost profiling on every loaded MoE layer in an AFD FFN model."""
+    if not os.environ.get(PROFILE_DIR_ENV, "").strip():
+        return 0
+    model_root = getattr(model, "model", None)
+    layers = getattr(model_root, "layers", None)
+    if layers is None:
+        raise RuntimeError("AFD FFN model does not expose model.layers")
+    installed = 0
+    moe_layers = 0
+    for layer_idx, layer in enumerate(layers):
+        moe_block = getattr(layer, "mlp", None)
+        if getattr(moe_block, "experts", None) is None:
+            continue
+        moe_layers += 1
+        installed += int(install_runtime_cost_profiler(moe_block, layer_idx))
+    if moe_layers != EXPECTED_LAYERS:
+        raise RuntimeError(
+            f"expected {EXPECTED_LAYERS} loaded MoE layers, got {moe_layers}"
+        )
+    return installed
 
 
 def run_profiled_ffn(

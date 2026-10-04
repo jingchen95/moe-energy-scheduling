@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -14,6 +15,8 @@ from src.afd_cost_model import (
 )
 from src.afd_ffn_cost_profile import (
     finalize_same_run_cost_profiles,
+    install_model_runtime_cost_profilers,
+    install_runtime_cost_profiler,
     valid_routing_rows,
 )
 from src.afd_routing_profile import combine_rank_routing_traces
@@ -21,6 +24,46 @@ from src.afd_static_placement import sha256_file
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+class _FakeRouter:
+    def set_capture_fn(self, function):
+        self.capture_fn = function
+
+
+class _FakeKernelImpl:
+    def _fused_experts(self, value):
+        return value + 1
+
+
+def _fake_moe_block(*, loaded: bool = True):
+    quant_method = SimpleNamespace(
+        moe_kernel=(SimpleNamespace(impl=_FakeKernelImpl()) if loaded else None)
+    )
+    runner = SimpleNamespace(router=_FakeRouter(), _quant_method=quant_method)
+    return SimpleNamespace(ep_rank=0, ep_size=2, experts=runner)
+
+
+def test_runtime_cost_profiler_requires_post_load_modular_kernel(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("AFD_FFN_TIMING_DIR", str(tmp_path))
+    monkeypatch.setenv("AFD_FFN_CLOCKS_MHZ", "2520,2520")
+    monkeypatch.setenv("AFD_FFN_PHYSICAL_GPUS", "2,3")
+    with np.testing.assert_raises_regex(RuntimeError, "after MoE weights"):
+        install_runtime_cost_profiler(_fake_moe_block(loaded=False), 0)
+
+
+def test_model_runtime_cost_profiler_installs_after_load_once(tmp_path, monkeypatch):
+    monkeypatch.setenv("AFD_FFN_TIMING_DIR", str(tmp_path))
+    monkeypatch.setenv("AFD_FFN_CLOCKS_MHZ", "2520,2520")
+    monkeypatch.setenv("AFD_FFN_PHYSICAL_GPUS", "2,3")
+    layers = [SimpleNamespace(mlp=_fake_moe_block()) for _ in range(48)]
+    model = SimpleNamespace(model=SimpleNamespace(layers=layers))
+
+    assert install_model_runtime_cost_profilers(model) == 48
+    assert install_model_runtime_cost_profilers(model) == 0
+    assert layers[0].mlp.experts._quant_method.moe_kernel.impl._fused_experts(2) == 3
 
 
 def _write_trace_chunk(path: Path, rank: int, histograms: np.ndarray) -> None:

@@ -1,15 +1,12 @@
 diff --git a/afd_plugin/model_executor/models/qwen3_moe.py b/afd_plugin/model_executor/models/qwen3_moe.py
-index 19179e3..580b1f0 100644
+index 19179e3..d4a0f50 100644
 --- a/afd_plugin/model_executor/models/qwen3_moe.py
 +++ b/afd_plugin/model_executor/models/qwen3_moe.py
-@@ -19,6 +19,14 @@ from vllm.platforms import current_platform
+@@ -19,6 +19,11 @@ from vllm.platforms import current_platform
  
  from afd_plugin.config import AFDConfig, parse_afd_config
  from afd_plugin.model_executor.models.deepseek_v2 import RemoteFFNProxy
-+from src.afd_ffn_cost_profile import (
-+    install_runtime_cost_profiler,
-+    run_profiled_ffn,
-+)
++from src.afd_ffn_cost_profile import run_profiled_ffn
 +from src.afd_static_placement import (
 +    apply_runtime_placement,
 +    dump_model_runtime_ownership,
@@ -17,16 +14,15 @@ index 19179e3..580b1f0 100644
  
  _ATTENTION_ROLE = frozenset(("attention",))
  _FFN_ROLE = frozenset(("ffn",))
-@@ -163,6 +171,8 @@ class AFDQwen3MoeDecoderLayer(native.Qwen3MoeDecoderLayer):
+@@ -163,6 +168,7 @@ class AFDQwen3MoeDecoderLayer(native.Qwen3MoeDecoderLayer):
                      vllm_config=vllm_config,
                      prefix=f"{prefix}.mlp",
                  )
 +                apply_runtime_placement(self.mlp, layer_idx)
-+                install_runtime_cost_profiler(self.mlp, layer_idx)
              else:
                  self.mlp = native.Qwen3MoeMLP(
                      hidden_size=config.hidden_size,
-@@ -179,7 +189,12 @@ class AFDQwen3MoeDecoderLayer(native.Qwen3MoeDecoderLayer):
+@@ -179,7 +185,12 @@ class AFDQwen3MoeDecoderLayer(native.Qwen3MoeDecoderLayer):
          """Execute this layer's complete native FFN block on the FFN role."""
          if self.afd_role != "ffn":
              raise RuntimeError("Qwen3 MoE FFN compute requires the AFD FFN role")
@@ -40,7 +36,7 @@ index 19179e3..580b1f0 100644
  
  
  class AFDQwen3MoeModel(native.Qwen3MoeModel):
-@@ -317,8 +332,11 @@ class AFDQwen3MoeForCausalLM(native.Qwen3MoeForCausalLM):
+@@ -317,8 +328,11 @@ class AFDQwen3MoeForCausalLM(native.Qwen3MoeForCausalLM):
      def load_weights(self, weights: Iterable[tuple[str, torch.Tensor]]) -> set[str]:
          # ### PATCH START: filter the checkpoint stream by AFD execution role.
          role_weights = _iter_role_weights(weights, role=self.afd_role)
@@ -54,10 +50,10 @@ index 19179e3..580b1f0 100644
  
  __all__ = ["AFDQwen3MoeForCausalLM"]
 diff --git a/afd_plugin/v1/worker/ffn_model_runner.py b/afd_plugin/v1/worker/ffn_model_runner.py
-index 4582d22..4de1ee4 100644
+index 4582d22..b963004 100644
 --- a/afd_plugin/v1/worker/ffn_model_runner.py
 +++ b/afd_plugin/v1/worker/ffn_model_runner.py
-@@ -43,6 +43,12 @@ from afd_plugin.v1.worker.ffn_metadata import (
+@@ -43,6 +43,13 @@ from afd_plugin.v1.worker.ffn_metadata import (
      aggregate_ffn_token_counts,
      project_ffn_token_counts_to_dp,
  )
@@ -65,12 +61,21 @@ index 4582d22..4de1ee4 100644
 +    begin_graph_profile_capture,
 +    end_graph_profile_capture,
 +    finish_runtime_profile_step,
++    install_model_runtime_cost_profilers,
 +    prepare_runtime_profile_step,
 +)
  
  if TYPE_CHECKING:
      from vllm.sequence import IntermediateTensors
-@@ -153,8 +159,11 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
+@@ -120,6 +127,7 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
+                     self.model,
+                     model_config=self.model_config,
+                 )
++        install_model_runtime_cost_profilers(self.model)
+         self.model_memory_usage = profiler.consumed_memory
+ 
+     def profile_run(self) -> None:
+@@ -153,8 +161,11 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
              graph_enabled=bool(self.use_cuda_graph),
              graph_exists=cuda_graph_info is not None,
          )
@@ -82,7 +87,7 @@ index 4582d22..4de1ee4 100644
              return None
  
          self._ffn_forward(
-@@ -162,6 +171,7 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
+@@ -162,6 +173,7 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
              is_graph_capturing=is_graph_capturing,
              is_warmup=is_warmup,
          )
@@ -90,7 +95,7 @@ index 4582d22..4de1ee4 100644
          return None
  
      def _ffn_forward(
-@@ -313,12 +323,15 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
+@@ -313,12 +325,15 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
                      is_graph_capturing=is_attn_graph_capturing,
                  ),
              )

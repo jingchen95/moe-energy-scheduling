@@ -21,8 +21,8 @@ before_shas=(
     "14aa42f09bb3807808faa9b4f9b702fcc5ecc8d83ba85ced72f6781da0aade93"
 )
 after_shas=(
-    "09b132cae179f12367b8d36f3f123bac4c0cfc54ad2794f1f4757d911b5e2d01"
-    "0032d45442e453446afaee767c0316b74c596f601d162cc51948d1c16c2a864b"
+    "1273acecfe11370fce632c7dc1a8205863ad8bdd506101262bf88972efef6bf4"
+    "0089df3d54b86ece730d8f8886e0238f23667c1c9bde39e366b6fe6d929c9abe"
 )
 
 for target in "${targets[@]}"; do
