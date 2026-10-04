@@ -1,10 +1,15 @@
 import hashlib
 import json
+import os
+import signal
+import subprocess
 import sys
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 from src.afd_cost_model import (
     fit_binned_curve,
@@ -24,6 +29,10 @@ from src.afd_ffn_cost_profile import (
 from src.afd_routing_profile import combine_rank_routing_traces
 from src.afd_static_placement import sha256_file
 from tools.validate_milestone_n_cost_timing import validate_average_clocks
+from tools.prepare_milestone_n_cost_model import (
+    PROFILED_MINI_SMOKE_REQUESTS,
+    _profiled_mini_smoke_bytes,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -177,12 +186,67 @@ def test_patch_manifest_and_one_job_scope_are_reproducible():
         ROOT / "tools/prepare_milestone_n_cost_model.py"
     ).read_text()
     assert "--defer-current-verification" in launcher
+    assert "run_profiled_mini_smoke" in launcher
+    assert "profiled-mini-smoke-trace.jsonl" in launcher
     assert "manage_afd_cost_model_patch.sh revert" in launcher
     assert "pkill" not in launcher
     assert "killall" not in launcher
     common = (ROOT / "scripts/afd_common.sh").read_text()
-    assert '"${pgid}" != "${pid}"' in common
-    assert '"${state}" != Z*' in common
+    stop_body = common.split("afd_stop_process_group()", 1)[1].split(
+        "afd_start_gpu_sampler()", 1
+    )[0]
+    assert 'pgrep -g "${pid}"' in stop_body
+    assert 'kill -0 "${pid}"' not in stop_body
+    assert '"${pgid}" != "${pid}"' in stop_body
+    assert 'VLLM_PLUGINS=afd' in stop_body
+    assert '"${state}" == Z*' in stop_body
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="requires Linux PGID/procfs")
+def test_cleanup_stops_group_when_leader_has_exited(tmp_path):
+    child_file = tmp_path / "child.pid"
+    environment = {
+        **os.environ,
+        "AFD_PROJECT_ROOT": str(ROOT),
+        "VLLM_PLUGINS": "afd",
+        "PYTHONPATH": str(ROOT),
+    }
+    leader = subprocess.Popen(
+        [
+            "setsid",
+            "bash",
+            "-c",
+            f"trap '' HUP; sleep 60 & printf '%s\\n' $! > {child_file!s}",
+        ],
+        env=environment,
+    )
+    pgid = leader.pid
+    try:
+        leader.wait(timeout=5)
+        deadline = time.monotonic() + 5
+        while not child_file.exists() and time.monotonic() < deadline:
+            time.sleep(0.05)
+        child = int(child_file.read_text().strip())
+        assert os.getpgid(child) == pgid
+        command = (
+            f"export AFD_PROJECT_ROOT={ROOT!s}; "
+            f"export AFD_PLUGIN_ROOT={ROOT / 'third_party/afd-plugin'!s}; "
+            f"source {ROOT / 'scripts/afd_common.sh'!s}; "
+            f"afd_stop_process_group {pgid}"
+        )
+        subprocess.run(["bash", "-c", command], check=True, timeout=40)
+        state = subprocess.run(
+            ["ps", "-o", "stat=", "-p", str(child)],
+            check=False,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        assert not state or state.startswith("Z")
+    finally:
+        try:
+            os.killpg(pgid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
 
 
 def test_config_has_same_run_local_and_full_instrumentation_and_no_optimizer():
@@ -195,10 +259,20 @@ def test_config_has_same_run_local_and_full_instrumentation_and_no_optimizer():
     assert "optimizer" not in text.lower()
 
 
-def _write_same_run_rank(directory: Path, rank: int, generation: str) -> None:
+def _write_same_run_rank(
+    directory: Path,
+    rank: int,
+    generation: str,
+    *,
+    assignments: int | None = None,
+    local_elapsed_ms: float | None = None,
+    full_elapsed_ms: float | None = None,
+) -> None:
     records = 48
+    token_rows = 2 + rank
+    assignment_count = assignments if assignments is not None else token_rows * 8
     histograms = np.zeros((records, 128), dtype=np.int32)
-    histograms[:, rank] = 4 + rank
+    histograms[:, rank] = assignment_count
     chunk = directory / (
         f"afd-cost-rank-{rank}-pid-{100 + rank}-chunk-000000-{generation}.npz"
     )
@@ -207,11 +281,19 @@ def _write_same_run_rank(directory: Path, rank: int, generation: str) -> None:
         step_sequences=np.zeros(records, dtype=np.int32),
         stages=np.zeros(records, dtype=np.int16),
         layers=np.arange(records, dtype=np.int16),
-        token_rows=np.full(records, 2 + rank, dtype=np.int32),
+        token_rows=np.full(records, token_rows, dtype=np.int32),
         topk_assignments=histograms.sum(axis=1),
         expert_histograms=histograms,
-        local_elapsed_ms=np.full(records, 0.5 + rank, dtype=np.float32),
-        full_elapsed_ms=np.full(records, 0.8 + rank, dtype=np.float32),
+        local_elapsed_ms=np.full(
+            records,
+            0.5 + rank if local_elapsed_ms is None else local_elapsed_ms,
+            dtype=np.float32,
+        ),
+        full_elapsed_ms=np.full(
+            records,
+            0.8 + rank if full_elapsed_ms is None else full_elapsed_ms,
+            dtype=np.float32,
+        ),
         ffn_rank=np.asarray(rank),
         physical_gpu=np.asarray(rank + 2),
         frequency_mhz=np.asarray(2520),
@@ -242,8 +324,50 @@ def test_same_run_profile_combines_routing_and_two_timing_boundaries(tmp_path):
     profile = load_same_run_cost_profile(output / "afd_same_run_cost_profile.npz")
     assert profile["local_elapsed_ms_by_rank"].shape == (2, 48)
     assert profile["full_elapsed_ms_by_rank"].shape == (2, 48)
-    assert np.all(profile["expert_histograms"][:, 0] == 4)
-    assert np.all(profile["expert_histograms"][:, 1] == 5)
+    assert np.all(profile["expert_histograms"][:, 0] == 16)
+    assert np.all(profile["expert_histograms"][:, 1] == 24)
+    assert metadata["validation"][
+        "per_rank_assignments_equal_token_rows_times_top_k"
+    ] is True
+    assert metadata["validation"][
+        "combined_histogram_equals_sum_of_rank_histograms"
+    ] is True
+
+
+def test_same_run_profile_rejects_wrong_topk_count(tmp_path):
+    control = tmp_path / "control"
+    output = tmp_path / "output"
+    control.mkdir()
+    _write_same_run_rank(control, 0, "g", assignments=15)
+    _write_same_run_rank(control, 1, "g")
+    with np.testing.assert_raises_regex(ValueError, "token_rows \\* top_k"):
+        finalize_same_run_cost_profiles(control, "g", output, timeout_s=0.1)
+
+
+def test_same_run_profile_rejects_invalid_or_uncontained_timing(tmp_path):
+    for name, local, full, pattern in (
+        ("nan", float("nan"), 1.0, "non-finite"),
+        ("outside", 2.0, 1.0, "not contained"),
+    ):
+        control = tmp_path / name / "control"
+        output = tmp_path / name / "output"
+        control.mkdir(parents=True)
+        _write_same_run_rank(
+            control, 0, "g", local_elapsed_ms=local, full_elapsed_ms=full
+        )
+        _write_same_run_rank(control, 1, "g")
+        with np.testing.assert_raises_regex(ValueError, pattern):
+            finalize_same_run_cost_profiles(control, "g", output, timeout_s=0.1)
+
+
+def test_profiled_mini_smoke_trace_is_deterministic_first_eight(tmp_path):
+    trace = tmp_path / "trace.jsonl"
+    trace.write_text("".join(f'{{"request_id":"{i}"}}\n' for i in range(300)))
+    smoke = _profiled_mini_smoke_bytes(trace)
+    assert PROFILED_MINI_SMOKE_REQUESTS == 8
+    assert smoke.decode().splitlines() == [
+        f'{{"request_id":"{i}"}}' for i in range(8)
+    ]
 
 
 def test_same_run_join_uses_own_histogram_and_local_boundary(tmp_path):

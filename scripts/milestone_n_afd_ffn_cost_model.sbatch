@@ -24,7 +24,10 @@ study="${MILESTONE_N_STUDY:?set MILESTONE_N_STUDY}"
 study="$(cd "${study}" && pwd)"
 plan="${study}/manifest.json"
 trace="${study}/trace.jsonl"
-[[ -f "${plan}" && -f "${trace}" ]] || { printf 'missing prepared study\n' >&2; exit 1; }
+smoke_trace="${study}/profiled-mini-smoke-trace.jsonl"
+[[ -f "${plan}" && -f "${trace}" && -f "${smoke_trace}" ]] || {
+    printf 'missing prepared study input\n' >&2; exit 1;
+}
 expected_commit="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["git_commit"])' "${plan}")"
 actual_commit="$(git rev-parse HEAD)"
 [[ "${expected_commit}" == "${actual_commit}" ]] || {
@@ -69,7 +72,8 @@ afd_check_allocation > "${study}/slurm-allocation.txt"
 nvidia-smi topo -m > "${study}/topology.txt"
 git rev-parse HEAD > "${study}/git-commit.txt"
 git -C "${AFD_PLUGIN_ROOT}" rev-parse HEAD > "${study}/afd-plugin-commit.txt"
-sha256sum "${plan}" "${trace}" data/placements/milestone_m/P_balanced.json \
+sha256sum "${plan}" "${trace}" "${smoke_trace}" \
+    data/placements/milestone_m/P_balanced.json \
     data/placements/milestone_m_target_splits/P_split_40_slow_rank0.json \
     data/placements/milestone_m_target_splits/P_split_40_slow_rank1.json \
     patches/afd-plugin-0.26.0-cost-model.* > "${study}/immutable-input-hashes.txt"
@@ -83,6 +87,10 @@ api_port=18560
 ffn_api_port=18561
 afd_port=6310
 trace_sha="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["trace_sha256"])' "${plan}")"
+smoke_trace_sha="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["profiled_mini_smoke"]["trace_sha256"])' "${plan}")"
+[[ "$(sha256sum "${smoke_trace}" | awk '{print $1}')" == "${smoke_trace_sha}" ]] || {
+    printf 'profiled mini-smoke trace hash drift\n' >&2; exit 1;
+}
 balanced="${PROJECT_ROOT}/data/placements/milestone_m/P_balanced.json"
 
 stop_server() {
@@ -120,6 +128,62 @@ run_conditioning() {
     local count
     count="$(find "${output_root}" -mindepth 1 -maxdepth 1 -type d | wc -l)"
     [[ "${count}" -eq 1 ]] || { printf 'conditioning run count mismatch\n' >&2; exit 1; }
+}
+
+run_profiled_mini_smoke() {
+    local config_dir="$1" model_name="$2" placement="$3" frequency="$4" clocks_csv="$5"
+    local output_root="${config_dir}/profiled-mini-smoke"
+    IFS=',' read -r -a clocks_array <<< "${clocks_csv}"
+    "${AFD_PYTHON}" -m src.benchmark \
+        --trace "${smoke_trace}" --base-url "http://127.0.0.1:${api_port}" \
+        --model "${model_name}-attention" --tokenizer Qwen/Qwen3-30B-A3B \
+        --request-rate 8 --override-arrival-rate --output-root "${output_root}" \
+        --warmup-requests 2 --settle-before-s 1 --settle-after-s 1 \
+        --monitor-interval-s 0.2 --max-concurrency 16 --request-timeout-s 900 \
+        --local-files-only --placement-file "${placement}" \
+        --vllm-patch-manifest patches/afd-plugin-0.26.0-cost-model.json \
+        --afd-timing-control-dir "${config_dir}/timing-control" \
+        --target-clocks "${clocks_array[@]}" --store-output-token-ids \
+        --run-label profiled-mini-smoke --placement-name profiled-mini-smoke \
+        --server-log "${config_dir}/server/attention.log" \
+        > "${config_dir}/profiled-mini-smoke.log" 2>&1
+    mapfile -t smoke_runs < <(
+        find "${output_root}" -mindepth 1 -maxdepth 1 -type d -print
+    )
+    [[ "${#smoke_runs[@]}" -eq 1 ]] || {
+        printf 'profiled mini-smoke run count mismatch\n' >&2; exit 1;
+    }
+    local run_dir="${smoke_runs[0]}"
+    "${AFD_PYTHON}" -m tools.validate_live_run "${run_dir}" \
+        > "${run_dir}/live-validation.json"
+    "${AFD_PYTHON}" -m tools.validate_milestone_n_cost_timing \
+        --timing-run "${run_dir}" --placement "${placement}" \
+        --config-id profiled-mini-smoke --lifecycle fail_fast_gate \
+        --frequency-mhz "${frequency}" \
+        > "${run_dir}/cost-timing-validation.json"
+    "${AFD_PYTHON}" - "${run_dir}" "${smoke_trace_sha}" <<'PY'
+import hashlib, json, sys
+from pathlib import Path
+run_dir = Path(sys.argv[1])
+metrics = json.loads((run_dir / "metrics.json").read_text())
+if metrics["completed_requests"] != 8 or metrics["failed_requests"] != 0:
+    raise SystemExit("profiled mini-smoke did not complete exactly 8/8 requests")
+profile = run_dir / "afd_same_run_cost_profile.npz"
+trace = run_dir / "trace.jsonl"
+if hashlib.sha256(trace.read_bytes()).hexdigest() != sys.argv[2]:
+    raise SystemExit("profiled mini-smoke trace hash mismatch")
+result = {
+    "status": "pass",
+    "completed_requests": 8,
+    "graph_replay_timing_finalization_and_rank_alignment": True,
+    "run_dir": str(run_dir),
+    "profile_sha256": hashlib.sha256(profile.read_bytes()).hexdigest(),
+    "trace_sha256": sys.argv[2],
+}
+(run_dir.parent / "PASS.json").write_text(
+    json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+)
+PY
 }
 
 printf 'stage\torder\tconfig_id\tlifecycle\tfrequency_mhz\tstatus\trun_dir\n' > "${study}/runs.tsv"
@@ -162,6 +226,10 @@ while IFS=$'\t' read -r order config_id stage lifecycle frequency placement_path
     validate_ownership "${placement}" "${config_dir}/ownership" "${config_dir}/runtime-ownership.json"
     actual_mapping_sha="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["actual_mapping_sha256"])' "${config_dir}/runtime-ownership.json")"
     [[ "${actual_mapping_sha}" == "${mapping_sha}" ]] || { printf 'ownership mismatch\n' >&2; exit 1; }
+    if [[ "${order}" -eq 0 ]]; then
+        run_profiled_mini_smoke "${config_dir}" "${model_name}" "${placement}" \
+            "${frequency}" "${clocks}"
+    fi
     run_conditioning "${config_dir}/conditioning" "${model_name}" "${placement}" \
         "${clocks}" "${config_dir}/server/attention.log"
     IFS=',' read -r -a target_array <<< "${clocks}"

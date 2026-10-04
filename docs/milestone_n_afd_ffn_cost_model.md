@@ -68,6 +68,20 @@ one measured trace. After the forced gate, order is randomized with seed
 same-run routing/local-timing/full-timing artifact; no cross-run alignment is
 allowed.
 
+Before order 0 performs its full conditioning trace, it runs an independent
+8-request profiled mini-smoke. This gate must exercise graph replay, CUDA-event
+`elapsed_time()`, the same-invocation routing snapshot, profile finalization,
+and exact two-rank alignment. Its generation is finalized before conditioning,
+and the formal measurement later starts a new generation.
+
+The profile validator does not accept its own derived assignment total as the
+only routing check. Qwen3-30B-A3B routes each token to eight experts, so every
+source-rank invocation must satisfy `sum(histogram) == 8 * token_rows`.
+Combined histograms must equal the sum of both source ranks and satisfy the
+same count invariant. All local/full timings must be finite and positive; at
+least 99% of local intervals must lie within their full intervals, allowing a
+0.01 ms numerical tolerance.
+
 ## Offline models
 
 The primary latency model is a binned interpolation table
@@ -121,6 +135,15 @@ cross-stream dependencies; the corrected profiler creates external timing
 events during graph capture so the replay contains queryable event-record
 nodes. Eager timing events remain internal/default. The failed job contributes
 no model data.
+
+The next replacement, job `271681`, was canceled while pending after review
+identified three reliability gaps. It consumed no GPU time. The fail-fast
+profiled mini-smoke and independent routing/timing invariants described above
+now close the two data-validity gaps. Cleanup was also changed from checking
+only leader liveness to validating and terminating the complete stored PGID,
+so an exited or zombie group leader cannot leave live AFD workers behind.
+The hardened implementation passes 142 project CPU tests and 63 focused tests
+against the patched pinned AFD plugin; patch revert restores a clean checkout.
 
 ## Decision gate
 

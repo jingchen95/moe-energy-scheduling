@@ -1,6 +1,6 @@
 # Handoff
 
-## Latest status — Milestone N first corrected GPU attempt failed before data
+## Latest status — Milestone N hardened replacement pending
 
 - Work continues from Milestone M commit `1cd98f4` on branch
   `milestone-n-afd-ffn-cost-model`.
@@ -84,13 +84,27 @@
 - Captured local/full timing events now use `external=True`, which makes
   PyTorch emit CUDA graph event-record nodes; eager events retain the default
   behavior. No completed measured run from `271652` is retained as data.
-- Cleanup found the Attention group leader already in zombie state and refused
-  it because its command line was empty. The stored `setsid` PID is now also
-  validated by same-user ownership and `PGID == PID`; a zombie leader can then
-  safely have its owned process group terminated. Slurm cgroup cleanup removed
-  the two reported workers after `271652`, and no GPU processes remain.
+- Replacement job `271681` was canceled while pending after a final code
+  review; it used zero GPU time and produced no measurements.
+- Order 0 now runs a separate, immutable 8-request profiled mini-smoke after
+  API/ownership validation and before the full conditioning trace. It must
+  complete CUDA graph replay, `elapsed_time()`, routing snapshot collection,
+  finalization, and exact two-rank alignment before expensive work begins.
+- Routing validation now uses the independent Qwen3 top-8 invariant
+  `histogram.sum() == 8 * token_rows` for every source-rank invocation. It
+  additionally checks combined two-rank counts, finite positive timings, and
+  requires at least 99% of local intervals to lie within the full boundary
+  with a 0.01 ms numerical tolerance.
+- Process cleanup now discovers and validates all members of the stored PGID,
+  even when the `setsid` leader has already exited. Every live member must be
+  owned by the current user and attributable to the isolated AFD environment;
+  zombie-only groups no longer trigger the previous 120-second wait.
+- The hardened code passes `142` project CPU tests, including malformed
+  top-k/timing artifacts and an exited-leader/live-descendant PGID regression,
+  plus `63` focused tests against the patched pinned AFD plugin. Patch revert
+  leaves the plugin checkout clean.
 
-Exact next command after committing and preparing a fresh immutable study:
+Exact next command after the hardening commit is pushed:
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling

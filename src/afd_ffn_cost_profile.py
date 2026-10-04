@@ -39,6 +39,9 @@ PROFILE_DIR_ENV = "AFD_FFN_TIMING_DIR"
 PROFILE_CLOCKS_ENV = "AFD_FFN_CLOCKS_MHZ"
 PROFILE_PHYSICAL_GPUS_ENV = "AFD_FFN_PHYSICAL_GPUS"
 CHUNK_RECORDS = 1024
+EXPECTED_TOP_K = 8
+LOCAL_WITHIN_FULL_MIN_FRACTION = 0.99
+TIMING_CONTAINMENT_TOLERANCE_MS = 0.01
 
 
 def _sha256(path: Path) -> str:
@@ -591,16 +594,40 @@ def _load_rank_chunks(
     records = len(combined["layers"])
     if combined["expert_histograms"].shape != (records, EXPECTED_EXPERTS):
         raise ValueError("invalid same-run routing histogram shape")
-    if not np.array_equal(
-        combined["expert_histograms"].sum(axis=1), combined["topk_assignments"]
-    ):
+    histogram_totals = combined["expert_histograms"].sum(axis=1)
+    if not np.array_equal(histogram_totals, combined["topk_assignments"]):
         raise ValueError("same-run routing assignment totals mismatch")
-    if np.any(combined["local_elapsed_ms"] <= 0) or np.any(
-        combined["full_elapsed_ms"] <= 0
-    ):
+    expected_assignments = combined["token_rows"].astype(np.int64) * EXPECTED_TOP_K
+    if not np.array_equal(histogram_totals, expected_assignments):
+        raise ValueError(
+            "same-run routing count does not equal "
+            f"token_rows * top_k ({EXPECTED_TOP_K})"
+        )
+    local_elapsed = combined["local_elapsed_ms"].astype(np.float64)
+    full_elapsed = combined["full_elapsed_ms"].astype(np.float64)
+    if not np.all(np.isfinite(local_elapsed)) or not np.all(np.isfinite(full_elapsed)):
+        raise ValueError("non-finite AFD cost timing")
+    if np.any(local_elapsed <= 0) or np.any(full_elapsed <= 0):
         raise ValueError("non-positive AFD cost timing")
+    containment = local_elapsed <= (
+        full_elapsed + TIMING_CONTAINMENT_TOLERANCE_MS
+    )
+    containment_fraction = float(np.mean(containment))
+    if containment_fraction < LOCAL_WITHIN_FULL_MIN_FRACTION:
+        raise ValueError(
+            "local AFD timing is not contained by the full timing boundary: "
+            f"{containment_fraction:.6f} < {LOCAL_WITHIN_FULL_MIN_FRACTION:.6f}"
+        )
     metadata["chunks"] = copied_chunks
     metadata["records"] = records
+    metadata["validation"] = {
+        "top_k": EXPECTED_TOP_K,
+        "routing_assignments_equal_token_rows_times_top_k": True,
+        "timings_finite_and_positive": True,
+        "local_within_full_fraction": containment_fraction,
+        "local_within_full_min_fraction": LOCAL_WITHIN_FULL_MIN_FRACTION,
+        "timing_containment_tolerance_ms": TIMING_CONTAINMENT_TOLERANCE_MS,
+    }
     return rank, combined, metadata
 
 
@@ -640,10 +667,26 @@ def finalize_same_run_cost_profiles(
     keys = np.stack([per_rank[0][key] for key in key_names], axis=1)
     if len(np.unique(keys, axis=0)) != len(keys):
         raise ValueError("duplicate step/stage/layer keys in same-run profile")
-    combined_histograms = (
+    per_source_rank_histograms = np.stack([
+        per_rank[0]["expert_histograms"].astype(np.int64),
+        per_rank[1]["expert_histograms"].astype(np.int64),
+    ])
+    combined_histograms = per_source_rank_histograms.sum(axis=0)
+    if not np.array_equal(
+        combined_histograms,
         per_rank[0]["expert_histograms"].astype(np.int64)
-        + per_rank[1]["expert_histograms"].astype(np.int64)
+        + per_rank[1]["expert_histograms"].astype(np.int64),
+    ):
+        raise ValueError("combined histogram does not equal both rank histograms")
+    combined_token_rows = (
+        per_rank[0]["token_rows"].astype(np.int64)
+        + per_rank[1]["token_rows"].astype(np.int64)
     )
+    if not np.array_equal(
+        combined_histograms.sum(axis=1),
+        combined_token_rows * EXPECTED_TOP_K,
+    ):
+        raise ValueError("combined routing count does not match both source ranks")
     output_path = output_directory / "afd_same_run_cost_profile.npz"
     np.savez_compressed(
         output_path,
@@ -651,9 +694,7 @@ def finalize_same_run_cost_profiles(
         stages=per_rank[0]["stages"],
         layers=per_rank[0]["layers"],
         expert_histograms=combined_histograms,
-        per_source_rank_expert_histograms=np.stack([
-            per_rank[0]["expert_histograms"], per_rank[1]["expert_histograms"]
-        ]),
+        per_source_rank_expert_histograms=per_source_rank_histograms,
         token_rows_by_source_rank=np.stack([
             per_rank[0]["token_rows"], per_rank[1]["token_rows"]
         ]),
@@ -680,6 +721,19 @@ def finalize_same_run_cost_profiles(
         "cross_run_join": False,
         "local_and_full_boundaries": True,
         "per_call_cuda_synchronize_added": False,
+        "validation": {
+            "top_k": EXPECTED_TOP_K,
+            "per_rank_assignments_equal_token_rows_times_top_k": True,
+            "combined_histogram_equals_sum_of_rank_histograms": True,
+            "combined_assignments_equal_combined_token_rows_times_top_k": True,
+            "timings_finite_and_positive": True,
+            "local_within_full_fraction_by_rank": {
+                str(rank): metadata_by_rank[rank]["validation"][
+                    "local_within_full_fraction"
+                ]
+                for rank in range(EXPECTED_RANKS)
+            },
+        },
     }
     metadata_path = output_directory / "afd_same_run_cost_profile.json"
     metadata_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")

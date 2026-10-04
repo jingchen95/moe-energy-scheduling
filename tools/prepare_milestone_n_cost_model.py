@@ -21,6 +21,7 @@ from tools.prepare_milestone_m_measurement import (
 
 RANDOMIZATION_SEED = 20261007
 FREQUENCIES = (1005, 1635, 2070, 2220, 2520)
+PROFILED_MINI_SMOKE_REQUESTS = 8
 
 
 def _git_commit(root: Path) -> str:
@@ -46,6 +47,17 @@ def _placement(root: Path, path: Path) -> dict[str, Any]:
         "sha256": file_sha,
         "canonical_mapping_sha256": canonical_mapping_sha256(mapping),
     }
+
+
+def _profiled_mini_smoke_bytes(trace: Path) -> bytes:
+    lines = [
+        line
+        for line in trace.read_bytes().splitlines(keepends=True)
+        if line.strip()
+    ]
+    if len(lines) != 300:
+        raise ValueError(f"frozen trace must contain 300 requests, found {len(lines)}")
+    return b"".join(lines[:PROFILED_MINI_SMOKE_REQUESTS])
 
 
 def build_plan(root: Path, trace: Path) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -139,6 +151,7 @@ def build_plan(root: Path, trace: Path) -> tuple[dict[str, Any], dict[str, Any]]
         }
         for index, source in enumerate(order)
     ]
+    smoke_bytes = _profiled_mini_smoke_bytes(trace)
     plan = {
         "schema_version": 1,
         "study": "milestone_n_afd_ffn_cost_model",
@@ -152,6 +165,17 @@ def build_plan(root: Path, trace: Path) -> tuple[dict[str, Any], dict[str, Any]]
         "requests": 300,
         "request_rate": 8.0,
         "max_output_tokens": 128,
+        "profiled_mini_smoke": {
+            "required_before_conditioning": True,
+            "requests": PROFILED_MINI_SMOKE_REQUESTS,
+            "trace": "profiled-mini-smoke-trace.jsonl",
+            "trace_sha256": hashlib.sha256(smoke_bytes).hexdigest(),
+            "scope": "order-0 balanced@2520 only",
+            "required_path": (
+                "CUDA graph replay -> elapsed_time -> routing snapshot -> "
+                "finalize -> exact two-rank alignment"
+            ),
+        },
         "attention_clocks_mhz": [2520, 2520],
         "routing_and_timing": {
             "same_invocation": True,
@@ -190,6 +214,9 @@ def main() -> int:
     trace = args.trace.resolve(strict=True)
     plan, reuse = build_plan(root, trace)
     shutil.copyfile(trace, output / "trace.jsonl")
+    (output / "profiled-mini-smoke-trace.jsonl").write_bytes(
+        _profiled_mini_smoke_bytes(trace)
+    )
     shutil.copyfile(
         root / "configs/milestone_n_afd_ffn_cost_model.yaml",
         output / "resolved-config.yaml",

@@ -122,27 +122,76 @@ afd_wait_attention_api() {
 afd_stop_process_group() {
     local pid="${1:-}"
     [[ "${pid}" =~ ^[0-9]+$ ]] || return 0
-    kill -0 "${pid}" 2>/dev/null || { wait "${pid}" 2>/dev/null || true; return 0; }
-    local owner command pgid state
-    owner="$(ps -o user= -p "${pid}" | tr -d ' ')"
-    command="$(ps -o command= -p "${pid}")"
-    pgid="$(ps -o pgid= -p "${pid}" | tr -d ' ')"
-    state="$(ps -o stat= -p "${pid}" | tr -d ' ')"
-    if [[ "${owner}" != "${USER}" || "${pgid}" != "${pid}" ]]; then
-        printf 'refusing to stop unrecognized process %s: %s\n' "${pid}" "${command}" >&2
-        return 1
+    local members=()
+    mapfile -t members < <(pgrep -g "${pid}" 2>/dev/null || true)
+    if [[ "${#members[@]}" -eq 0 ]]; then
+        wait "${pid}" 2>/dev/null || true
+        return 0
     fi
-    if [[ "${state}" != Z* && "${command}" != *"${AFD_PLUGIN_ROOT}/.venv"* ]]; then
-        printf 'refusing to stop unexpected live process %s: %s\n' "${pid}" "${command}" >&2
-        return 1
-    fi
-    kill -TERM -- "-${pid}" 2>/dev/null || kill -TERM "${pid}" 2>/dev/null || true
-    for _ in $(seq 1 120); do
-        pgrep -g "${pid}" >/dev/null 2>&1 || { wait "${pid}" 2>/dev/null || true; return 0; }
-        sleep 1
+
+    # Validate every surviving PGID member. The group leader may already have
+    # exited, so leader liveness is not a safe proxy for worker liveness.
+    local member owner command pgid state environment
+    for member in "${members[@]}"; do
+        owner="$(ps -o user= -p "${member}" | tr -d ' ')"
+        command="$(ps -o command= -p "${member}")"
+        pgid="$(ps -o pgid= -p "${member}" | tr -d ' ')"
+        state="$(ps -o stat= -p "${member}" | tr -d ' ')"
+        if [[ "${owner}" != "${USER}" || "${pgid}" != "${pid}" ]]; then
+            printf 'refusing to stop unrecognized PGID %s member %s: %s\n' \
+                "${pid}" "${member}" "${command}" >&2
+            return 1
+        fi
+        if [[ "${state}" == Z* ]]; then
+            continue
+        fi
+        environment=""
+        if [[ -r "/proc/${member}/environ" ]]; then
+            environment="$(tr '\0' '\n' < "/proc/${member}/environ" 2>/dev/null || true)"
+        fi
+        if [[ "${command}" != *"${AFD_PLUGIN_ROOT}/.venv"* ]] && \
+           [[ "${environment}" != *"VLLM_PLUGINS=afd"* || \
+              "${environment}" != *"PYTHONPATH=${AFD_PROJECT_ROOT}"* ]]; then
+            printf 'refusing to stop unexpected live PGID %s member %s: %s\n' \
+                "${pid}" "${member}" "${command}" >&2
+            return 1
+        fi
     done
-    kill -KILL -- "-${pid}" 2>/dev/null || kill -KILL "${pid}" 2>/dev/null || true
+
+    kill -TERM -- "-${pid}" 2>/dev/null || true
+    for _ in $(seq 1 120); do
+        mapfile -t members < <(pgrep -g "${pid}" 2>/dev/null || true)
+        [[ "${#members[@]}" -eq 0 ]] && {
+            wait "${pid}" 2>/dev/null || true
+            return 0
+        }
+        local live=0
+        for member in "${members[@]}"; do
+            state="$(ps -o stat= -p "${member}" | tr -d ' ')"
+            [[ "${state}" == Z* || -z "${state}" ]] || live=1
+        done
+        if [[ "${live}" -eq 0 ]]; then
+            wait "${pid}" 2>/dev/null || true
+            return 0
+        fi
+        sleep 0.25
+    done
+    kill -KILL -- "-${pid}" 2>/dev/null || true
+    for _ in $(seq 1 40); do
+        mapfile -t members < <(pgrep -g "${pid}" 2>/dev/null || true)
+        [[ "${#members[@]}" -eq 0 ]] && break
+        sleep 0.25
+    done
     wait "${pid}" 2>/dev/null || true
+    mapfile -t members < <(pgrep -g "${pid}" 2>/dev/null || true)
+    for member in "${members[@]}"; do
+        state="$(ps -o stat= -p "${member}" | tr -d ' ')"
+        if [[ -n "${state}" && "${state}" != Z* ]]; then
+            printf 'live PGID %s member remains after SIGKILL: %s\n' \
+                "${pid}" "${member}" >&2
+            return 1
+        fi
+    done
 }
 
 afd_start_gpu_sampler() {

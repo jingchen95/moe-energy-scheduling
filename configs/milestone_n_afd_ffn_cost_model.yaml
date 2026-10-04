@@ -18,6 +18,11 @@ clocks_mhz:
   attention: [2520, 2520]
   symmetric_ffn: [1005, 1635, 2070, 2220, 2520]
 instrumentation:
+  profiled_mini_smoke:
+    required_before_conditioning: true
+    requests: 8
+    scope: order-0 balanced-f2520-primary
+    validates: graph replay, elapsed timing, routing snapshot, finalize, exact rank alignment
   routing_and_timing_same_invocation: true
   cross_run_routing_timing_join: false
   cuda_events: true
@@ -26,6 +31,11 @@ instrumentation:
   full_timing_boundary: per-layer Qwen3 MoE block including communication
   routing_snapshot: existing logical topk IDs copied after both timed intervals
   routing_chunk_records: 1024
+  expected_top_k: 8
+  require_histogram_sum_equals_token_rows_times_top_k: true
+  require_finite_positive_timing: true
+  local_within_full_min_fraction: 0.99
+  local_within_full_tolerance_ms: 0.01
   mandatory_first_gate: balanced-f2520-primary
 modeling:
   latency: rank_and_frequency_specific_binned_interpolation
