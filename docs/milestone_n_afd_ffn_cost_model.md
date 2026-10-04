@@ -142,8 +142,20 @@ profiled mini-smoke and independent routing/timing invariants described above
 now close the two data-validity gaps. Cleanup was also changed from checking
 only leader liveness to validating and terminating the complete stored PGID,
 so an exited or zombie group leader cannot leave live AFD workers behind.
-The hardened implementation passes 142 project CPU tests and 63 focused tests
+The hardened implementation passes 143 project CPU tests and 63 focused tests
 against the patched pinned AFD plugin; patch revert restores a clean checkout.
+
+Job `271687` validated the new instrumentation gate on real GPUs. The
+8-request mini-smoke and first formal 300-request all-HH run both passed exact
+two-rank alignment, top-8 count invariants, finite/positive timing, and 100%
+local-within-full containment. The formal run completed 300/300 requests with
+zero failures and produced 30,912 records per FFN rank at measured 2520 MHz.
+The job then stopped after 1/11 lifecycles because vLLM had renamed live worker
+processes to `VLLM::DPCoordinator`, which the cleanup identity guard rejected.
+This is an incomplete engineering run and is not used for model fitting.
+Cleanup now recognizes such title-rewritten workers only when same-user PGID,
+resolved project-local AFD Python executable, and project working directory
+all match; it does not broaden termination beyond the stored process group.
 
 ## Decision gate
 

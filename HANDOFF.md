@@ -99,10 +99,22 @@
   even when the `setsid` leader has already exited. Every live member must be
   owned by the current user and attributable to the isolated AFD environment;
   zombie-only groups no longer trigger the previous 120-second wait.
-- The hardened code passes `142` project CPU tests, including malformed
+- The hardened code passes `143` project CPU tests, including malformed
   top-k/timing artifacts and an exited-leader/live-descendant PGID regression,
   plus `63` focused tests against the patched pinned AFD plugin. Patch revert
   leaves the plugin checkout clean.
+- Job `271687` proved that both the 8-request profiled mini-smoke and the first
+  formal 300-request `P_balanced@2520` profile pass all routing/timing/clock
+  checks. It then failed during server shutdown because vLLM changes worker
+  process titles to `VLLM::DPCoordinator`; the cleanup guard did not recognize
+  that title even though the processes remained in the owned PGID. The job
+  completed only 1/11 timing lifecycles, so the study is incomplete and is not
+  used for model fitting.
+- Cleanup now accepts a title-rewritten process only when it has the expected
+  same-user PGID and both its resolved executable and working directory match
+  the project-local AFD Python runtime. Environment-marker and explicit venv
+  command checks remain accepted paths. Slurm removed job `271687`'s workers;
+  Uranus has no remaining compute processes.
 
 Exact next command after the hardening commit is pushed:
 

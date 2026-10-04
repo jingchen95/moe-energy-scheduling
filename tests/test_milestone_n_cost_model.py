@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import shlex
 import signal
 import subprocess
 import sys
@@ -199,6 +200,9 @@ def test_patch_manifest_and_one_job_scope_are_reproducible():
     assert 'kill -0 "${pid}"' not in stop_body
     assert '"${pgid}" != "${pid}"' in stop_body
     assert 'VLLM_PLUGINS=afd' in stop_body
+    assert 'readlink -f "/proc/${member}/exe"' in stop_body
+    assert '"${executable}" != "${expected_python}"' in stop_body
+    assert '"${cwd}" != "${AFD_PROJECT_ROOT}"' in stop_body
     assert '"${state}" == Z*' in stop_body
 
 
@@ -235,6 +239,47 @@ def test_cleanup_stops_group_when_leader_has_exited(tmp_path):
             f"afd_stop_process_group {pgid}"
         )
         subprocess.run(["bash", "-c", command], check=True, timeout=40)
+        state = subprocess.run(
+            ["ps", "-o", "stat=", "-p", str(child)],
+            check=False,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        assert not state or state.startswith("Z")
+    finally:
+        try:
+            os.killpg(pgid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="requires Linux PGID/procfs")
+def test_cleanup_accepts_title_rewritten_project_python_worker(tmp_path):
+    afd_python = ROOT / "third_party/afd-plugin/.venv/bin/python"
+    if not afd_python.exists():
+        pytest.skip("isolated AFD interpreter is unavailable")
+    child_file = tmp_path / "child.pid"
+    child_command = (
+        f"cd {shlex.quote(str(ROOT))}; trap '' HUP; "
+        "env -u VLLM_PLUGINS -u PYTHONPATH "
+        f"{shlex.quote(str(afd_python))} -c "
+        f"{shlex.quote('import time; time.sleep(60)')} & "
+        f"printf '%s\\n' $! > {shlex.quote(str(child_file))}"
+    )
+    leader = subprocess.Popen(["setsid", "bash", "-c", child_command])
+    pgid = leader.pid
+    try:
+        leader.wait(timeout=5)
+        child = int(child_file.read_text().strip())
+        assert os.getpgid(child) == pgid
+        cleanup_command = (
+            f"export AFD_PROJECT_ROOT={shlex.quote(str(ROOT))}; "
+            f"export AFD_PLUGIN_ROOT={shlex.quote(str(ROOT / 'third_party/afd-plugin'))}; "
+            f"export AFD_PYTHON={shlex.quote(str(afd_python))}; "
+            f"source {shlex.quote(str(ROOT / 'scripts/afd_common.sh'))}; "
+            f"afd_stop_process_group {pgid}"
+        )
+        subprocess.run(["bash", "-c", cleanup_command], check=True, timeout=40)
         state = subprocess.run(
             ["ps", "-o", "stat=", "-p", str(child)],
             check=False,

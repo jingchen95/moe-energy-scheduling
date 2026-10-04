@@ -131,7 +131,9 @@ afd_stop_process_group() {
 
     # Validate every surviving PGID member. The group leader may already have
     # exited, so leader liveness is not a safe proxy for worker liveness.
-    local member owner command pgid state environment
+    local member owner command pgid state environment executable cwd
+    local expected_python
+    expected_python="$(readlink -f "${AFD_PYTHON}")"
     for member in "${members[@]}"; do
         owner="$(ps -o user= -p "${member}" | tr -d ' ')"
         command="$(ps -o command= -p "${member}")"
@@ -146,12 +148,20 @@ afd_stop_process_group() {
             continue
         fi
         environment=""
+        executable=""
+        cwd=""
         if [[ -r "/proc/${member}/environ" ]]; then
             environment="$(tr '\0' '\n' < "/proc/${member}/environ" 2>/dev/null || true)"
         fi
+        [[ -e "/proc/${member}/exe" ]] && \
+            executable="$(readlink -f "/proc/${member}/exe" 2>/dev/null || true)"
+        [[ -e "/proc/${member}/cwd" ]] && \
+            cwd="$(readlink -f "/proc/${member}/cwd" 2>/dev/null || true)"
         if [[ "${command}" != *"${AFD_PLUGIN_ROOT}/.venv"* ]] && \
            [[ "${environment}" != *"VLLM_PLUGINS=afd"* || \
-              "${environment}" != *"PYTHONPATH=${AFD_PROJECT_ROOT}"* ]]; then
+              "${environment}" != *"PYTHONPATH=${AFD_PROJECT_ROOT}"* ]] && \
+           [[ "${executable}" != "${expected_python}" || \
+              "${cwd}" != "${AFD_PROJECT_ROOT}" ]]; then
             printf 'refusing to stop unexpected live PGID %s member %s: %s\n' \
                 "${pid}" "${member}" "${command}" >&2
             return 1
