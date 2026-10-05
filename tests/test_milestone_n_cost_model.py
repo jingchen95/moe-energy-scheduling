@@ -204,6 +204,11 @@ def test_patch_manifest_and_one_job_scope_are_reproducible():
     assert '"${executable}" != "${expected_python}"' in stop_body
     assert '"${cwd}" != "${AFD_PROJECT_ROOT}"' in stop_body
     assert '"${state}" == Z*' in stop_body
+    assert 'ps -o stat= -p "${member}" 2>/dev/null' in stop_body
+    assert '|| true)' in stop_body
+    assert 'if [[ -z "${owner}" && -z "${pgid}" && -z "${state}" ]]' in stop_body
+    assert "failure-context.tsv" in launcher
+    assert "failure_stage=" in launcher
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="requires Linux PGID/procfs")

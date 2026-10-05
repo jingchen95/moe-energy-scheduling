@@ -13,7 +13,7 @@
 #SBATCH --time=04:00:00
 #SBATCH --output=results/raw/slurm-milestone-n-afd-cost-%j.out
 
-set -euo pipefail
+set -Eeuo pipefail
 
 PROJECT_ROOT="${SLURM_SUBMIT_DIR}"
 cd "${PROJECT_ROOT}"
@@ -43,9 +43,21 @@ printf '%s\n' "${SLURM_JOB_ID}" > "${study}/slurm-job-id.txt"
 attention_pid=""
 ffn_pid=""
 patch_applied=0
+failure_stage="initialization"
+failure_line=""
+failure_command=""
+record_error() {
+    local status="$1"
+    if [[ -z "${failure_line}" ]]; then
+        failure_line="$2"
+        failure_command="$3"
+    fi
+    return "${status}"
+}
+trap 'record_error "$?" "$LINENO" "$BASH_COMMAND"' ERR
 cleanup() {
     status=$?
-    trap - EXIT INT TERM
+    trap - EXIT INT TERM ERR
     afd_stop_process_group "${attention_pid}" || true
     afd_stop_process_group "${ffn_pid}" || true
     afd_reset_clocks > "${study}/clock-reset.json" 2> "${study}/clock-reset.err" || status=1
@@ -62,6 +74,11 @@ cleanup() {
         --afd-python "${AFD_PYTHON}" --plugin-root "${AFD_PLUGIN_ROOT}" \
         --uv "${PROJECT_ROOT}/.tools/uv-bootstrap/bin/uv" \
         --output "${study}/environment-after.json" || status=1
+    if [[ "${status}" -ne 0 ]]; then
+        printf 'stage\t%s\nline\t%s\ncommand\t%s\n' \
+            "${failure_stage}" "${failure_line}" "${failure_command}" \
+            > "${study}/failure-context.tsv"
+    fi
     printf '%s\n' "${status}" > "${study}/exit-status.txt"
     exit "${status}"
 }
@@ -192,6 +209,7 @@ printf 'stage\torder\tconfig_id\tlifecycle\tfrequency_mhz\tstatus\trun_dir\n' > 
 # server lifecycle.  Order 0 is the mandatory balanced@HH alignment gate.
 mkdir -p "${study}/timing-configurations"
 while IFS=$'\t' read -r order config_id stage lifecycle frequency placement_path placement_sha mapping_sha; do
+    failure_stage="config-${order}-${config_id}:prepare"
     config_dir="${study}/timing-configurations/$(printf '%02d' "${order}")-${config_id}"
     mkdir -p "${config_dir}/server" "${config_dir}/ownership" \
         "${config_dir}/timing-control" "${config_dir}/conditioning" "${config_dir}/runs"
@@ -211,6 +229,7 @@ while IFS=$'\t' read -r order config_id stage lifecycle frequency placement_path
     nvidia-smi --query-gpu=index,clocks.current.sm --format=csv,noheader,nounits \
         > "${config_dir}/actual-clocks-before-conditioning.csv"
     model_name="qwen3-moe-n-${order}"
+    failure_stage="config-${order}-${config_id}:server-start"
     afd_start_role ffn 2,3 "${ffn_api_port}" Qwen/Qwen3-30B-A3B "${model_name}" "${afd_port}" \
         "${config_dir}/server/ffn.log" "${config_dir}/server/ffn-command.txt" \
         "${placement}" "${config_dir}/ownership" "" full_decode_only \
@@ -223,15 +242,19 @@ while IFS=$'\t' read -r order config_id stage lifecycle frequency placement_path
     attention_pid="${AFD_LAST_PID}"
     afd_wait_attention_api "${attention_pid}" "${ffn_pid}" 2400 \
         "http://127.0.0.1:${api_port}/v1/models" || exit 1
+    failure_stage="config-${order}-${config_id}:ownership"
     validate_ownership "${placement}" "${config_dir}/ownership" "${config_dir}/runtime-ownership.json"
     actual_mapping_sha="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["actual_mapping_sha256"])' "${config_dir}/runtime-ownership.json")"
     [[ "${actual_mapping_sha}" == "${mapping_sha}" ]] || { printf 'ownership mismatch\n' >&2; exit 1; }
     if [[ "${order}" -eq 0 ]]; then
+        failure_stage="config-${order}-${config_id}:profiled-mini-smoke"
         run_profiled_mini_smoke "${config_dir}" "${model_name}" "${placement}" \
             "${frequency}" "${clocks}"
     fi
+    failure_stage="config-${order}-${config_id}:conditioning"
     run_conditioning "${config_dir}/conditioning" "${model_name}" "${placement}" \
         "${clocks}" "${config_dir}/server/attention.log"
+    failure_stage="config-${order}-${config_id}:measured-run"
     IFS=',' read -r -a target_array <<< "${clocks}"
     "${AFD_PYTHON}" -m src.benchmark \
         --trace "${trace}" --base-url "http://127.0.0.1:${api_port}" \
@@ -246,6 +269,7 @@ while IFS=$'\t' read -r order config_id stage lifecycle frequency placement_path
         --run-label "${config_id}" --placement-name "${config_id}" \
         --server-log "${config_dir}/server/attention.log" > "${config_dir}/benchmark.log" 2>&1
     run_dir="$(find "${config_dir}/runs" -mindepth 1 -maxdepth 1 -type d | head -1)"
+    failure_stage="config-${order}-${config_id}:validation"
     "${AFD_PYTHON}" -m tools.validate_live_run "${run_dir}" > "${run_dir}/live-validation.json"
     "${AFD_PYTHON}" -m tools.validate_milestone_n_cost_timing \
         --timing-run "${run_dir}" \
@@ -254,6 +278,7 @@ while IFS=$'\t' read -r order config_id stage lifecycle frequency placement_path
         > "${run_dir}/cost-timing-validation.json"
     printf 'timing\t%s\t%s\t%s\t%s\tcomplete\t%s\n' \
         "${order}" "${config_id}" "${lifecycle}" "${frequency}" "${run_dir}" >> "${study}/runs.tsv"
+    failure_stage="config-${order}-${config_id}:shutdown"
     stop_server "${config_dir}/compute-apps-after.csv"
 done < <("${AFD_PYTHON}" - "${plan}" <<'PY'
 import json, sys

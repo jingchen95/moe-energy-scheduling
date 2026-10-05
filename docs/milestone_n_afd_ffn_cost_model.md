@@ -157,6 +157,14 @@ Cleanup now recognizes such title-rewritten workers only when same-user PGID,
 resolved project-local AFD Python executable, and project working directory
 all match; it does not broaden termination beyond the stored process group.
 
+Replacement job `271750` reproduced a second shutdown-only race after another
+valid mini-smoke and formal HH profile. A worker could disappear after the
+PGID member snapshot but before `ps` read its state; under `set -e`, that
+expected `ps` miss terminated the launcher silently. Cleanup now treats an
+empty `ps` result as an already exited member, while all surviving processes
+still require the ownership and runtime identity checks. The launcher also
+persists failure stage, source line, and command for any subsequent failure.
+
 ## Decision gate
 
 The next milestone may construct an offline `(placement, frequency)` oracle

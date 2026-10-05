@@ -135,10 +135,13 @@ afd_stop_process_group() {
     local expected_python
     expected_python="$(readlink -f "${AFD_PYTHON}")"
     for member in "${members[@]}"; do
-        owner="$(ps -o user= -p "${member}" | tr -d ' ')"
-        command="$(ps -o command= -p "${member}")"
-        pgid="$(ps -o pgid= -p "${member}" | tr -d ' ')"
-        state="$(ps -o stat= -p "${member}" | tr -d ' ')"
+        owner="$(ps -o user= -p "${member}" 2>/dev/null | tr -d ' ' || true)"
+        command="$(ps -o command= -p "${member}" 2>/dev/null || true)"
+        pgid="$(ps -o pgid= -p "${member}" 2>/dev/null | tr -d ' ' || true)"
+        state="$(ps -o stat= -p "${member}" 2>/dev/null | tr -d ' ' || true)"
+        if [[ -z "${owner}" && -z "${pgid}" && -z "${state}" ]]; then
+            continue
+        fi
         if [[ "${owner}" != "${USER}" || "${pgid}" != "${pid}" ]]; then
             printf 'refusing to stop unrecognized PGID %s member %s: %s\n' \
                 "${pid}" "${member}" "${command}" >&2
@@ -177,7 +180,7 @@ afd_stop_process_group() {
         }
         local live=0
         for member in "${members[@]}"; do
-            state="$(ps -o stat= -p "${member}" | tr -d ' ')"
+            state="$(ps -o stat= -p "${member}" 2>/dev/null | tr -d ' ' || true)"
             [[ "${state}" == Z* || -z "${state}" ]] || live=1
         done
         if [[ "${live}" -eq 0 ]]; then
@@ -195,7 +198,7 @@ afd_stop_process_group() {
     wait "${pid}" 2>/dev/null || true
     mapfile -t members < <(pgrep -g "${pid}" 2>/dev/null || true)
     for member in "${members[@]}"; do
-        state="$(ps -o stat= -p "${member}" | tr -d ' ')"
+        state="$(ps -o stat= -p "${member}" 2>/dev/null | tr -d ' ' || true)"
         if [[ -n "${state}" && "${state}" != Z* ]]; then
             printf 'live PGID %s member remains after SIGKILL: %s\n' \
                 "${pid}" "${member}" >&2

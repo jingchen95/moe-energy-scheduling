@@ -115,6 +115,14 @@
   the project-local AFD Python runtime. Environment-marker and explicit venv
   command checks remain accepted paths. Slurm removed job `271687`'s workers;
   Uranus has no remaining compute processes.
+- Replacement job `271750` again completed the mini-smoke and first formal HH
+  profile, then failed during shutdown before writing the per-configuration
+  empty-process artifact. This time title-rewritten workers were accepted and
+  shut down, but a process could exit between `pgrep` and `ps`; the resulting
+  nonzero `ps` command substitution triggered `set -e` without a diagnostic.
+  All cleanup `ps` snapshots are now disappearance-tolerant while retaining
+  same-user/PGID/runtime checks. The launcher also records the exact stage,
+  line, and command for any future nonzero exit.
 
 Exact next command after the hardening commit is pushed:
 
