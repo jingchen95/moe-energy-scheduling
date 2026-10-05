@@ -1,0 +1,137 @@
+{
+  "candidate_rankings": [
+    {
+      "candidates": 12,
+      "inversions": 34,
+      "kendall_tau_b": -0.030303030303030304,
+      "metric": "latency_n_only",
+      "pairs": 66,
+      "pairwise_accuracy": 0.48484848484848486,
+      "resolved_pairs": 13,
+      "resolved_pairwise_accuracy": 0.6923076923076923,
+      "spearman": -0.034965034965034975,
+      "top1_correct": true,
+      "top1_difference_within_noise": true,
+      "top1_measured": "P_split_40_slow_rank1@2070-1635",
+      "top1_predicted": "P_split_40_slow_rank1@2070-1635",
+      "top_k": 3,
+      "top_k_overlap": 0.3333333333333333
+    },
+    {
+      "candidates": 12,
+      "inversions": 27,
+      "kendall_tau_b": 0.18181818181818182,
+      "metric": "latency_mode_binned",
+      "pairs": 66,
+      "pairwise_accuracy": 0.5909090909090909,
+      "resolved_pairs": 13,
+      "resolved_pairwise_accuracy": 0.8461538461538461,
+      "spearman": 0.2867132867132868,
+      "top1_correct": true,
+      "top1_difference_within_noise": true,
+      "top1_measured": "P_split_40_slow_rank1@2070-1635",
+      "top1_predicted": "P_split_40_slow_rank1@2070-1635",
+      "top_k": 3,
+      "top_k_overlap": 0.3333333333333333
+    },
+    {
+      "candidates": 12,
+      "inversions": 27,
+      "kendall_tau_b": 0.18181818181818182,
+      "metric": "latency_ridge_residual",
+      "pairs": 66,
+      "pairwise_accuracy": 0.5909090909090909,
+      "resolved_pairs": 13,
+      "resolved_pairwise_accuracy": 0.9230769230769231,
+      "spearman": 0.1958041958041958,
+      "top1_correct": true,
+      "top1_difference_within_noise": true,
+      "top1_measured": "P_split_40_slow_rank1@2070-1635",
+      "top1_predicted": "P_split_40_slow_rank1@2070-1635",
+      "top_k": 3,
+      "top_k_overlap": 0.3333333333333333
+    },
+    {
+      "candidates": 12,
+      "inversions": 33,
+      "kendall_tau_b": 0.0,
+      "metric": "energy_conditional",
+      "pairs": 66,
+      "pairwise_accuracy": 0.5,
+      "resolved_pairs": 28,
+      "resolved_pairwise_accuracy": 0.5714285714285714,
+      "spearman": 0.0,
+      "top1_correct": true,
+      "top1_difference_within_noise": true,
+      "top1_measured": "P_balanced@1635-1635",
+      "top1_predicted": "P_balanced@1635-1635",
+      "top_k": 3,
+      "top_k_overlap": 0.3333333333333333
+    },
+    {
+      "candidates": 12,
+      "inversions": 33,
+      "kendall_tau_b": 0.0,
+      "metric": "energy_proxy",
+      "pairs": 66,
+      "pairwise_accuracy": 0.5,
+      "resolved_pairs": 28,
+      "resolved_pairwise_accuracy": 0.42857142857142855,
+      "spearman": 0.027972027972027972,
+      "top1_correct": false,
+      "top1_difference_within_noise": false,
+      "top1_measured": "P_balanced@1635-1635",
+      "top1_predicted": "P_split_40_slow_rank1@2070-1635",
+      "top_k": 3,
+      "top_k_overlap": 0.0
+    }
+  ],
+  "decision": "FAIL",
+  "diagnostic_exact_selections": 0,
+  "diagnostic_measured_feasible_selections": 6,
+  "diagnostic_scenarios": 6,
+  "execution_commit": "068914350043720bd840a577874c80191eb6e10e",
+  "gpu_jobs_submitted": 0,
+  "instrumented_serving_metrics_used_as_ground_truth": false,
+  "latency_ranking_minimum_accuracy": 0.9,
+  "latency_validation": "See separate lifecycle/config/rank holdouts; no random row splits.",
+  "missing_requested_ground_truth": [
+    {
+      "f0": 1635,
+      "f1": 1635,
+      "missing_reason": "Only heterogeneous 1635/2070 or 2070/1635 M runs exist; symmetric instrumented N runs cannot substitute.",
+      "placement": "P_split_40_slow_rank0",
+      "uninstrumented_exact_ground_truth": false
+    },
+    {
+      "f0": 2070,
+      "f1": 2070,
+      "missing_reason": "Only heterogeneous 1635/2070 or 2070/1635 M runs exist; symmetric instrumented N runs cannot substitute.",
+      "placement": "P_split_40_slow_rank0",
+      "uninstrumented_exact_ground_truth": false
+    },
+    {
+      "f0": 1635,
+      "f1": 1635,
+      "missing_reason": "Only heterogeneous 1635/2070 or 2070/1635 M runs exist; symmetric instrumented N runs cannot substitute.",
+      "placement": "P_split_40_slow_rank1",
+      "uninstrumented_exact_ground_truth": false
+    },
+    {
+      "f0": 2070,
+      "f1": 2070,
+      "missing_reason": "Only heterogeneous 1635/2070 or 2070/1635 M runs exist; symmetric instrumented N runs cannot substitute.",
+      "placement": "P_split_40_slow_rank1",
+      "uninstrumented_exact_ground_truth": false
+    }
+  ],
+  "proceed_to_joint_oracle": false,
+  "reasons": [
+    "Less than 90% accuracy among latency pairs resolved beyond pooled sample SD.",
+    "No independently validated mapping from instrumented local critical score to uninstrumented p99/duration; no TTFT predictor."
+  ],
+  "runtime_modified": false,
+  "selected_diagnostic_latency_model": "n_only",
+  "threshold_is_readiness_screen_not_significance": true,
+  "uncertainty": "Three windows per M config, one server per config; pooled sample-SD overlap is descriptive, not equivalence or significance."
+}

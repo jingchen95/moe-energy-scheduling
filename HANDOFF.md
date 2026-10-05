@@ -1,5 +1,58 @@
 # Handoff
 
+## Latest status - Milestone N offline model validation: FAIL
+
+- Continues authoritative `milestone-n-afd-ffn-cost-model` from `bb75005`.
+  Data: job `272216`, execution `0689143`; Phase-B schema-3 only, 621,120
+  rank-level rows. COMPLETE hashes and integrity artifacts rechecked before
+  extended fitting. No GPU submission, runtime/profiler/placement/DVFS change.
+- Existing analyzer ran first, unchanged. Final extended outputs:
+  `results/processed/milestone_n_272216_model_validation/validated_outputs-v2/`;
+  five PNGs in the same subdirectory under `results/figures/`.
+- n-only lifecycle MAPE: 13.20-16.45%; per-skew-config/rank: 14.10-23.38%.
+  All held-out R-squared values negative. Observed n-range extrapolation <=0.330%.
+  Mode splitting did not help. Fixed Ridge reduced average skew MAPE only from
+  17.879% to 17.109%; neither diagnostic extension is retained.
+- Local-to-full residual consumes 23.85-33.71% of summed full critical time,
+  varying across lifecycle/orientation. A primary-only frequency/mode constant
+  correction does not generalize adequately.
+- Uninstrumented NVML power LOCO MAPE 1.65-2.11% is conditional on historical
+  routing labels and measured duration. It does not certify fine energy ranking.
+  New same-run slow-rank shares are 42.19-42.30%, not historical 40% labels;
+  historical runs/labels are not rewritten.
+- Four requested symmetric split40 cases lack exact uninstrumented ground
+  truth. Actual M candidates comprise two balanced symmetric points and ten
+  heterogeneous split/orientation points. Never substitute instrumented TPOT.
+- Across these 12 candidates, n-only latency ordering: 48.5% all pairs,
+  69.2% beyond pooled sample SD, Spearman -0.035. Ridge 59.1% all pairs is
+  not a robust solution. Independent-input energy proxy: 50.0% pair accuracy.
+- Six exploratory TPOT-budget selection checks choose HM40 instead of the
+  measured energy optimum in all six (0/6 exact or pooled-SD-equivalent).
+  Extra measured energy: 181-679 J. The single-anchor TPOT/duration bridge is
+  diagnostic only; no uninstrumented p99/TTFT predictor has been validated.
+- Decision: **FAIL; do not implement the joint oracle or a scheduler.** This is
+  model readiness, not a claim that all possible placement/energy mechanisms fail.
+- Analysis code: `src/afd_cost_validation.py`,
+  `tools/validate_milestone_n_models.py`; CPU tests:
+  `tests/test_afd_cost_validation.py`. Full data ignored; compact tables and
+  provenance committed under `docs/milestone_n_validation/`. Raw data preserved.
+- Full report: `docs/milestone_n_afd_ffn_cost_model.md`. Local source worktree
+  remains unswitched to protect unrelated existing changes; reports/results
+  synchronized from the authoritative research branch.
+- Full CPU suite: 177 passed, no skips; `git diff --check` passed. Compact
+  summaries/provenance, analysis helpers/tool/tests and report are committed;
+  no raw/joined datasets or generated figures are staged.
+
+Exact next command (inspect the decision, offline only):
+
+```bash
+cd /data/users/chjing/moe-energy-scheduling
+cat results/processed/milestone_n_272216_model_validation/validated_outputs-v2/decision_gate.json
+```
+
+No next GPU job or oracle milestone is authorized by this result. If work
+continues, review existing-data composition/label uncertainty offline first.
+
 ## Latest status - Milestone N job 272216 completed and revalidated
 
 - Authoritative branch: `milestone-n-afd-ffn-cost-model`; execution commit

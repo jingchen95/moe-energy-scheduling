@@ -1,0 +1,6 @@
+metric,candidates,pairs,pairwise_accuracy,resolved_pairs,resolved_pairwise_accuracy,spearman,kendall_tau_b,inversions,top1_measured,top1_predicted,top1_correct,top1_difference_within_noise,top_k,top_k_overlap
+latency_n_only,12,66,0.48484848484848486,13,0.6923076923076923,-0.034965034965034975,-0.030303030303030304,34,P_split_40_slow_rank1@2070-1635,P_split_40_slow_rank1@2070-1635,True,True,3,0.3333333333333333
+latency_mode_binned,12,66,0.5909090909090909,13,0.8461538461538461,0.2867132867132868,0.18181818181818182,27,P_split_40_slow_rank1@2070-1635,P_split_40_slow_rank1@2070-1635,True,True,3,0.3333333333333333
+latency_ridge_residual,12,66,0.5909090909090909,13,0.9230769230769231,0.1958041958041958,0.18181818181818182,27,P_split_40_slow_rank1@2070-1635,P_split_40_slow_rank1@2070-1635,True,True,3,0.3333333333333333
+energy_conditional,12,66,0.5,28,0.5714285714285714,0.0,0.0,33,P_balanced@1635-1635,P_balanced@1635-1635,True,True,3,0.3333333333333333
+energy_proxy,12,66,0.5,28,0.42857142857142855,0.027972027972027972,0.0,33,P_balanced@1635-1635,P_split_40_slow_rank1@2070-1635,False,False,3,0.0

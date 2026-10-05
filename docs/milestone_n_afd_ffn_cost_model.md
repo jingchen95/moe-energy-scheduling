@@ -452,10 +452,260 @@ and distribution checks, together with the existing uninstrumented power data.
 Do not submit another GPU job or proceed to a placement/DVFS oracle before the
 model validation decision gate below is assessed.
 
+## Offline model validation of job 272216
+
+**Decision: FAIL. Do not implement the joint `(placement, frequency)` oracle.**
+The profiling protocol passed its GPU correctness gate, but the empirical
+models do not reliably generalize or rank the small differences between
+configurations. This is a model-readiness result, not a new GPU experiment or
+proof that every possible placement/power mechanism is ineffective.
+
+### Data and method
+
+The original analyzer was run first, unchanged, from documented commit
+`bb75005`, using the command in HANDOFF. Its outputs remain at
+`results/processed/milestone_n_272216_model_validation/`. Extended validation
+uses `tools/validate_milestone_n_models.py`; final tables/models are under
+`validated_outputs-v2/` and final PNGs under the corresponding figure
+directory. Earlier extended output versions are retained, not overwritten.
+
+Before extended fitting, all eleven COMPLETE fingerprints/artifact hashes were
+rechecked against the integrity summary and per-configuration CSV. Only schema-3
+formal Phase-B profiles from source `0689143` were admitted: 621,120 rank-level
+observations from eleven fresh servers. Phase A, schema-2 and failed attempts
+were excluded. Instrumented serving TTFT/TPOT/energy are not scientific ground
+truth. All power and serving ground truth below comes from uninstrumented
+Milestone M. No raw data or frozen routing/placement labels were rewritten.
+
+The provenance JSON hashes every admitted combined profile, COMPLETE marker,
+trace, placement, metrics, input CSV, historical profile and analysis source.
+`uninstrumented_provenance.json` additionally records hashes of the 36 raw M
+runs used for the 1635/2070 candidate region (metrics, requests, trace, config
+and server metadata). Reused CSV hashes match the execution reuse manifest.
+
+Physical GPU2 and GPU3 remain separate. Training uses **balanced primary only**;
+there are no random invocation-row holdouts. Two fixed diagnostic extensions
+were compared with the baseline using exactly the same held-out configurations:
+
+- `mode_binned`: separate `C[g,f,mode](n)` curves for eager and graph replay.
+- `ridge_residual`: baseline plus a standardized Ridge residual, fixed alpha
+  10, with log load, active/max expert load, concentration, combined source
+  rows, mode, expert-load CV, top-4 fraction, entropy and 48 layer indicators.
+  Scaling is fitted on training rows only. There was no hyperparameter search
+  or fitting on held-out skew records. Models and coefficients are serialized.
+
+Neither extension is retained. Ridge retention required >=20% lower mean
+held-out MAPE without worsening any rank/configuration by >2 percentage points;
+mode retention required lower mean MAPE with the same per-group safeguard.
+These are diagnostic retention rules, not preregistered scientific thresholds
+or an independent final test. The failure conclusion does not depend on a
+particular retention threshold: ordering and energy selection remain unreliable.
+
+### Latency generalization
+
+Baseline errors below are evaluated separately for every physical GPU and
+configuration, not pooled across the two skew orientations.
+
+| Held-out configuration | GPU | MAE ms | MAPE % | p95 absolute error ms |
+| --- | --- | --- | --- | --- |
+| balanced 1635 repeat | 2 | 0.117 | 13.20 | 0.295 |
+| balanced 1635 repeat | 3 | 0.125 | 14.38 | 0.385 |
+| balanced 2070 repeat | 2 | 0.173 | 16.45 | 0.434 |
+| balanced 2070 repeat | 3 | 0.113 | 14.69 | 0.301 |
+| split40 rank0, 1635 | 2 | 0.147 | 19.33 | 0.324 |
+| split40 rank0, 1635 | 3 | 0.225 | 19.16 | 0.588 |
+| split40 rank1, 1635 | 2 | 0.172 | 16.34 | 0.465 |
+| split40 rank1, 1635 | 3 | 0.145 | 16.03 | 0.412 |
+| split40 rank0, 2070 | 2 | 0.244 | 23.38 | 0.506 |
+| split40 rank0, 2070 | 3 | 0.128 | 14.10 | 0.412 |
+| split40 rank1, 2070 | 2 | 0.155 | 15.57 | 0.343 |
+| split40 rank1, 2070 | 3 | 0.155 | 19.13 | 0.361 |
+
+Every baseline held-out R-squared is negative (approximately -0.004 to -0.651).
+Prediction bias, median/p90/p95/p99 errors, sample count and coverage appear
+in `latency_validation.csv` and `latency_distribution_validation.csv`.
+Observed-range extrapolation is at most 0.330%; lifecycle interpolation-endpoint
+clamping is 5.53-7.60%, which is distinguished from true range extrapolation.
+Thus the poor validation is not primarily a lack of observed `n` coverage.
+
+| Model | Fresh-lifecycle mean MAPE % | Skew-config mean MAPE % |
+| --- | --- | --- |
+| n only | 14.679 | 17.879 |
+| mode + n | 14.717 | 19.637 |
+| Ridge residual | 14.661 | 17.109 |
+
+Mode is not ignored: eager/replay distributions, curves and held-out errors are
+reported separately. The n-conditioned mean residual difference between modes
+varies from -0.023 to +0.274 ms across rank/configuration groups; its sign and
+magnitude are not stable. Separating modes did not improve generalization.
+This is descriptive dependence, not a significance test on correlated rows.
+The mixed-path model is not certified for deployment or a replay-only oracle.
+
+Among captured features, the mean absolute within-rank/configuration residual
+correlations are strongest for entropy (0.165), active experts (0.163), expert
+CV (0.156), top-4 fraction (0.151), concentration (0.149) and mode (0.146).
+Layer is weaker (0.050); token rows and maximum expert load are also recorded.
+These associations are modest, are not causal explanations, and do not rescue
+the fixed Ridge model. No stronger model was tuned against the skew holdouts.
+
+### Critical-path composition
+
+For each exact paired invocation, analysis computes max local time, max full
+time and their difference. The residual contributes **23.85-33.71%** of summed
+full-boundary critical time. It includes router/dispatch/combine, synchronization
+and other work outside the local timer; it is not a direct NCCL measurement.
+
+At balanced 1635, its mean changes from 0.535 ms in primary to 0.326 ms in the
+fresh repeat. At balanced 2070 it changes from 0.331 to 0.447 ms. Skew 2070
+means differ by orientation: 0.540 versus 0.336 ms. Consequently it is neither
+a stable frequency-only constant nor negligible. Dependence on total source
+rows, layer and mode is preserved in `critical_path_summary.csv`.
+
+A deliberately small correction uses the training primary median residual
+for each frequency/mode, without fitting a communication model. With n-only
+local predictions, held-out full-critical sum biases are -18.73%, -34.67%,
+-13.99%, -22.27% for the four skew cases; fresh-repeat biases are +2.12% and
+-26.02%. Detailed invocation errors and sums are in `critical_path_validation.csv`.
+This correction is not adopted for candidate selection.
+
+The six fully held-out N configurations also have direct measured CUDA-boundary
+score checks. n-only ordering is correct for 6/15 local-score pairs and 5/15
+full-score pairs (Spearman -0.371 and -0.600). Ridge reaches only 7/15 and 6/15.
+These scores use each run's observed invocation trajectory, not uninstrumented
+TPOT. No noise-resolved ranking is claimed for these one-shot configurations;
+absent repeat deviations are recorded as unavailable, not zero uncertainty.
+
+### Power and historical load labels
+
+The original analyzer's sampled-average-power model is preserved. Extended
+validation fits linear rank/frequency power to NVML window energy / duration
+and holds out an entire configuration (all three repetitions) at a time.
+Each physical rank/frequency has 18 observations across six configurations.
+
+| GPU | MHz | LOCO power MAE W | Power / conditional-energy MAPE % | Conditional-energy MAE J |
+| --- | --- | --- | --- | --- |
+| 2 | 1635 | 2.433 | 1.655 | 109.0 |
+| 2 | 2070 | 3.292 | 2.114 | 147.7 |
+| 3 | 1635 | 2.809 | 1.890 | 126.1 |
+| 3 | 2070 | 2.582 | 1.647 | 115.7 |
+
+These small relative errors estimate broad power levels, not fine candidate
+differences: LOCO power R-squared is negative within every rank/frequency.
+Energy here is **conditional on measured duration**; the corresponding load
+rate also uses that duration. It is not an independent end-to-end energy forecast.
+Coverage/extrapolation, bias, every LOCO fold and model coefficients are saved.
+No idle power is subtracted.
+
+Historical routed-load labels still use the 9/30 frozen profile, not same-run
+routes. N's four skew runs produce slow-rank fractions **42.19-42.30%**, rather
+than the historical 40.00% label. Other rank totals also change across batching
+trajectories. `historical_load_label_sanity.csv` records assignment ratios and
+fraction differences. This demonstrates label uncertainty, not the historical
+run's actual route distribution; instrumentation/runtime-window differences
+prevent rewriting those old labels from N data.
+
+### Candidate ordering and SLO decisions
+
+The requested balanced 1635/2070 cases have exact uninstrumented M ground truth.
+The four requested **symmetric split40** cases do not: M measured split40 at
+1635/2070 or 2070/1635, whereas N measured it at 1635/1635 or 2070/2070.
+`requested_candidate_ground_truth_coverage.csv` marks those cases unavailable;
+instrumented N TPOT is never substituted.
+
+Instead, the valid M region contains 12 candidates: two symmetric balanced
+points and ten heterogeneous target-split/orientation points. All have the
+same frozen trace, explicit mapping hash, valid target/actual clocks, three
+windows and zero failures. Prediction uses one **common** balanced@2070 primary
+logical routing trajectory, applying each frozen mapping and model. Its score
+is `sum(step,layer) max(rank predicted local time)`. This is a counterfactual
+structural cost score, not an exact join to another run's routing or a p99 model.
+
+| Metric/model | All-pair accuracy | Accuracy beyond pooled SD | Spearman | Kendall tau-b | Inversions | Top-3 overlap |
+| --- | --- | --- | --- | --- | --- | --- |
+| TPOT ordering, n only | 48.5% | 69.2% (13 pairs) | -0.035 | -0.030 | 34/66 | 1/3 |
+| TPOT ordering, mode + n | 59.1% | 84.6% (13 pairs) | 0.287 | 0.182 | 27/66 | 1/3 |
+| TPOT ordering, Ridge | 59.1% | 92.3% (13 pairs) | 0.196 | 0.182 | 27/66 | 1/3 |
+| Energy, conditional LOCO power | 50.0% | 57.1% (28 pairs) | 0.000 | 0.000 | 33/66 | 1/3 |
+| Energy, independent-input proxy | 50.0% | 42.9% (28 pairs) | 0.028 | 0.000 | 33/66 | 0/3 |
+
+All three latency models select the literal fastest mean-TPOT point, HM40;
+that single correct top-1 result does not establish adequate ordering. The
+conditional energy check selects balanced MM as literal top-1 but uses measured
+duration and measured Attention energy. Those known quantities cannot be used
+to certify an optimizer.
+
+For the requested decision test, a transparent **diagnostic**, not certified,
+bridge anchors local-score ratios to balanced 2070's uninstrumented TPOT and
+window duration. FFN power is held-out-config predicted; Attention power is the
+same 2070 reference average. No skew serving latency/energy is fitted into this
+bridge. The 2070 anchor is in-sample, and there is no queueing, p99 or TTFT model.
+These are explicitly illustrative selection errors, not a final joint oracle.
+
+| TPOT budget ms | Measured lowest-energy candidate | Diagnostic choice | Extra measured energy J | Exact / noise-equivalent? |
+| --- | --- | --- | --- | --- |
+| 65.040 (2070 x1.000) | balanced 2070/2070 | HM40 | 181.0 | No |
+| 66.666 (2070 x1.025) | MH50 | HM40 | 369.4 | No |
+| 68.292 (2070 x1.050) | balanced 1635/1635 | HM40 | 679.3 | No |
+| 67.328 (1635 x1.000) | balanced 1635/1635 | HM40 | 679.3 | No |
+| 69.011 (1635 x1.025) | balanced 1635/1635 | HM40 | 679.3 | No |
+| 70.694 (1635 x1.050) | balanced 1635/1635 | HM40 | 679.3 | No |
+
+All six diagnostic choices satisfy the measured mean-TPOT budget, but **0/6**
+choose the measured energy optimum or fall within the descriptive pooled-SD
+energy band. HM40 uses 24,075.9 J versus balanced MM's 23,396.6 J: +2.90%.
+Measured TTFT is retained for every candidate; it is not predicted/certified.
+The six scenarios are exploratory relative TPOT budgets, not production SLOs.
+
+Noise handling uses one pooled sample SD of the three M windows, not a p-value
+or equivalence margin. Three windows share one fresh server per configuration;
+their SD does not estimate all between-server uncertainty. Pairwise lists,
+top-1/top-3 outcomes, uncertainty flags and every scenario's feasible candidates
+are saved. No significance claim is made.
+
+### Artifacts and reproducibility
+
+Final extended outputs include joined invocation features/predictions; rank/
+frequency baseline, mode and Ridge models; separate lifecycle/distribution/mode
+validation; feature residuals; paired critical paths and composition checks;
+power dataset/models/LOCO validation; historical label sanity; candidate scores,
+pairwise inversions, exact-ground-truth coverage, SLO decisions and decision JSON.
+Five PNG figures cover latency by mode, held-out predictions/errors, strongest
+residual features, candidate ranking and power versus load. All full data remain
+ignored by Git and are synchronized locally. Compact tables/provenance are
+committed under `docs/milestone_n_validation/`.
+
+Reproduce after the original analyzer, using a **new** output directory:
+
+```bash
+cd /data/users/chjing/moe-energy-scheduling
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 PYTHONPATH=.deps \
+  /data/users/chjing/miniforge3/envs/cuda-env/bin/python \
+  -m tools.validate_milestone_n_models \
+  --study-dir results/raw/milestone-n-afd-cost-20261005T115917Z/allocations/272216 \
+  --output-dir results/processed/milestone_n_272216_model_validation/reproduction \
+  --figures-dir results/figures/milestone_n_272216_model_validation/reproduction
+```
+
+The tool rejects an existing output directory. It uses existing NumPy/pandas/
+matplotlib dependencies only; no SciPy/sklearn installation, runtime patch or
+GPU operation is involved. Nine added CPU tests cover metrics, coverage,
+train-only Ridge scaling, histogram features, ranking/ties/noise, the gate and
+the complete five-figure pipeline.
+Full project CPU suite: **177 passed**, no skips; `git diff --check` passed.
+No protected dependency or package was installed/changed.
+
 ## Decision gate
 
-The next milestone may construct an offline `(placement, frequency)` oracle
-only if held-out timing and power errors are adequate for correct candidate
-ranking. If `n` alone fails and residuals depend on expert distribution, this
-milestone stops with that negative result and uses the already captured richer
-features for offline analysis rather than submitting another GPU job.
+**FAIL:** neither unrestricted nor restricted-domain joint oracle readiness is
+established. Even in the relevant 1635/2070 region, richer features do not
+robustly solve lifecycle/distribution errors, composition residual is unstable,
+energy differences are too narrow relative to conditional model error, and
+candidate selection is wrong. The diagnostic 90% resolved-pair readiness screen
+is exploratory, not a preregistered significance criterion; failed energy
+selection and the absent p99/TTFT bridge independently prevent proceeding.
+
+No oracle, scheduler, dynamic DVFS, new placement or new GPU experiment was
+implemented. Next work, if pursued, remains offline scrutiny of existing timing
+boundaries/composition and historical load-label uncertainty, followed by a
+research decision. Do not proceed automatically or request another GPU run as
+part of this task.
