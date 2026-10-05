@@ -1,5 +1,48 @@
 # Handoff
 
+## Latest status - Milestone N job 272216 completed and revalidated
+
+- Authoritative branch: `milestone-n-afd-ffn-cost-model`; execution commit
+  `068914350043720bd840a577874c80191eb6e10e`. Slurm job `272216` ended
+  `COMPLETED / 0:0` after `01:19:48` on Uranus.
+- Study: `results/raw/milestone-n-afd-cost-20261005T115917Z`.
+  Phase A passed all eight 8-request generations on one balanced/HH graph
+  server. Shared runtime IDs advanced across windows, with exact two-rank
+  identities and complete 48-layer steps; graph timing finalization passed.
+- All 11 formal fresh-server lifecycles completed 300/300 requests with zero
+  failures, 38,400 output tokens each, exact trace/placement ownership and
+  actual average clocks `[2520,2520,f,f]`. Client p99 delay: 2.135-3.381 ms.
+- The formal data contain 6,470 active runtime steps and 310,560 records per
+  rank. Top-8, combined routes, finite/positive timing, exact rank pairing,
+  and 100% local-within-full containment passed. No truncation or offset join.
+- Independent offline re-finalization compared every array in all 19 profiles;
+  all 11 COMPLETE fingerprints and 1,739 artifact hashes passed. Diagnostics:
+  `results/processed/milestone_n_272216_integrity/{summary.json,formal-configurations.csv}`.
+- Graphics reset succeeded without stderr, no compute processes remained,
+  patch reverted and pinned plugin clean. Both protected 0.15.1 and isolated
+  0.26.0 environment versions/package roots match the preparation baseline.
+- Raw study, report and compact inspection outputs synchronized locally.
+  Post-inspection project CPU suite: 168 passed, no skips; diff check passed.
+- This verifies profiling identity/boundary integration, not a model or
+  energy-saving result. Instrumented serving latencies have significant
+  overhead/variation and must not replace uninstrumented Milestone M data.
+  Legacy schema-2 data and Phase A remain excluded from model training.
+- No model fitting, runtime modification or new GPU submission was performed.
+
+Exact next command (offline model validation only, using the existing analyzer):
+
+```bash
+cd /data/users/chjing/moe-energy-scheduling
+PYTHONPATH=.deps /data/users/chjing/miniforge3/envs/cuda-env/bin/python \
+  -m tools.analyze_milestone_n_cost_model \
+  --study-dir results/raw/milestone-n-afd-cost-20261005T115917Z/allocations/272216 \
+  --processed-dir results/processed/milestone_n_272216_model_validation \
+  --figures-dir results/figures/milestone_n_272216_model_validation
+```
+
+Assess held-out feature/model errors and candidate-ranking adequacy before
+any oracle/scheduler milestone. Do not resubmit the completed GPU study.
+
 ## Latest status - Milestone N shared runtime profiling protocol prepared
 
 - Continues `milestone-n-afd-ffn-cost-model` from documented base `f2ba04f`.

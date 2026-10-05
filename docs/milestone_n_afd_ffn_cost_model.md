@@ -363,11 +363,94 @@ the final training dataset. The failed fourth run is not salvaged.
   matches the old job's protected/isolated version and package-root records
   exactly: vLLM 0.15.1 / 0.26.0 respectively; the pinned plugin is clean.
 
-These CPU checks establish protocol regression coverage, not proof of the new
-GPU integration. That remains pending the single allocation's Phase A gate.
-No execution-model fitting or scheduler design was performed. Commit and push
-the preparation before creating the immutable execution manifest; do not make
-another tracked-source/documentation commit while it is queued.
+These CPU checks establish protocol regression coverage; the subsequent GPU
+integration result is recorded below. Preparation was committed and pushed
+before immutable study creation, with tracked HEAD unchanged during execution.
+
+### Job 272216: shared protocol GPU validation complete
+
+Study `results/raw/milestone-n-afd-cost-20261005T115917Z` executed source
+`068914350043720bd840a577874c80191eb6e10e`. Slurm reports `COMPLETED / 0:0`
+after `01:19:48` on Uranus. The single allocation completed both phases;
+no replacement job was submitted.
+
+**Phase A:** all eight generations on the same balanced/HH server passed.
+Each completed 8/8 requests with zero failures and exercised CUDA graph replay,
+event resolution, same-invocation routing capture, window closure and exact
+cross-rank finalization. Active step ranges were 155-300, 601-746, 1049-1193,
+1497-1641, 1945-2089, 2393-2537, 2842-2984 and 3290-3433. IDs advanced across
+windows instead of restarting. Gaps between windows are excluded inactive
+traffic, not missing interior active steps. Each active step contained all
+48 layers. The gate server shut down before the formal fresh-server matrix.
+
+**Phase B:** all eleven formal configurations completed 300/300 requests,
+zero failures and 38,400 output tokens each. Both rank streams paired exactly
+on schema-3 `(runtime_step_id, stage, layer)` keys, without truncation, offsets,
+tolerance or cross-run routing joins.
+
+| Order | Configuration | FFN MHz | Active steps | Records per rank | Instrumented TTFT p99 ms | Instrumented TPOT p99 ms |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0 | balanced primary | 2520 | 601 | 28,848 | 8598.564 | 105.333 |
+| 1 | split-40 slow-rank-0 | 1635 | 565 | 27,120 | 9246.137 | 124.831 |
+| 2 | split-40 slow-rank-1 | 2070 | 607 | 29,136 | 5208.620 | 103.514 |
+| 3 | split-40 slow-rank-1 | 1635 | 590 | 28,320 | 8625.676 | 112.402 |
+| 4 | balanced primary | 1005 | 588 | 28,224 | 2013.115 | 91.092 |
+| 5 | split-40 slow-rank-0 | 2070 | 595 | 28,560 | 10723.718 | 114.901 |
+| 6 | balanced held-out repeat | 1635 | 575 | 27,600 | 3607.695 | 103.096 |
+| 7 | balanced primary | 2070 | 596 | 28,608 | 3853.765 | 99.086 |
+| 8 | balanced primary | 1635 | 582 | 27,936 | 9849.473 | 111.532 |
+| 9 | balanced held-out repeat | 2070 | 588 | 28,224 | 6829.361 | 101.370 |
+| 10 | balanced primary | 2220 | 583 | 27,984 | 3718.800 | 96.233 |
+
+There are 6,470 formal active steps and 310,560 records per rank (621,120
+rank-specific local/full timing observations). Same-run top-8 routing checks,
+combined histogram checks and finite/positive timing checks all passed.
+Local-within-full containment was 100% on both ranks in every configuration,
+under the existing 0.01 ms numerical containment tolerance. Both ranks recorded
+eager and graph-replay observations; formal replay fractions were 22.30-25.04%.
+
+Post-job offline inspection independently re-finalized all eight gate profiles
+and all eleven formal profiles into a separate derived directory, comparing
+every regenerated array against the preserved combined NPZ. It also verified
+all eleven COMPLETE fingerprints and 1,739 recorded artifact hashes, including
+trace/placement identity and role logs. No raw artifact was overwritten.
+The common trace SHA-256 is
+`6cf46c02b3a88ace790c6f9b59dbb7b5f44a9872a5813584a3f3a232b39b1020`.
+Actual average clocks matched `[2520,2520,f,f]` exactly in every formal run;
+client p99 send delay was 2.135-3.381 ms against 125 ms inter-arrival spacing.
+All four cumulative NVML energy deltas were positive.
+
+**Interpretation:** this closes the shared-identity/window protocol GPU gate.
+It does not yet validate an empirical cost model or establish scientific
+energy/latency gains. Profiling changes batching/host overhead substantially:
+instrumented end-to-end latency is variable and not monotonic with frequency.
+Do not infer that 1005 MHz is faster from this table or replace the frozen
+uninstrumented Milestone M energy/performance measurements with these runs.
+The adequacy of local cost features and held-out candidate ranking remains an
+offline analysis question; no model was fitted during this completion check.
+Legacy schema-2 job 272171 and Phase A traffic remain excluded from model data.
+
+Cleanup passed after every formal lifecycle and at allocation exit. The final
+GPU-process CSV contains only its header. Graphics clocks reset without stderr;
+the patch is not applied and the pinned plugin is clean at its original commit.
+Protected vLLM 0.15.1 / PyTorch 2.9.1+cu128 and isolated vLLM 0.26.0 /
+PyTorch 2.11.0+cu130 versions and package roots exactly match the preparation
+baseline. Post-inspection project tests: **168 passed**, no skips;
+`git diff --check` passed. No new runtime, placement or model code changed.
+
+Artifacts, synchronized into the local project:
+
+- Full raw study: `results/raw/milestone-n-afd-cost-20261005T115917Z/`.
+- Integrity summary: `results/processed/milestone_n_272216_integrity/summary.json`.
+- Per-configuration diagnostics:
+  `results/processed/milestone_n_272216_integrity/formal-configurations.csv`.
+- Read-only inspection source:
+  `results/processed/milestone_n_272216_integrity/inspection-source.py`.
+
+Next step is offline analysis of these schema-3 local timings, held-out repeats
+and distribution checks, together with the existing uninstrumented power data.
+Do not submit another GPU job or proceed to a placement/DVFS oracle before the
+model validation decision gate below is assessed.
 
 ## Decision gate
 
