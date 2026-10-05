@@ -1,6 +1,51 @@
 # Handoff
 
-## Latest status — Milestone N hardened replacement pending
+## Latest status - Milestone N job 272171 incomplete; no resubmission
+
+- Job `272171`, source `2090fe4`, ran on Uranus for `00:28:24` and ended
+  `FAILED / 1:0`. Study: `results/raw/milestone-n-afd-cost-20261005T073112Z`.
+- The profiled mini-smoke passed. Three of eleven formal timing lifecycles
+  finalized successfully: balanced at 2520 MHz, split-40 slow-rank-0 at
+  1635 MHz, and split-40 slow-rank-1 at 2070 MHz. Each completed 300 requests
+  with zero failures; average clocks matched `[2520,2520,f,f]` exactly.
+- Their per-rank record counts were respectively 28,896, 28,752, and 27,216.
+  Both ranks had equal keys in each run; routing top-8 and positive/finite
+  timing checks passed, with 100% local-within-full containment.
+- The fourth lifecycle, split-40 slow-rank-1 at 1635 MHz, stopped during
+  profile finalization: `FFN ranks do not align in same run: step_sequences`.
+  Rank 0 saved 28,176 records (587 steps); rank 1 saved 28,224 (588 steps).
+  Each step contains all 48 layers. Individual rank routing/timing invariants
+  still passed, but the run is rejected and has no finalized serving metrics.
+- Source inspection found independently polled file-control transitions and
+  independently reset rank-local step counters, not a shared runtime step ID.
+  A profiling boundary race is a plausible explanation; current artifacts do
+  not establish whether the extra step occurred at activation or deactivation.
+  Equal local counters alone also do not prove global invocation identity.
+  Do not truncate/offset-join rank records or fit a model before that identity
+  and boundary issue is resolved and regression-tested.
+- Shutdown cleanup now succeeded across the three completed lifecycles and
+  the failed lifecycle: no compute applications remained, clock-reset commands
+  completed without stderr, the patch was reverted, and the pinned plugin was
+  clean. Protected vLLM/PyTorch remained 0.15.1 / 2.9.1+cu128; isolated AFD
+  remained 0.26.0 / 2.11.0+cu130. Idle clocks after reset need not equal H.
+- Raw results are preserved and synchronized to the local project. This is
+  incomplete characterization, not a performance/energy comparison or a model
+  validation result. No runtime fix or replacement GPU job was submitted.
+- Post-inspection project CPU suite: `143 passed` using `pytest -q tests`;
+  `git diff --check` passed. Only documentation changed.
+
+Exact next command (offline source inspection, not a GPU submission):
+
+```bash
+cd /data/users/chjing/moe-energy-scheduling
+sed -n '150,195p;281,330p;650,680p' src/afd_ffn_cost_profile.py
+```
+
+Next work: establish a shared same-step identity/coordinated profiling boundary,
+test deliberately skewed rank-control observations on CPU, and validate a short
+multi-lifecycle GPU gate before another full eleven-lifecycle allocation.
+
+## Previous status - Milestone N hardened replacement pending
 
 - Work continues from Milestone M commit `1cd98f4` on branch
   `milestone-n-afd-ffn-cost-model`.
@@ -124,7 +169,7 @@
   same-user/PGID/runtime checks. The launcher also records the exact stage,
   line, and command for any future nonzero exit.
 
-Exact next command after the hardening commit is pushed:
+Historical replacement command (superseded; do not submit unchanged):
 
 ```bash
 cd /data/users/chjing/moe-energy-scheduling

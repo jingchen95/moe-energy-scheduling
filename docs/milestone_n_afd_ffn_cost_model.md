@@ -165,6 +165,69 @@ empty `ps` result as an already exited member, while all surviving processes
 still require the ownership and runtime identity checks. The launcher also
 persists failure stage, source line, and command for any subsequent failure.
 
+### Job 272171: partial progress, rank-window alignment failure
+
+Study `results/raw/milestone-n-afd-cost-20261005T073112Z` used source
+`2090fe46d358d279352b9c0d8f46bd3a8a22f6d7`. Slurm reports `FAILED`, exit
+`1:0`, after `00:28:24` on Uranus. The profiled mini-smoke passed, followed
+by three finalized formal lifecycles out of the eleven planned.
+
+| Order | Placement | FFN MHz | Completed / failed | Records rank 0 / rank 1 | Status |
+| --- | --- | --- | --- | --- | --- |
+| 0 | P_balanced | 2520 / 2520 | 300 / 0 | 28,896 / 28,896 | Finalized |
+| 1 | P_split_40_slow_rank0 | 1635 / 1635 | 300 / 0 | 28,752 / 28,752 | Finalized |
+| 2 | P_split_40_slow_rank1 | 2070 / 2070 | 300 / 0 | 27,216 / 27,216 | Finalized |
+| 3 | P_split_40_slow_rank1 | 1635 / 1635 | Not finalized | 28,176 / 28,224 | Rejected |
+
+The three finalized runs matched their target average clocks exactly on all
+four GPUs. Client p99 send delays were 2.347, 2.902, and 2.916 ms. Both ranks
+passed routing top-8 and positive/finite timing checks; local-within-full
+containment was 100%. Their step/stage/layer arrays matched. The instrumentation
+adds substantial overhead; these serving/energy observations are not substituted
+for the frozen uninstrumented Milestone M energy dataset.
+
+The fourth run failed in `finalize_same_run_cost_profiles()` with
+`FFN ranks do not align in same run: step_sequences`. Rank 0 recorded 587
+steps and rank 1 recorded 588, with all 48 layers in every step. Individual
+rank top-8 and timing-containment checks still passed. The validator correctly
+refused to combine these records. Final request/energy/metrics files were not
+written because profile finalization precedes their persistence; this is not
+evidence that a serving request itself failed.
+
+Source inspection identifies an unresolved boundary/identity weakness: each
+FFN rank independently polls the shared control file and resets its own local
+step counter. Atomic file replacement does not synchronize the ranks' reads.
+A control-transition race is therefore a plausible cause of the one-step
+difference, but the existing artifacts cannot determine whether the mismatch
+arose at start or stop. Moreover, equality of independently reset counters is
+not by itself proof of a common runtime invocation. No truncation or offset
+join is used to salvage the fourth run. Successful raw artifacts remain
+preserved, but model fitting is withheld pending a coordinated boundary and
+shared step identity, including CPU tests with deliberately skewed observations.
+
+The earlier cleanup defects did not recur. Per-configuration shutdown records
+for the first three lifecycles and final allocation cleanup show no compute
+applications remaining. Graphics-clock reset completed with empty stderr;
+post-reset idle clocks are not used as lock-target validation. Patch revert
+left the pinned plugin clean at `4c2541a53ec8ad507508073eac81ac9feecc6c9a`.
+The post-job environment check retained protected vLLM 0.15.1 / PyTorch
+2.9.1+cu128 and isolated vLLM 0.26.0 / PyTorch 2.11.0+cu130 at their original
+package roots.
+
+This attempt is incomplete engineering characterization, not a scientific
+model result. No replacement GPU job is submitted as part of this inspection.
+A short multi-lifecycle gate should precede another full matrix once the
+boundary/identity issue is resolved; do not simply resubmit the unchanged job.
+
+Post-inspection validation: the complete repository CPU suite, explicitly
+scoped as `PYTHONPATH=.deps /data/users/chjing/miniforge3/envs/cuda-env/bin/python
+-m pytest -q tests`, passed 143 tests in 9.92 seconds; `git diff --check` passed.
+An initial unscoped `pytest -q` invocation also discovered ignored third-party
+AFD runtime/E2E tests and failed collection in the protected 0.15.1 interpreter
+(14 collection errors). Those tests require the separate pinned AFD runtime
+and are not the project CPU suite. No dependency, runtime, or patch changes
+were made to address that invocation error.
+
 ## Decision gate
 
 The next milestone may construct an offline `(placement, frequency)` oracle
