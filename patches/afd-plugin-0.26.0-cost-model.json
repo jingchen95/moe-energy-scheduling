@@ -3,19 +3,45 @@
   "name": "afd-plugin-0.26.0-cost-model",
   "afd_plugin_commit": "4c2541a53ec8ad507508073eac81ac9feecc6c9a",
   "vllm_version": "0.26.0",
+  "profiler_schema_version": 3,
   "targets": [
+    {
+      "path": "afd_plugin/connectors/metadata.py",
+      "source_sha256_before": "161316e4ed8f8a316ba89489a26ebf5c2d3d4f252ee606f2b1a66bd868568f73",
+      "source_sha256_after": "d7827e8572faff4fd8e08fb6860b8dcf59cd2ac4ce6c3929b66e35dba985b4cc"
+    },
     {
       "path": "afd_plugin/model_executor/models/qwen3_moe.py",
       "source_sha256_before": "cef1790937637cd445cac92bf8dcfaea20d7c3cfdfb0e2813a36b80a8098e2d5",
       "source_sha256_after": "1273acecfe11370fce632c7dc1a8205863ad8bdd506101262bf88972efef6bf4"
     },
     {
+      "path": "afd_plugin/v1/worker/attention_metadata.py",
+      "source_sha256_before": "384bd2b6350fc5f7297eda7d9f12e2d2dcc2fe70056c5db79d265bed68c68f4c",
+      "source_sha256_after": "f40c11b15c0bacffec03c5a33696e0f97e726048ec0bd188c3a51a473a2f5595"
+    },
+    {
+      "path": "afd_plugin/v1/worker/attention_model_runner.py",
+      "source_sha256_before": "5744742118eedb85118ac2e59cf2a0630ddfd164e897b47a49e343c1996e1d7b",
+      "source_sha256_after": "1144e32c4733825b6d4d07c358dddb3eeef8cdc6095af77ccd1a0229ad38607b"
+    },
+    {
+      "path": "afd_plugin/v1/worker/attention_worker.py",
+      "source_sha256_before": "0d5081fa94d2acbdc9b8c2a29816ebce48a4977526de97770d0384c5820fedbe",
+      "source_sha256_after": "495e7e5bf74d79656852711d38250d7cbc60c314141ca8e7be33fb37cfe933dd"
+    },
+    {
       "path": "afd_plugin/v1/worker/ffn_model_runner.py",
       "source_sha256_before": "14aa42f09bb3807808faa9b4f9b702fcc5ecc8d83ba85ced72f6781da0aade93",
-      "source_sha256_after": "0089df3d54b86ece730d8f8886e0238f23667c1c9bde39e366b6fe6d929c9abe"
+      "source_sha256_after": "9e5547ebb8347e6098434e947adc623a3da73d76fd5571de55eccf7f28bcac15"
+    },
+    {
+      "path": "afd_plugin/v1/worker/ffn_worker.py",
+      "source_sha256_before": "2349262887e00748bfe3886485a3b4e0ce53575da3e25a68c47a95b8c6fbef59",
+      "source_sha256_after": "d5702ef0f573ef43464476afb158530223409fad8cd585aafb31e93d71deb7d7"
     }
   ],
   "patch_file": "afd-plugin-0.26.0-cost-model.patch",
-  "patch_sha256": "751f35a7b1b51ed343b48e8f7734c50d6f931ee8463610a98c0de0863cc8c2d2",
-  "scope": "static FFN ownership plus graph-safe same-run routing and local/full CUDA-event timing"
+  "patch_sha256": "20180f90d3708f8af8e35cdf46e0620c16c7440606c2eeb4267a7b4c3fee1250",
+  "scope": "static ownership, shared Attention-DP identity/window payload, graph-safe same-run timing"
 }

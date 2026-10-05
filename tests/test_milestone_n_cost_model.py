@@ -328,6 +328,9 @@ def _write_same_run_rank(
     )
     np.savez_compressed(
         chunk,
+        schema_version=np.asarray(3),
+        runtime_step_ids=np.full(records, 71, dtype=np.int64),
+        run_modes=np.full(records, "replay", dtype="U8"),
         step_sequences=np.zeros(records, dtype=np.int32),
         stages=np.zeros(records, dtype=np.int16),
         layers=np.arange(records, dtype=np.int16),
@@ -351,7 +354,8 @@ def _write_same_run_rank(
         chunk_index=np.asarray(0),
     )
     metadata = {
-        "schema_version": 2,
+        "schema_version": 3,
+        "identity_source": "attention_dp_rank0_cpu_broadcast",
         "generation": generation,
         "rank": rank,
         "physical_gpu": rank + 2,
@@ -436,7 +440,8 @@ def test_same_run_join_uses_own_histogram_and_local_boundary(tmp_path):
     histograms[:, 0] = 7
     histograms[:, 64] = 3
     profile = {
-        "step_sequences": np.zeros(48, dtype=np.int32),
+        "schema_version": np.asarray(3),
+        "runtime_step_ids": np.zeros(48, dtype=np.int64),
         "stages": np.zeros(48, dtype=np.int16),
         "layers": np.arange(48, dtype=np.int16),
         "expert_histograms": histograms,

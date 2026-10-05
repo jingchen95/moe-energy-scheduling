@@ -12,18 +12,25 @@ root="$(cd "$3" && pwd)"
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 patch_file="${project_root}/patches/afd-plugin-0.26.0-cost-model.patch"
 expected_commit="4c2541a53ec8ad507508073eac81ac9feecc6c9a"
-targets=(
-    "afd_plugin/model_executor/models/qwen3_moe.py"
-    "afd_plugin/v1/worker/ffn_model_runner.py"
+python="${AFD_PYTHON:-${root}/.venv/bin/python}"
+[[ -x "${python}" && "${python}" != *'/cuda-env/'* ]] || {
+    printf 'isolated AFD Python required for patch manifest\n' >&2; exit 1;
+}
+targets=(); before_shas=(); after_shas=()
+while IFS=$'\t' read -r target before after; do
+    targets+=("${target}"); before_shas+=("${before}"); after_shas+=("${after}")
+done < <("${python}" - "${project_root}/patches/afd-plugin-0.26.0-cost-model.json" <<'PY'
+import json, sys
+for row in json.load(open(sys.argv[1]))["targets"]:
+    print(row["path"], row["source_sha256_before"], row["source_sha256_after"], sep="\t")
+PY
 )
-before_shas=(
-    "cef1790937637cd445cac92bf8dcfaea20d7c3cfdfb0e2813a36b80a8098e2d5"
-    "14aa42f09bb3807808faa9b4f9b702fcc5ecc8d83ba85ced72f6781da0aade93"
-)
-after_shas=(
-    "1273acecfe11370fce632c7dc1a8205863ad8bdd506101262bf88972efef6bf4"
-    "0089df3d54b86ece730d8f8886e0238f23667c1c9bde39e366b6fe6d929c9abe"
-)
+[[ "${#targets[@]}" -eq 7 ]] || { printf 'invalid cost patch manifest\n' >&2; exit 1; }
+"${python}" - "${project_root}/patches/afd-plugin-0.26.0-cost-model.json" "${patch_file}" <<'PY'
+import hashlib, json, sys
+manifest = json.load(open(sys.argv[1]))
+assert hashlib.sha256(open(sys.argv[2], "rb").read()).hexdigest() == manifest["patch_sha256"]
+PY
 
 for target in "${targets[@]}"; do
     [[ -f "${root}/${target}" ]] || {

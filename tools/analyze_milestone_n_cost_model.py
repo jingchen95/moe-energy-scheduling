@@ -213,7 +213,7 @@ def build_latency_analysis(
     for row in joined:
         key = (
             row["config_id"], row["lifecycle"], row["frequency_mhz"],
-            row["step_sequence"], row["stage"], row["layer"],
+            row["runtime_step_id"], row["stage"], row["layer"],
         )
         paired.setdefault(key, []).append(row)
     critical_path_rows: list[dict[str, Any]] = []
@@ -226,7 +226,7 @@ def build_latency_analysis(
             "config_id": key[0],
             "lifecycle": key[1],
             "frequency_mhz": key[2],
-            "step_sequence": key[3],
+            "runtime_step_id": key[3],
             "stage": key[4],
             "layer": key[5],
             "max_local_elapsed_ms": local_max,

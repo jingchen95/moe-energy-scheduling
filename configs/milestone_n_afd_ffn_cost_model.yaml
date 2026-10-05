@@ -21,9 +21,13 @@ instrumentation:
   profiled_mini_smoke:
     required_before_conditioning: true
     requests: 8
-    scope: order-0 balanced-f2520-primary
+    scope: phase-A balanced@HH server; restart before formal matrix
+    generations: 8
     validates: graph replay, elapsed timing, routing snapshot, finalize, exact rank alignment
   routing_and_timing_same_invocation: true
+  profiler_schema_version: 3
+  identity_source: attention_dp_rank0_cpu_broadcast
+  profile_window_control: Attention collective RPC carried in AFD control payload
   cross_run_routing_timing_join: false
   cuda_events: true
   per_call_cuda_synchronize_added: false

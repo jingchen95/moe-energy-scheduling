@@ -37,7 +37,12 @@ actual_commit="$(git rev-parse HEAD)"
 git diff --quiet && git diff --cached --quiet || {
     printf 'refusing modified tracked worktree\n' >&2; exit 1;
 }
-[[ ! -e "${study}/slurm-job-id.txt" ]] || { printf 'study already submitted\n' >&2; exit 1; }
+input_study="${study}"
+mkdir -p "${input_study}/allocations"
+study="${input_study}/allocations/${SLURM_JOB_ID}"
+mkdir "${study}"
+cp "${plan}" "${study}/manifest.json"
+cp "${input_study}/reuse-manifest.json" "${study}/reuse-manifest.json"
 printf '%s\n' "${SLURM_JOB_ID}" > "${study}/slurm-job-id.txt"
 
 attention_pid=""
@@ -82,7 +87,9 @@ cleanup() {
     printf '%s\n' "${status}" > "${study}/exit-status.txt"
     exit "${status}"
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 afd_require_runtime
 afd_check_allocation > "${study}/slurm-allocation.txt"
@@ -109,6 +116,11 @@ smoke_trace_sha="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys
     printf 'profiled mini-smoke trace hash drift\n' >&2; exit 1;
 }
 balanced="${PROJECT_ROOT}/data/placements/milestone_m/P_balanced.json"
+patch_sha="$(sha256sum patches/afd-plugin-0.26.0-cost-model.patch | awk '{print $1}')"
+expected_patch_sha="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["patch_sha256"])' "${plan}")"
+[[ "${patch_sha}" == "${expected_patch_sha}" && "$(sha256sum "${trace}" | awk '{print $1}')" == "${trace_sha}" ]] || {
+    printf 'immutable patch/trace hash drift\n' >&2; exit 1;
+}
 
 stop_server() {
     afd_stop_process_group "${attention_pid}"
@@ -126,6 +138,38 @@ validate_ownership() {
     "${AFD_PYTHON}" -m tools.validate_milestone_m_runtime_ownership \
         --placement-file "${placement}" --evidence-dir "${evidence}" \
         --output "${output}" > "${output%.json}.stdout"
+}
+
+start_profile_server() {
+    local config_dir="$1" model_name="$2" placement="$3" frequency="$4" mapping_sha="$5"
+    mkdir -p "${config_dir}/server" "${config_dir}/ownership" \
+        "${config_dir}/timing-control" "${config_dir}/conditioning" "${config_dir}/runs"
+    local clocks="2520,2520,${frequency},${frequency}"
+    SUDO="${SUDO:-sudo}" "${AFD_PYTHON}" -m src.gpu_control set-all \
+        --clocks "${clocks}" --defer-current-verification > "${config_dir}/clock-set.json"
+    "${AFD_PYTHON}" -m src.gpu_control list > "${config_dir}/clock-readback.json"
+    sleep 5
+    nvidia-smi --query-gpu=index,clocks.current.sm --format=csv,noheader,nounits \
+        > "${config_dir}/actual-clocks-before-conditioning.csv"
+    afd_start_role ffn 2,3 "${ffn_api_port}" Qwen/Qwen3-30B-A3B "${model_name}" "${afd_port}" \
+        "${config_dir}/server/ffn.log" "${config_dir}/server/ffn-command.txt" \
+        "${placement}" "${config_dir}/ownership" "" full_decode_only \
+        "${config_dir}/timing-control" "${frequency},${frequency}"
+    ffn_pid="${AFD_LAST_PID}"
+    sleep 5
+    afd_start_role attention 0,1 "${api_port}" Qwen/Qwen3-30B-A3B "${model_name}" "${afd_port}" \
+        "${config_dir}/server/attention.log" "${config_dir}/server/attention-command.txt" \
+        "${placement}" "${config_dir}/ownership" "" full_decode_only \
+        "${config_dir}/timing-control" "${frequency},${frequency}"
+    attention_pid="${AFD_LAST_PID}"
+    afd_wait_attention_api "${attention_pid}" "${ffn_pid}" 2400 \
+        "http://127.0.0.1:${api_port}/v1/models"
+    validate_ownership "${placement}" "${config_dir}/ownership" "${config_dir}/runtime-ownership.json"
+    local actual_mapping_sha
+    actual_mapping_sha="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["actual_mapping_sha256"])' "${config_dir}/runtime-ownership.json")"
+    [[ "${actual_mapping_sha}" == "${mapping_sha}" ]] || {
+        printf 'ownership mismatch\n' >&2; return 1;
+    }
 }
 
 run_conditioning() {
@@ -149,7 +193,8 @@ run_conditioning() {
 
 run_profiled_mini_smoke() {
     local config_dir="$1" model_name="$2" placement="$3" frequency="$4" clocks_csv="$5"
-    local output_root="${config_dir}/profiled-mini-smoke"
+    local label="${6:-profiled-mini-smoke}"
+    local output_root="${config_dir}/${label}"
     IFS=',' read -r -a clocks_array <<< "${clocks_csv}"
     "${AFD_PYTHON}" -m src.benchmark \
         --trace "${smoke_trace}" --base-url "http://127.0.0.1:${api_port}" \
@@ -163,7 +208,7 @@ run_profiled_mini_smoke() {
         --target-clocks "${clocks_array[@]}" --store-output-token-ids \
         --run-label profiled-mini-smoke --placement-name profiled-mini-smoke \
         --server-log "${config_dir}/server/attention.log" \
-        > "${config_dir}/profiled-mini-smoke.log" 2>&1
+        > "${config_dir}/${label}.log" 2>&1
     mapfile -t smoke_runs < <(
         find "${output_root}" -mindepth 1 -maxdepth 1 -type d -print
     )
@@ -180,6 +225,7 @@ run_profiled_mini_smoke() {
         > "${run_dir}/cost-timing-validation.json"
     "${AFD_PYTHON}" - "${run_dir}" "${smoke_trace_sha}" <<'PY'
 import hashlib, json, sys
+import numpy as np
 from pathlib import Path
 run_dir = Path(sys.argv[1])
 metrics = json.loads((run_dir / "metrics.json").read_text())
@@ -189,6 +235,12 @@ profile = run_dir / "afd_same_run_cost_profile.npz"
 trace = run_dir / "trace.jsonl"
 if hashlib.sha256(trace.read_bytes()).hexdigest() != sys.argv[2]:
     raise SystemExit("profiled mini-smoke trace hash mismatch")
+final = json.loads((run_dir / "afd_same_run_cost_finalize.json").read_text())
+if final["schema_version"] != 3 or not final["exact_same_run_rank_alignment"]:
+    raise SystemExit("stress gate lacks shared runtime identity")
+with np.load(profile, allow_pickle=False) as data:
+    if not np.all(np.any(data["run_modes_by_rank"] == "replay", axis=1)):
+        raise SystemExit("stress gate did not exercise CUDA graph replay")
 result = {
     "status": "pass",
     "completed_requests": 8,
@@ -196,6 +248,10 @@ result = {
     "run_dir": str(run_dir),
     "profile_sha256": hashlib.sha256(profile.read_bytes()).hexdigest(),
     "trace_sha256": sys.argv[2],
+    "first_runtime_step_id": final["first_runtime_step_id"],
+    "last_runtime_step_id": final["last_runtime_step_id"],
+    "runtime_steps": final["runtime_steps"],
+    "diagnostic_counter_ranges_by_rank": final["diagnostic_counter_ranges_by_rank"],
 }
 (run_dir.parent / "PASS.json").write_text(
     json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -205,52 +261,54 @@ PY
 
 printf 'stage\torder\tconfig_id\tlifecycle\tfrequency_mhz\tstatus\trun_dir\n' > "${study}/runs.tsv"
 
+# Phase A: eight enable/disable generations on one server, never model data.
+failure_stage="phase-a:startup"
+gate_dir="${study}/phase-a-stress"
+mkdir "${gate_dir}"
+balanced_mapping_sha="$("${AFD_PYTHON}" -c 'import json,sys; p=json.load(open(sys.argv[1])); print(p["configurations"][0]["placement"]["canonical_mapping_sha256"])' "${plan}")"
+start_profile_server "${gate_dir}" qwen3-moe-n-stress "${balanced}" 2520 "${balanced_mapping_sha}"
+for generation in {0..7}; do
+    failure_stage="phase-a:generation-${generation}"
+    run_profiled_mini_smoke "${gate_dir}" qwen3-moe-n-stress "${balanced}" 2520 \
+        2520,2520,2520,2520 "window-$(printf '%02d' "${generation}")"
+done
+failure_stage="phase-a:shutdown"
+stop_server "${gate_dir}/compute-apps-after.csv"
+"${AFD_PYTHON}" - "${gate_dir}" <<'PY'
+import json, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+rows = [json.loads((root / f"window-{i:02d}" / "PASS.json").read_text()) for i in range(8)]
+for previous, current in zip(rows, rows[1:]):
+    if current["first_runtime_step_id"] <= previous["last_runtime_step_id"]:
+        raise SystemExit("runtime identity reset across profiling generations")
+(root / "PASS.json").write_text(json.dumps({"status": "pass", "generations": rows}, indent=2) + "\n")
+PY
+
 # Each configuration captures routing and both timing boundaries in the same
 # server lifecycle.  Order 0 is the mandatory balanced@HH alignment gate.
-mkdir -p "${study}/timing-configurations"
+mkdir -p "${input_study}/timing-configurations"
 while IFS=$'\t' read -r order config_id stage lifecycle frequency placement_path placement_sha mapping_sha; do
     failure_stage="config-${order}-${config_id}:prepare"
-    config_dir="${study}/timing-configurations/$(printf '%02d' "${order}")-${config_id}"
-    mkdir -p "${config_dir}/server" "${config_dir}/ownership" \
-        "${config_dir}/timing-control" "${config_dir}/conditioning" "${config_dir}/runs"
+    config_parent="${input_study}/timing-configurations/$(printf '%02d' "${order}")-${config_id}"
+    mkdir -p "${config_parent}"
+    resumed_run="$("${AFD_PYTHON}" -m src.afd_cost_transaction check \
+        --plan "${plan}" --order "${order}" --directory "${config_parent}" --patch-sha "${patch_sha}")"
+    if [[ -n "${resumed_run}" ]]; then
+        printf 'timing\t%s\t%s\t%s\t%s\tcomplete\t%s\n' \
+            "${order}" "${config_id}" "${lifecycle}" "${frequency}" "${resumed_run}" >> "${study}/runs.tsv"
+        continue
+    fi
+    config_dir="${config_parent}/attempt-${SLURM_JOB_ID}"
+    mkdir "${config_dir}"
     placement="${PROJECT_ROOT}/${placement_path}"
     [[ "$(sha256sum "${placement}" | awk '{print $1}')" == "${placement_sha}" ]] || {
         printf 'placement hash drift: %s\n' "${placement}" >&2; exit 1;
     }
     clocks="2520,2520,${frequency},${frequency}"
-    "${AFD_PYTHON}" -c \
-        'from pathlib import Path; from src.afd_routing_profile import write_profile_control; import sys; write_profile_control(Path(sys.argv[1]), "startup", False)' \
-        "${config_dir}/timing-control"
-    SUDO="${SUDO:-sudo}" "${AFD_PYTHON}" -m src.gpu_control set-all \
-        --clocks "${clocks}" --defer-current-verification \
-        > "${config_dir}/clock-set.json"
-    "${AFD_PYTHON}" -m src.gpu_control list > "${config_dir}/clock-readback.json"
-    sleep 5
-    nvidia-smi --query-gpu=index,clocks.current.sm --format=csv,noheader,nounits \
-        > "${config_dir}/actual-clocks-before-conditioning.csv"
     model_name="qwen3-moe-n-${order}"
     failure_stage="config-${order}-${config_id}:server-start"
-    afd_start_role ffn 2,3 "${ffn_api_port}" Qwen/Qwen3-30B-A3B "${model_name}" "${afd_port}" \
-        "${config_dir}/server/ffn.log" "${config_dir}/server/ffn-command.txt" \
-        "${placement}" "${config_dir}/ownership" "" full_decode_only \
-        "${config_dir}/timing-control" "${frequency},${frequency}"
-    ffn_pid="${AFD_LAST_PID}"
-    sleep 5
-    afd_start_role attention 0,1 "${api_port}" Qwen/Qwen3-30B-A3B "${model_name}" "${afd_port}" \
-        "${config_dir}/server/attention.log" "${config_dir}/server/attention-command.txt" \
-        "${placement}" "${config_dir}/ownership" "" full_decode_only
-    attention_pid="${AFD_LAST_PID}"
-    afd_wait_attention_api "${attention_pid}" "${ffn_pid}" 2400 \
-        "http://127.0.0.1:${api_port}/v1/models" || exit 1
-    failure_stage="config-${order}-${config_id}:ownership"
-    validate_ownership "${placement}" "${config_dir}/ownership" "${config_dir}/runtime-ownership.json"
-    actual_mapping_sha="$("${AFD_PYTHON}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["actual_mapping_sha256"])' "${config_dir}/runtime-ownership.json")"
-    [[ "${actual_mapping_sha}" == "${mapping_sha}" ]] || { printf 'ownership mismatch\n' >&2; exit 1; }
-    if [[ "${order}" -eq 0 ]]; then
-        failure_stage="config-${order}-${config_id}:profiled-mini-smoke"
-        run_profiled_mini_smoke "${config_dir}" "${model_name}" "${placement}" \
-            "${frequency}" "${clocks}"
-    fi
+    start_profile_server "${config_dir}" "${model_name}" "${placement}" "${frequency}" "${mapping_sha}"
     failure_stage="config-${order}-${config_id}:conditioning"
     run_conditioning "${config_dir}/conditioning" "${model_name}" "${placement}" \
         "${clocks}" "${config_dir}/server/attention.log"
@@ -276,10 +334,13 @@ while IFS=$'\t' read -r order config_id stage lifecycle frequency placement_path
         --placement "${placement}" --config-id "${config_id}" \
         --lifecycle "${lifecycle}" --frequency-mhz "${frequency}" \
         > "${run_dir}/cost-timing-validation.json"
-    printf 'timing\t%s\t%s\t%s\t%s\tcomplete\t%s\n' \
-        "${order}" "${config_id}" "${lifecycle}" "${frequency}" "${run_dir}" >> "${study}/runs.tsv"
     failure_stage="config-${order}-${config_id}:shutdown"
     stop_server "${config_dir}/compute-apps-after.csv"
+    "${AFD_PYTHON}" -m src.afd_cost_transaction mark \
+        --plan "${plan}" --order "${order}" --directory "${config_parent}" --patch-sha "${patch_sha}" \
+        --run "${run_dir}" --attempt "${config_dir}"
+    printf 'timing\t%s\t%s\t%s\t%s\tcomplete\t%s\n' \
+        "${order}" "${config_id}" "${lifecycle}" "${frequency}" "${run_dir}" >> "${study}/runs.tsv"
 done < <("${AFD_PYTHON}" - "${plan}" <<'PY'
 import json, sys
 plan = json.load(open(sys.argv[1]))

@@ -379,11 +379,10 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
             args.afd_profile_control_dir, afd_profile_generation, True
         )
     if args.afd_timing_control_dir:
-        from src.afd_routing_profile import write_profile_control
+        from src.afd_profile_protocol import set_profile_state_rpc
 
-        write_profile_control(
-            args.afd_timing_control_dir, afd_profile_generation, True
-        )
+        ack = await set_profile_state_rpc(args.base_url, afd_profile_generation, True)
+        (run_dir / "afd-profile-start-rpc.json").write_text(json.dumps(ack) + "\n")
 
     with NVMLReader(range(4)) as reader:
         monitor = FixedPeriodMonitor(reader, run_dir / "gpu_samples.csv", args.monitor_interval_s)
@@ -401,6 +400,9 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
         finally:
             end_samples = reader.sample_all()
             samples = monitor.stop()
+            if args.afd_timing_control_dir:
+                ack = await set_profile_state_rpc(args.base_url, afd_profile_generation, False)
+                (run_dir / "afd-profile-stop-rpc.json").write_text(json.dumps(ack) + "\n")
 
     if args.afd_profile_control_dir:
         from src.afd_routing_profile import (
@@ -434,11 +436,6 @@ async def run_benchmark(args: argparse.Namespace) -> Path:
         )
     if args.afd_timing_control_dir:
         from src.afd_ffn_cost_profile import finalize_same_run_cost_profiles
-        from src.afd_routing_profile import write_profile_control
-
-        write_profile_control(
-            args.afd_timing_control_dir, afd_profile_generation, False
-        )
         await warm_up(
             requests,
             base_url=args.base_url,

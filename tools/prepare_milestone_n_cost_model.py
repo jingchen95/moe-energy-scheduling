@@ -170,12 +170,20 @@ def build_plan(root: Path, trace: Path) -> tuple[dict[str, Any], dict[str, Any]]
             "requests": PROFILED_MINI_SMOKE_REQUESTS,
             "trace": "profiled-mini-smoke-trace.jsonl",
             "trace_sha256": hashlib.sha256(smoke_bytes).hexdigest(),
-            "scope": "order-0 balanced@2520 only",
+            "scope": "Phase A: eight generations on one balanced@2520 server",
+            "generations": 8,
             "required_path": (
                 "CUDA graph replay -> elapsed_time -> routing snapshot -> "
                 "finalize -> exact two-rank alignment"
             ),
         },
+        "profiler_schema_version": 3,
+        "identity_source": "attention_dp_rank0_cpu_broadcast",
+        "profile_window_control": "synchronized Attention collective RPC -> AFD control payload",
+        "patch_sha256": sha256_file(root / "patches/afd-plugin-0.26.0-cost-model.patch"),
+        "phase_a_is_model_data": False,
+        "resume": "only COMPLETE marker with identical execution fingerprint and artifact hashes",
+        "legacy_timing_reuse": False,
         "attention_clocks_mhz": [2520, 2520],
         "routing_and_timing": {
             "same_invocation": True,

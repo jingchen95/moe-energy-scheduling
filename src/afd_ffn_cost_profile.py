@@ -31,8 +31,8 @@ from src.afd_routing_profile import (
     EXPECTED_EXPERTS,
     EXPECTED_LAYERS,
     EXPECTED_RANKS,
-    _load_control,
 )
+from src.afd_profile_protocol import IDENTITY_SOURCE, PROFILER_SCHEMA_VERSION
 
 
 PROFILE_DIR_ENV = "AFD_FFN_TIMING_DIR"
@@ -111,7 +111,6 @@ class RuntimeAFDCostProfiler:
         if rank not in range(EXPECTED_RANKS):
             raise ValueError(f"invalid FFN rank {rank}")
         self.directory = directory.resolve()
-        self.control_path = self.directory / "control.json"
         self.rank = int(rank)
         self.frequency_mhz = int(frequency_mhz)
         self.physical_gpu = int(physical_gpu)
@@ -119,6 +118,8 @@ class RuntimeAFDCostProfiler:
         self.active = False
         self.dumped_generations: set[str] = set()
         self.step_sequence = 0
+        self.current_runtime_step_id: int | None = None
+        self.last_runtime_step_id: int | None = None
         self.mode = "inactive"
         self.capture_key: str | None = None
         self.capture_records: list[_Invocation] = []
@@ -127,6 +128,8 @@ class RuntimeAFDCostProfiler:
         self.invocation_stack: list[_Invocation] = []
         self.pending_records: tuple[_Invocation, ...] | None = None
         self.pending_step: int | None = None
+        self.pending_runtime_step_id: int | None = None
+        self.pending_run_mode: str | None = None
         self.rows: list[dict[str, Any]] = []
         self.histograms: list[np.ndarray] = []
         self.chunk_paths: list[Path] = []
@@ -154,10 +157,15 @@ class RuntimeAFDCostProfiler:
         self.capture_records = []
         self.mode = "inactive"
 
-    def prepare_runtime_step(self, run_mode: str, graph_key: object) -> None:
+    def prepare_runtime_step(self, run_mode: str, graph_key: object, payload: Any) -> None:
         # AFDFFNWorker synchronized CUDA after the preceding execute_model.
         self._resolve_pending_step()
-        self._refresh_control()
+        if payload is None:
+            raise RuntimeError("cost profiling requires Attention control payload")
+        if payload.is_warmup or payload.is_graph_capturing or payload.is_profile:
+            self.mode = "inactive"
+            return
+        self._apply_payload(payload)
         self.current_invocations = []
         self.invocation_stack = []
         if not self.active:
@@ -172,6 +180,8 @@ class RuntimeAFDCostProfiler:
             self.mode = "replay"
             self.pending_records = template
             self.pending_step = self.step_sequence
+            self.pending_runtime_step_id = self.current_runtime_step_id
+            self.pending_run_mode = run_mode
             self.step_sequence += 1
         elif run_mode == "eager":
             self.mode = "eager"
@@ -187,6 +197,8 @@ class RuntimeAFDCostProfiler:
         self._validate_invocations(records, require_snapshot=True)
         self.pending_records = records
         self.pending_step = self.step_sequence
+        self.pending_runtime_step_id = self.current_runtime_step_id
+        self.pending_run_mode = run_mode
         self.step_sequence += 1
 
     def begin_full(self, layer: int, hidden_states: Any) -> _Invocation | None:
@@ -278,10 +290,17 @@ class RuntimeAFDCostProfiler:
             if require_snapshot and record.routing_snapshot is None:
                 raise RuntimeError("missing routing snapshot")
 
-    def _refresh_control(self) -> None:
-        if not self.control_path.is_file():
-            return
-        generation, requested_active = _load_control(self.control_path)
+    def _apply_payload(self, payload: Any) -> None:
+        runtime_id = payload.runtime_step_id
+        if type(runtime_id) is not int or runtime_id < 0:
+            raise RuntimeError("serving profile payload missing shared runtime_step_id")
+        if self.last_runtime_step_id is not None and runtime_id <= self.last_runtime_step_id:
+            raise RuntimeError("non-monotonic shared runtime_step_id")
+        self.last_runtime_step_id = runtime_id
+        self.current_runtime_step_id = runtime_id
+        generation, requested_active = payload.profile_generation, payload.profile_active
+        if requested_active and (not generation or generation in self.dumped_generations):
+            raise RuntimeError("invalid or already finalized active profiling generation")
         if generation != self.generation:
             if self.active:
                 self._dump()
@@ -298,7 +317,6 @@ class RuntimeAFDCostProfiler:
             self.active = False
 
     def _reset_window(self) -> None:
-        self.step_sequence = 0
         self.rows.clear()
         self.histograms.clear()
         self.chunk_paths.clear()
@@ -307,7 +325,7 @@ class RuntimeAFDCostProfiler:
     def _resolve_pending_step(self) -> None:
         if self.pending_records is None:
             return
-        if self.pending_step is None:
+        if self.pending_step is None or self.pending_runtime_step_id is None:
             raise RuntimeError("pending AFD cost profile has no step id")
         for record in self.pending_records:
             topk = record.routing_snapshot.detach().cpu().numpy().reshape(-1)
@@ -317,6 +335,8 @@ class RuntimeAFDCostProfiler:
             )
             self.rows.append({
                 "step_sequence": int(self.pending_step),
+                "runtime_step_id": int(self.pending_runtime_step_id),
+                "run_mode": self.pending_run_mode,
                 "stage": int(record.stage),
                 "layer": int(record.layer),
                 "token_rows": int(record.token_rows),
@@ -331,6 +351,8 @@ class RuntimeAFDCostProfiler:
             self.histograms.append(histogram)
         self.pending_records = None
         self.pending_step = None
+        self.pending_runtime_step_id = None
+        self.pending_run_mode = None
         if len(self.rows) >= CHUNK_RECORDS:
             self._flush_chunk()
 
@@ -347,6 +369,11 @@ class RuntimeAFDCostProfiler:
         temporary = target.with_name(target.name + ".tmp.npz")
         np.savez_compressed(
             temporary,
+            schema_version=np.asarray(PROFILER_SCHEMA_VERSION),
+            runtime_step_ids=np.asarray(
+                [row["runtime_step_id"] for row in self.rows], dtype=np.int64
+            ),
+            run_modes=np.asarray([row["run_mode"] for row in self.rows], dtype="U8"),
             step_sequences=np.asarray(
                 [row["step_sequence"] for row in self.rows], dtype=np.int32
             ),
@@ -387,7 +414,8 @@ class RuntimeAFDCostProfiler:
         if not self.chunk_paths:
             raise RuntimeError("AFD cost profile window produced no chunks")
         metadata = {
-            "schema_version": 2,
+            "schema_version": PROFILER_SCHEMA_VERSION,
+            "identity_source": IDENTITY_SOURCE,
             "generation": self.generation,
             "rank": self.rank,
             "physical_gpu": self.physical_gpu,
@@ -535,10 +563,10 @@ def end_graph_profile_capture(rank: int, graph_key: object) -> None:
         profiler.end_graph_capture(graph_key)
 
 
-def prepare_runtime_profile_step(rank: int, run_mode: str, graph_key: object) -> None:
+def prepare_runtime_profile_step(rank: int, run_mode: str, graph_key: object, payload: Any) -> None:
     profiler = _profiler_for_rank(rank)
     if profiler is not None:
-        profiler.prepare_runtime_step(run_mode, graph_key)
+        profiler.prepare_runtime_step(run_mode, graph_key, payload)
 
 
 def finish_runtime_profile_step(rank: int, run_mode: str) -> None:
@@ -566,11 +594,13 @@ def _load_rank_chunks(
     directory: Path, metadata_path: Path, output_directory: Path
 ) -> tuple[int, dict[str, np.ndarray], dict[str, Any]]:
     metadata = json.loads(metadata_path.read_text())
+    if metadata.get("schema_version") != PROFILER_SCHEMA_VERSION or metadata.get("identity_source") != IDENTITY_SOURCE:
+        raise ValueError("cost profile lacks shared runtime identity (schema 3 required)")
     rank = int(metadata["rank"])
     arrays: dict[str, list[np.ndarray]] = {
         key: []
         for key in (
-            "step_sequences", "stages", "layers", "token_rows",
+            "runtime_step_ids", "step_sequences", "run_modes", "stages", "layers", "token_rows",
             "topk_assignments", "expert_histograms", "local_elapsed_ms",
             "full_elapsed_ms",
         )
@@ -581,8 +611,14 @@ def _load_rank_chunks(
         if _sha256(source) != chunk["sha256"]:
             raise ValueError(f"cost profile chunk hash mismatch: {source}")
         with np.load(source, allow_pickle=False) as archive:
+            if int(archive["schema_version"]) != PROFILER_SCHEMA_VERSION:
+                raise ValueError("cost profile chunk schema mismatch")
+            if str(archive["generation"]) != metadata["generation"]:
+                raise ValueError("cost profile chunk generation mismatch")
             if int(archive["ffn_rank"]) != rank:
                 raise ValueError(f"cost profile rank mismatch: {source}")
+            if int(archive["physical_gpu"]) != rank + 2 or int(archive["frequency_mhz"]) != int(metadata["frequency_mhz"]):
+                raise ValueError(f"cost profile physical rank/frequency mismatch: {source}")
             if int(archive["chunk_index"]) != expected_index:
                 raise ValueError(f"cost profile chunk sequence mismatch: {source}")
             for key in arrays:
@@ -592,6 +628,24 @@ def _load_rank_chunks(
         copied_chunks.append({"path": copied.name, "sha256": _sha256(copied)})
     combined = {key: np.concatenate(parts, axis=0) for key, parts in arrays.items()}
     records = len(combined["layers"])
+    if records == 0 or any(len(array) != records for array in combined.values()):
+        raise ValueError("empty or inconsistent cost profile arrays")
+    keys = np.stack([combined[key] for key in ("runtime_step_ids", "stages", "layers")], axis=1)
+    if len(np.unique(keys, axis=0)) != records:
+        raise ValueError("duplicate runtime step/stage/layer keys")
+    ids = combined["runtime_step_ids"]
+    if np.any(ids < 0) or np.any(np.diff(ids) < 0):
+        raise ValueError("invalid runtime step ordering")
+    unique_ids = np.unique(ids)
+    if np.any(np.diff(unique_ids) != 1):
+        raise ValueError("missing interior active runtime step")
+    if not np.all(np.isin(combined["run_modes"], ["eager", "replay"])):
+        raise ValueError("capture/warmup cannot be formal profile records")
+    for runtime_id in unique_ids:
+        for stage in np.unique(combined["stages"][ids == runtime_id]):
+            layers = combined["layers"][(ids == runtime_id) & (combined["stages"] == stage)]
+            if not np.array_equal(np.sort(layers), np.arange(EXPECTED_LAYERS)):
+                raise ValueError("incomplete 48-layer runtime step")
     if combined["expert_histograms"].shape != (records, EXPECTED_EXPERTS):
         raise ValueError("invalid same-run routing histogram shape")
     histogram_totals = combined["expert_histograms"].sum(axis=1)
@@ -646,6 +700,8 @@ def finalize_same_run_cost_profiles(
     rank_metadata: list[dict[str, Any]] = []
     for path in paths:
         rank, arrays, metadata = _load_rank_chunks(directory, path, output_directory)
+        if metadata["generation"] != generation:
+            raise ValueError("cost profile rank generation mismatch")
         if rank in per_rank:
             raise ValueError(f"duplicate AFD cost profile rank {rank}")
         per_rank[rank] = arrays
@@ -660,7 +716,7 @@ def finalize_same_run_cost_profiles(
         })
     if set(per_rank) != set(range(EXPECTED_RANKS)):
         raise ValueError(f"missing AFD cost profile rank: {set(per_rank)}")
-    key_names = ("step_sequences", "stages", "layers")
+    key_names = ("runtime_step_ids", "stages", "layers")
     for key in key_names:
         if not np.array_equal(per_rank[0][key], per_rank[1][key]):
             raise ValueError(f"FFN ranks do not align in same run: {key}")
@@ -690,7 +746,10 @@ def finalize_same_run_cost_profiles(
     output_path = output_directory / "afd_same_run_cost_profile.npz"
     np.savez_compressed(
         output_path,
-        step_sequences=per_rank[0]["step_sequences"],
+        schema_version=np.asarray(PROFILER_SCHEMA_VERSION),
+        runtime_step_ids=per_rank[0]["runtime_step_ids"],
+        diagnostic_step_sequences_by_rank=np.stack([per_rank[rank]["step_sequences"] for rank in range(2)]),
+        run_modes_by_rank=np.stack([per_rank[rank]["run_modes"] for rank in range(2)]),
         stages=per_rank[0]["stages"],
         layers=per_rank[0]["layers"],
         expert_histograms=combined_histograms,
@@ -710,7 +769,15 @@ def finalize_same_run_cost_profiles(
         ], dtype=np.int32),
     )
     result = {
-        "schema_version": 2,
+        "schema_version": PROFILER_SCHEMA_VERSION,
+        "identity_source": IDENTITY_SOURCE,
+        "first_runtime_step_id": int(keys[0, 0]),
+        "last_runtime_step_id": int(keys[-1, 0]),
+        "runtime_steps": int(len(np.unique(keys[:, 0]))),
+        "diagnostic_counter_ranges_by_rank": [
+            [int(per_rank[rank]["step_sequences"][0]), int(per_rank[rank]["step_sequences"][-1])]
+            for rank in range(2)
+        ],
         "generation": generation,
         "records": int(len(keys)),
         "exact_same_run_rank_alignment": True,

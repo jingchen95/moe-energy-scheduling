@@ -48,31 +48,113 @@ Two boundaries are retained:
 
 Each physical FFN rank records its source-rank logical routes. The two rank
 files are combined only within the same run on exact
-`(step_sequence, stage, layer)` keys. The immutable placement then maps the
+`(runtime_step_id, stage, layer)` keys under schema 3. The old schema-2 local
+counter join is not accepted as training data. The immutable placement maps the
 combined logical histogram to the two physical-rank local loads.
+
+## Shared identity and window protocol
+
+The defect exposed by job `272171` was a missing cross-rank identity/control
+contract: independent file reads and independently reset local counters could
+not guarantee that the paired records represented the same serving step.
+The artifacts establish one extra complete rank-1 step, not whether its cause
+was activation or deactivation. The replacement fixes that protocol rather
+than loosening the validator.
+
+The pinned `AFDMetadataProviderMixin._next_afd_transaction_id()` increments a
+counter owned by each Attention runner. Both V1 and V2 use this sidecar helper;
+its allocations include context, warmup/capture and graph lifecycle work.
+There is no agreement operation or documented shared DP identity in that
+counter. In 2A2F, `P2pNcclAFDControlPlane` has two Attention metadata senders,
+each connected to a different FFN receiver. Therefore copying their independent
+transaction counters into the payload would not solve the problem.
+
+The profiling-only solution is a monotonic counter on Attention DP rank 0,
+coordinated using the existing `get_dp_group().broadcast_object(..., src=0)`
+CPU control group. Each synchronized serving control send receives the same
+`runtime_step_id`, `profile_generation`, and `profile_active` dictionary before
+the two Attention senders publish their corresponding AFD payloads. Identity
+is scoped to a server lifecycle and never reset at a profiling-window boundary.
+Native DP batch coordination and idle dummy participation remain unchanged.
+Graph capture, graph warmup and memory profiling do not allocate formal serving
+IDs. A scoped V1 dummy-run flag distinguishes startup memory-profile calls
+from idle-DP dummy serving calls. V2 remains disabled for this experiment.
+
+Before replay, the benchmark awaits Attention collective RPC
+`set_afd_cost_profile_state` with the run generation and `active=true`. Pinned
+`DPLBAsyncMPClient.call_utility_async()` awaits all engine RPCs using
+`asyncio.gather`, returning the first engine result only after all complete.
+The client validates the acknowledgement, then starts measured traffic. It
+awaits the inactive RPC after replay and sends excluded flush traffic.
+The FFN worker resolves the previous pending CUDA events after its existing
+step synchronization, applies the current received payload state, then
+executes/replays. The last active step is thus resolved before the inactive
+flush closes its generation. Filesystem observation order is irrelevant to
+membership. The older routing-only profiler is outside this correction.
+
+The cost-profile schema is now 3. Records retain runtime ID, stage, layer,
+physical rank/GPU, frequency, real token rows, logical histogram, local/full
+elapsed times, run mode, and rank-local diagnostic counter. Only runtime ID,
+stage and layer are join keys. The finalizer rejects missing/mismatched IDs,
+duplicate keys, incomplete 48-layer steps, missing interior active steps,
+generation differences and routing/timing violations. It never truncates,
+shifts, tolerates a missing step or heuristically pairs rows. Captured timing
+events remain `external=True`; eager events use the existing default. No new
+per-call CUDA synchronization or timed GPU histogram operation is introduced.
+
+The shared CPU collective is profiling overhead outside both CUDA timer
+boundaries. These runs are characterization, not primary serving-performance
+or NVML energy comparisons. Uninstrumented energy reuse remains unchanged.
+The patch is source-controlled with exact seven-file before/after hashes:
+payload codec, Attention metadata/worker/dummy exclusion, FFN worker/runner,
+and the existing Qwen ownership/timing wrapper. It touches no site-packages.
+Optional payload fields default to absent/inactive, preserving the ordinary
+non-profiled wire format. The dev RPC endpoint is enabled only for profiling
+Attention launchers, bound to loopback. It must not be exposed as a public API.
 
 ## Characterization matrix
 
-One exclusive Uranus allocation performs eleven fresh-server lifecycles:
+One exclusive Uranus allocation has two phases.
 
-1. a mandatory first `P_balanced` at 2520/2520 MHz same-run alignment gate;
-2. `P_balanced` profiling at symmetric FFN frequencies 1005, 1635, 2070, 2220,
-   and 2520 MHz;
-3. an independent lifecycle repeat at 1635 and 2070 MHz;
-4. timing-only distribution checks for the existing 40/60 rank-0 and rank-1
-   placements at 1635 and 2070 MHz.
+**Phase A:** one balanced/HH `FULL_DECODE_ONLY` server exercises eight independent
+8-request profiling generations, using the production RPC/payload protocol.
+Each generation must pass actual replay/event resolution, exact runtime-ID
+pairing, 48 layers per step, top-8 routing, positive finite timing and containment.
+First/last IDs, step counts and diagnostic counters are retained. IDs must
+increase across windows. Any failure ends the allocation before formal data;
+no automatic resubmission occurs. All stress traffic is excluded from training.
+
+**Phase B:** restart, then perform the existing eleven fresh-server lifecycles:
+
+1. five `P_balanced` symmetric FFN frequencies: 1005, 1635, 2070, 2220, 2520 MHz;
+2. independent balanced lifecycle repeats at 1635 and 2070 MHz;
+3. the existing 40/60 rank-0 and rank-1 placements at 1635 and 2070 MHz.
 
 Every configuration uses a fresh server, one complete conditioning trace, and
-one measured trace. After the forced gate, order is randomized with seed
+one measured trace. The first formal point remains balanced/HH; the remaining
+ten retain their original deterministic order randomized with seed
 `20261007`. Attention remains at 2520/2520 MHz. Every run produces its own
 same-run routing/local-timing/full-timing artifact; no cross-run alignment is
 allowed.
 
-Before order 0 performs its full conditioning trace, it runs an independent
-8-request profiled mini-smoke. This gate must exercise graph replay, CUDA-event
+### Transactional completion and resume
+
+Each allocation writes to `allocations/<Slurm job ID>/`, and each formal
+configuration has an `attempt-<Slurm job ID>/` directory. Old partial attempts
+remain untouched. `COMPLETE.json` is created only after 300/300 requests, zero
+failures, finalized shared-ID pairing, valid actual clocks, matching runtime
+ownership, all required request/config/energy/profile/log files, and successful
+owned-server shutdown. A completion marker binds source commit, patch SHA,
+profiler schema, trace SHA, placement SHA and complete plan/config SHA, plus
+all attempt artifact hashes. A resume may skip only an exactly matching,
+unchanged completed attempt; drift fails closed. It reruns Phase A first.
+Changed code/schema/scientific inputs require a new study. This does not admit
+the legacy job `272171` into the final dataset.
+
+Each Phase A window exercises graph replay on both ranks, CUDA-event
 `elapsed_time()`, the same-invocation routing snapshot, profile finalization,
-and exact two-rank alignment. Its generation is finalized before conditioning,
-and the formal measurement later starts a new generation.
+and exact two-rank alignment. Its generation is finalized before the next
+window; the fresh formal lifecycle starts a different generation.
 
 The profile validator does not accept its own derived assignment total as the
 only routing check. Qwen3-30B-A3B routes each token to eight experts, so every
@@ -82,7 +164,10 @@ same count invariant. All local/full timings must be finite and positive; at
 least 99% of local intervals must lie within their full intervals, allowing a
 0.01 ms numerical tolerance.
 
-## Offline models
+## Planned Offline Models
+
+No model is fitted in the protocol-correction task. The intended modeling
+method below is unchanged, and remains gated on valid schema-3 GPU data.
 
 The primary latency model is a binned interpolation table
 `C[g,f](n)`, kept separate for physical GPUs 2 and 3. Here `n` is the number of
@@ -227,6 +312,62 @@ AFD runtime/E2E tests and failed collection in the protected 0.15.1 interpreter
 (14 collection errors). Those tests require the separate pinned AFD runtime
 and are not the project CPU suite. No dependency, runtime, or patch changes
 were made to address that invocation error.
+
+### Legacy boundary diagnostic
+
+`tools/diagnose_milestone_n_legacy_boundaries.py` reads the preserved chunks
+without repairing or joining them. The JSON report is stored beside the old
+study as `protocol-boundary-diagnosis.json`. All listed steps have 48 layers
+at stage 0. The head/tail columns show token rows in the first/last six local
+steps, not inferred cross-rank correspondence.
+
+| Order | Rank | Records | First / Last local step | Head token rows | Tail token rows |
+| --- | --- | --- | --- | --- | --- |
+| 0 | 0 | 28,896 | 0 / 601 | 13,64,64,64,64,7 | 64,64,64,64,64,64 |
+| 0 | 1 | 28,896 | 0 / 601 | 64,64,64,13,64,64 | 64,64,64,64,64,64 |
+| 1 | 0 | 28,752 | 0 / 598 | 64,64,64,13,64,7 | 64,64,64,64,64,64 |
+| 1 | 1 | 28,752 | 0 / 598 | 13,64,64,64,64,64 | 64,64,64,64,64,64 |
+| 2 | 0 | 27,216 | 0 / 566 | 13,64,64,64,64,64 | 64,64,64,64,64,64 |
+| 2 | 1 | 27,216 | 0 / 566 | 64,64,64,13,64,7 | 64,64,64,64,64,64 |
+| 3 | 0 | 28,176 | 0 / 586 | 13,64,64,64,64,7 | 64,64,64,64,64,64 |
+| 3 | 1 | 28,224 | 0 / 587 | 64,64,64,13,64,64 | 64,64,64,64,64,64 |
+
+Resolved configuration declares `FULL_DECODE_ONLY`, but legacy chunks do not
+record per-invocation graph/run mode or a shared runtime ID. Repeated token-row
+values cannot establish whether the unmatched step is at activation or
+deactivation, nor prove post-hoc identity for the three equal-length runs.
+They are preserved as engineering evidence, not automatically admitted to
+the final training dataset. The failed fourth run is not salvaged.
+
+### Protocol correction validation
+
+- Complete project CPU suite: **168 passed**, no skips.
+- Focused profiler/protocol tests: **43 passed**, no skips.
+- Pinned-plugin/protocol suite: **266 passed**, no skips. It covers payload
+  encode/decode, Attention/FFN workers and runners, graph policy, V2 runner
+  compatibility, P2P connector, Qwen construction/loading, and a real native
+  two-process Gloo broadcast across eight generations.
+- Adversarial tests cover independently displaced hypothetical file reads,
+  active/inactive and generation transitions, different diagnostic counters,
+  resolving the last active step before closure, eager/replay, excluded
+  warmup/capture/memory profiling, duplicate/missing/mismatched IDs, malformed
+  routes/timings, and transactional completion/fingerprint/artifact drift.
+- Patch apply -> verify -> revert -> clean passed for all seven pinned files.
+  Shell syntax and `git diff --check` passed. No GPU experiment was needed for
+  these checks, and no protected package was installed or edited.
+- A CPU preparation check compared all eleven formal definitions and their
+  order against job 272171's manifest: placements, hashes, frequencies, trace,
+  request rate and matrix are unchanged. The only additional traffic is the
+  excluded eight-generation Phase A gate.
+- Environment artifact `results/raw/milestone-n-protocol-environment-20261005.json`
+  matches the old job's protected/isolated version and package-root records
+  exactly: vLLM 0.15.1 / 0.26.0 respectively; the pinned plugin is clean.
+
+These CPU checks establish protocol regression coverage, not proof of the new
+GPU integration. That remains pending the single allocation's Phase A gate.
+No execution-model fitting or scheduler design was performed. Commit and push
+the preparation before creating the immutable execution manifest; do not make
+another tracked-source/documentation commit while it is queued.
 
 ## Decision gate
 

@@ -103,7 +103,8 @@ def load_same_run_cost_profile(path: Path) -> dict[str, np.ndarray]:
     with np.load(path, allow_pickle=False) as archive:
         result = {key: np.asarray(archive[key]) for key in archive.files}
     required = {
-        "step_sequences",
+        "runtime_step_ids",
+        "schema_version",
         "stages",
         "layers",
         "expert_histograms",
@@ -117,6 +118,8 @@ def load_same_run_cost_profile(path: Path) -> dict[str, np.ndarray]:
         raise ValueError(
             f"same-run cost profile missing: {sorted(required - set(result))}"
         )
+    if int(result["schema_version"]) != 3:
+        raise ValueError("schema-3 shared runtime identity required; legacy profiles are engineering-only")
     records = len(result["layers"])
     if result["expert_histograms"].shape != (records, 128):
         raise ValueError("same-run profile must contain 128-expert histograms")
@@ -130,7 +133,7 @@ def load_same_run_cost_profile(path: Path) -> dict[str, np.ndarray]:
         if result[key].shape != expected:
             raise ValueError(f"invalid {key} shape: {result[key].shape}")
     keys = np.stack(
-        [result["step_sequences"], result["stages"], result["layers"]], axis=1
+        [result["runtime_step_ids"], result["stages"], result["layers"]], axis=1
     )
     if len(np.unique(keys, axis=0)) != records:
         raise ValueError("same-run profile contains duplicate invocation keys")
@@ -276,7 +279,7 @@ def join_same_run_cost_profile(
                 "physical_ffn_rank": rank,
                 "physical_gpu": rank + 2,
                 "frequency_mhz": frequency,
-                "step_sequence": int(profile["step_sequences"][index]),
+                "runtime_step_id": int(profile["runtime_step_ids"][index]),
                 "stage": int(profile["stages"][index]),
                 "layer": int(profile["layers"][index]),
                 "token_rows": int(

@@ -1,3 +1,87 @@
+diff --git a/afd_plugin/connectors/metadata.py b/afd_plugin/connectors/metadata.py
+index f8c23bd..384e403 100644
+--- a/afd_plugin/connectors/metadata.py
++++ b/afd_plugin/connectors/metadata.py
+@@ -130,6 +130,10 @@ class AFDControlPayload:
+         is_profile: Whether the payload belongs to an initial memory-profile
+             forward. NPU FFN workers use this to preserve Ascend's balanced
+             dummy MoE routing in the split-process AFD execution model.
++        runtime_step_id: Optional shared Attention-DP serving identity for
++            project-local cost profiling, never a reset FFN call counter.
++        profile_generation: Optional immutable profiling-window identifier.
++        profile_active: Whether this serving step belongs to that window.
+     """
+ 
+     dp_metadata_list: dict[int, AFDDPMetadata]
+@@ -137,8 +141,28 @@ class AFDControlPayload:
+     is_warmup: bool
+     is_graph_replaying: bool = False
+     is_profile: bool = False
++    runtime_step_id: int | None = None
++    profile_generation: str | None = None
++    profile_active: bool = False
+ 
+     def __post_init__(self) -> None:
++        if self.runtime_step_id is not None and (
++            type(self.runtime_step_id) is not int or self.runtime_step_id < 0
++        ):
++            raise ValueError("invalid profiling runtime_step_id")
++        if type(self.profile_active) is not bool:
++            raise ValueError("invalid profile_active")
++        if self.profile_generation is not None and (
++            not isinstance(self.profile_generation, str)
++            or not self.profile_generation
++            or any(c.isspace() for c in self.profile_generation)
++        ):
++            raise ValueError("invalid profile_generation")
++        if self.profile_active and (
++            self.runtime_step_id is None or self.profile_generation is None
++            or self.is_graph_capturing or self.is_warmup or self.is_profile
++        ):
++            raise ValueError("active profile needs a real serving step and generation")
+         self.dp_metadata_list = {
+             # stage_idx: _ensure_afd_dp_metadata(dp_metadata)
+             stage_idx: AFDDPMetadata(
+@@ -322,7 +346,7 @@ def encode_control_payload(payload: AFDControlPayload) -> bytes:
+ 
+     Only ``num_tokens_across_dp_cpu`` / ``max_tokens_across_dp_cpu`` per stage
+     and the graph-capturing, warmup, replay, and profile flags are carried.
+-    These are the fields the FFN-side connectors read back after decode. A
++    Optional profiling identity/state is included only when present. A
+     plugin-owned minimal schema keeps the wire format decoupled from
+     vLLM-internal DP metadata objects.
+     """
+@@ -341,13 +365,19 @@ def encode_control_payload(payload: AFDControlPayload) -> bytes:
+         "is_graph_replaying": bool(payload.is_graph_replaying),
+         "is_profile": bool(payload.is_profile),
+     }
++    if payload.runtime_step_id is not None or payload.profile_generation is not None or payload.profile_active:
++        wire_payload.update(
++            runtime_step_id=payload.runtime_step_id,
++            profile_generation=payload.profile_generation,
++            profile_active=payload.profile_active,
++        )
+     return json.dumps(wire_payload, separators=(",", ":"), sort_keys=True).encode(
+         "utf-8",
+     )
+ 
+ 
+ def decode_control_payload(payload_bytes: bytes) -> AFDControlPayload:
+-    """Rebuild an ``AFDControlPayload`` from ``encode_control_payload``."""
++    """Rebuild control, defaulting legacy non-profiled payloads unchanged."""
+     payload = json.loads(payload_bytes.decode("utf-8"))
+     dp_metadata_list = {
+         int(stage_idx): AFDDPMetadata(
+@@ -370,6 +400,9 @@ def decode_control_payload(payload_bytes: bytes) -> AFDControlPayload:
+         is_warmup=bool(payload.get("is_warmup", False)),
+         is_graph_replaying=bool(payload.get("is_graph_replaying", False)),
+         is_profile=bool(payload.get("is_profile", False)),
++        runtime_step_id=payload.get("runtime_step_id"),
++        profile_generation=payload.get("profile_generation"),
++        profile_active=payload.get("profile_active", False),
+     )
+ 
+ 
 diff --git a/afd_plugin/model_executor/models/qwen3_moe.py b/afd_plugin/model_executor/models/qwen3_moe.py
 index 19179e3..d4a0f50 100644
 --- a/afd_plugin/model_executor/models/qwen3_moe.py
@@ -49,8 +133,84 @@ index 19179e3..d4a0f50 100644
  
  
  __all__ = ["AFDQwen3MoeForCausalLM"]
+diff --git a/afd_plugin/v1/worker/attention_metadata.py b/afd_plugin/v1/worker/attention_metadata.py
+index ba36a6c..6dd8745 100644
+--- a/afd_plugin/v1/worker/attention_metadata.py
++++ b/afd_plugin/v1/worker/attention_metadata.py
+@@ -106,12 +106,20 @@ class AFDMetadataProviderMixin:
+         # callers compatible with runners created before this mixin existed.
+         is_graph_capturing = getattr(self, "_afd_is_graph_capturing", False)
+         is_graph_replaying = getattr(self, "_afd_is_graph_replaying", False)
++        # Project-local profiling requires one DP-leader identity/state, not
++        # the independent transaction counters used by runner sidecars.
++        from src.afd_profile_protocol import coordinate_profile_step
++
++        profile_metadata = coordinate_profile_step(
++            self, excluded=is_warmup or is_graph_capturing or self._afd_is_profile,
++        )
+         payload = AFDControlPayload(
+             dp_metadata_list=dp_metadata_list,
+             is_graph_capturing=is_graph_capturing,
+             is_warmup=is_warmup,
+             is_graph_replaying=is_graph_replaying,
+             is_profile=self._afd_is_profile,
++            **profile_metadata,
+         )
+         self.connector.control_plane.update_state_from_dp_metadata(payload)
+         self.connector.control_plane.send_dp_metadata_list(payload)
+diff --git a/afd_plugin/v1/worker/attention_model_runner.py b/afd_plugin/v1/worker/attention_model_runner.py
+index cc9cf2d..e50c9a3 100644
+--- a/afd_plugin/v1/worker/attention_model_runner.py
++++ b/afd_plugin/v1/worker/attention_model_runner.py
+@@ -4,6 +4,8 @@
+ 
+ from __future__ import annotations
+ 
++import os
++
+ from collections.abc import Callable
+ from contextlib import AbstractContextManager, contextmanager, nullcontext
+ from typing import Any
+@@ -410,6 +412,11 @@ class AFDAttentionModelRunner(AFDMetadataProviderMixin, GPUModelRunner):
+             False,
+         )
+         self._afd_is_graph_capturing = is_graph_capturing
++        # Memory-profiling dummy calls are not synchronized serving steps.
++        # Expose their native flag only in the project-local cost protocol.
++        previous_is_profile = self._afd_is_profile
++        if os.environ.get("AFD_FFN_TIMING_DIR", "").strip():
++            self._afd_is_profile = is_profile
+         try:
+             with use_afd_metadata_provider(
+                 self.install_afd_metadata_on_forward_context,
+@@ -429,6 +436,7 @@ class AFDAttentionModelRunner(AFDMetadataProviderMixin, GPUModelRunner):
+                     profile_seq_lens,
+                 )
+         finally:
++            self._afd_is_profile = previous_is_profile
+             self._afd_is_graph_capturing = previous_is_graph_capturing
+             self._afd_pending_metadata = previous_metadata
+ 
+diff --git a/afd_plugin/v1/worker/attention_worker.py b/afd_plugin/v1/worker/attention_worker.py
+index 304eb8a..a190738 100644
+--- a/afd_plugin/v1/worker/attention_worker.py
++++ b/afd_plugin/v1/worker/attention_worker.py
+@@ -29,6 +29,13 @@ class AFDAttentionWorker(Worker):
+ 
+     afd_expected_role = "attention"
+ 
++    # Profiling-only collective-RPC seam; native model/forward signatures stay
++    # unchanged. The RPC client awaits all Attention DP engines before replay.
++    def set_afd_cost_profile_state(self, encoded: str) -> dict:
++        from src.afd_profile_protocol import set_attention_profile_state
++
++        return set_attention_profile_state(self.model_runner, encoded)
++
+     def __init__(
+         self,
+         vllm_config: VllmConfig,
 diff --git a/afd_plugin/v1/worker/ffn_model_runner.py b/afd_plugin/v1/worker/ffn_model_runner.py
-index 4582d22..b963004 100644
+index 4582d22..d4c365d 100644
 --- a/afd_plugin/v1/worker/ffn_model_runner.py
 +++ b/afd_plugin/v1/worker/ffn_model_runner.py
 @@ -43,6 +43,13 @@ from afd_plugin.v1.worker.ffn_metadata import (
@@ -75,19 +235,37 @@ index 4582d22..b963004 100644
          self.model_memory_usage = profiler.consumed_memory
  
      def profile_run(self) -> None:
-@@ -153,8 +161,11 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
+@@ -131,6 +139,9 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
+     def initialize_kv_cache(self, kv_cache_config: KVCacheConfig) -> None:
+         return None
+ 
++    # Profiling-only extension: adds optional profile_payload from the current
++    # connector receive. Its identity/state is consumed before CUDA replay;
++    # ordinary AFD callers retain the original default behavior.
+     def execute_model(
+         self,
+         scheduler_output: SchedulerOutput | None = None,
+@@ -140,6 +151,7 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
+         is_graph_capturing: bool = False,
+         is_warmup: bool = False,
+         is_graph_replaying: bool = False,
++        profile_payload: AFDControlPayload | None = None,
+     ) -> None:
+         step_afd_gpu_profiler(self.prof)
+         if dp_metadata_list is None:
+@@ -153,8 +165,11 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
              graph_enabled=bool(self.use_cuda_graph),
              graph_exists=cuda_graph_info is not None,
          )
 +        profile_rank = int(getattr(self.connector, "role_rank", 0))
-+        prepare_runtime_profile_step(profile_rank, run_mode.value, graph_key)
++        prepare_runtime_profile_step(profile_rank, run_mode.value, graph_key, profile_payload)
          if run_mode is AFDGraphRunMode.REPLAY:
              cuda_graph_info["graph"].replay()
 +            finish_runtime_profile_step(profile_rank, run_mode.value)
              return None
  
          self._ffn_forward(
-@@ -162,6 +173,7 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
+@@ -162,6 +177,7 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
              is_graph_capturing=is_graph_capturing,
              is_warmup=is_warmup,
          )
@@ -95,7 +273,7 @@ index 4582d22..b963004 100644
          return None
  
      def _ffn_forward(
-@@ -313,12 +325,15 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
+@@ -313,12 +329,15 @@ class GPUFFNModelRunner(LoRAModelRunnerMixin):
                      is_graph_capturing=is_attn_graph_capturing,
                  ),
              )
@@ -111,3 +289,28 @@ index 4582d22..b963004 100644
              self._cuda_graphs[graph_key] = {
                  "graph": cudagraph,
                  "input_hidden_states": output,
+diff --git a/afd_plugin/v1/worker/ffn_worker.py b/afd_plugin/v1/worker/ffn_worker.py
+index 4800eab..99f925a 100644
+--- a/afd_plugin/v1/worker/ffn_worker.py
++++ b/afd_plugin/v1/worker/ffn_worker.py
+@@ -195,6 +195,12 @@ class AFDFFNWorker(Worker):
+             if self.model_runner.use_cuda_graph and (
+                 is_warmup or is_attn_graph_capturing
+             ):
++                from src.afd_ffn_cost_profile import prepare_runtime_profile_step
++
++                prepare_runtime_profile_step(
++                    int(getattr(self.model_runner.connector, "role_rank", 0)),
++                    "warmup", None, payload,
++                )
+                 self.model_runner.capture_model(
+                     dp_metadata_list=dp_metadata_list,
+                     is_warmup=is_warmup,
+@@ -206,6 +212,7 @@ class AFDFFNWorker(Worker):
+                     is_graph_capturing=is_attn_graph_capturing,
+                     is_warmup=is_warmup,
+                     is_graph_replaying=is_graph_replaying,
++                    profile_payload=payload,
+                 )
+ 
+             if self.device.type == "cuda":

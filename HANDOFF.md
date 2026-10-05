@@ -1,5 +1,63 @@
 # Handoff
 
+## Latest status - Milestone N shared runtime profiling protocol prepared
+
+- Continues `milestone-n-afd-ffn-cost-model` from documented base `f2ba04f`.
+  No scheduler, model-fitting algorithm, placement, frequency grid, trace, or
+  formal-matrix changes are introduced in this correction.
+- The protocol defect in `272171` is independent FFN file polling/reset
+  counters. Offline boundary diagnosis confirms rank 0 local steps 0-586 and
+  rank 1 steps 0-587; it cannot locate the extra step at start versus stop.
+  All old schema-2 profiles, including the three finalized configurations,
+  remain engineering evidence only and are rejected as training input.
+- Native `transaction_id` is runner-local in both Attention runner paths;
+  matching initial counters do not establish cross-DP identity. A profiling-only
+  Attention DP-rank-0 counter now allocates serving IDs and broadcasts one
+  identity/generation/active tuple through the existing DP CPU group before
+  both Attention senders transmit their AFD control payloads.
+- `set_afd_cost_profile_state` is an Attention collective RPC. The pinned
+  internal DP client awaits all engines before returning; the benchmark starts
+  measured replay only after acknowledgement. FFN ranks never poll a file for
+  cost-profile membership. They resolve the prior step after existing worker
+  synchronization, apply the current payload, then execute/replay.
+- Schema 3 joins exclusively on `(runtime_step_id, stage, layer)`. Rank-local
+  counters are retained only as diagnostics and are not reset by windows.
+  Warmup, capture, and startup memory-profile work are excluded; idle DP dummy
+  batches remain serving steps. External graph events, same-invocation routes,
+  local/full timer boundaries, top-8 and timing containment checks are preserved.
+- One exclusive Uranus allocation first runs eight separate 8-request profile
+  generations on one balanced/HH graph server. Every generation requires exact
+  rank pairing, complete 48-layer steps, valid routes/timings and graph replay.
+  Any failure stops the job. The gate server is shut down before the unchanged
+  eleven fresh-server formal lifecycles; stress traffic is never model data.
+- Formal runs receive `COMPLETE.json` only after all validation, artifacts,
+  ownership, clocks, and shutdown pass. Resume requires identical source,
+  patch, schema, trace, placement and full-plan/config fingerprints plus all
+  artifact hashes. Each allocation and partial attempt has a unique directory.
+- CPU validation: 168 project tests; 43 focused profiler/protocol tests; 266
+  pinned-plugin/protocol tests, including a real two-process Gloo broadcast.
+  No tests in those gates skipped. Patch apply/verify/revert leaves the pinned
+  plugin clean. Shell syntax and `git diff --check` pass. Environment versions
+  and roots match job 272171's baseline (protected 0.15.1; isolated 0.26.0).
+- Real GPU validation of the new protocol is pending Phase A. Preparation and
+  submission must use the corrective execution commit, then leave tracked HEAD
+  unchanged while queued. Job IDs belong in ignored study artifacts, not a
+  subsequent documentation-only commit.
+
+Exact next command after this correction is committed and pushed:
+
+```bash
+cd /data/users/chjing/moe-energy-scheduling
+study="results/raw/milestone-n-afd-cost-$(date -u +%Y%m%dT%H%M%SZ)"
+third_party/afd-plugin/.venv/bin/python -m tools.prepare_milestone_n_cost_model \
+  --output-dir "$study" \
+  --trace results/raw/milestone-m-stationary-repeat-20261002T060128Z/trace.jsonl
+MILESTONE_N_STUDY="$study" sbatch scripts/milestone_n_afd_ffn_cost_model.sbatch
+```
+
+Submit only that single two-phase job. If Phase A fails, preserve artifacts,
+reset/clean up and stop; do not automatically resubmit or fit a model.
+
 ## Latest status - Milestone N job 272171 incomplete; no resubmission
 
 - Job `272171`, source `2090fe4`, ran on Uranus for `00:28:24` and ended
